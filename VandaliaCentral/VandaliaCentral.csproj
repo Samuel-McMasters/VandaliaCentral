@@ -14,4 +14,8 @@
     <None Remove="Components\Layout\MainLayout - Copy.razor.css" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.14" />
+  </ItemGroup>
+
 </Project>
