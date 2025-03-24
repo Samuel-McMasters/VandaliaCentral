@@ -19,4 +19,9 @@
     <PackageReference Include="Microsoft.Identity.Web" Version="3.8.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controller\" />
+    <Folder Include="wwwroot\pdf\" />
+  </ItemGroup>
+
 </Project>
