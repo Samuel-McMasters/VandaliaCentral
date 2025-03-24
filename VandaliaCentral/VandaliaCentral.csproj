@@ -6,4 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Remove="Components\Layout\MainLayout - Copy.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Components\Layout\MainLayout - Copy.razor.css" />
+  </ItemGroup>
+
 </Project>
