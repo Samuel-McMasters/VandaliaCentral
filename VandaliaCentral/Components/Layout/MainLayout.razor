@@ -8,7 +8,8 @@
             <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
         </a>
         <div class="container-fluid justify-content-end">
-            <button class="btn btn btn-danger">Sign Out</button>
+            <button class="btn btn btn-danger" @* @onclick="SignOut" *@ href="https://localhost:7189/signout-oidc">Sign Out</button>
+            <a class="nav-link text-dark" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut">Sign out</a>
             
         </div>
 
@@ -29,6 +30,14 @@
     </div>
 </div>
 
+@code {
+    [Inject] NavigationManager Navigation { get; set; }
+
+    private void SignOut()
+    {
+        Navigation.NavigateTo("https://localhost:7189/signout-oidc", forceLoad: true); // triggers the server-side logout
+    }
+}
 
 
 
