@@ -8,9 +8,7 @@
             <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
         </a>
         <div class="container-fluid justify-content-end">
-            <button class="btn btn btn-danger" @* @onclick="SignOut" *@ href="https://localhost:7189/signout-oidc">Sign Out</button>
-            <a class="nav-link text-dark" asp-area="MicrosoftIdentity" asp-controller="Account" asp-action="SignOut">Sign out</a>
-            
+            <button class="btn btn btn-danger" @onclick="SignOut">Sign Out</button>                    
         </div>
 
 
@@ -35,7 +33,8 @@
 
     private void SignOut()
     {
-        Navigation.NavigateTo("https://localhost:7189/signout-oidc", forceLoad: true); // triggers the server-side logout
+        Navigation.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
+        
     }
 }
 
