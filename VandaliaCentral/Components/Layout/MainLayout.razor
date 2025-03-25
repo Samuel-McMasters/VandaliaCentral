@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components
 
+
+
 <div>
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary px-4">
@@ -8,7 +10,8 @@
             <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
         </a>
         <div class="container-fluid justify-content-end">
-            <button class="btn btn btn-danger" @onclick="SignOut">Sign Out</button>                    
+            <button class="btn btn btn-danger" @onclick="SignOut">Sign Out</button> 
+            
         </div>
 
 
@@ -31,11 +34,12 @@
 @code {
     [Inject] NavigationManager Navigation { get; set; }
 
+    
     private void SignOut()
     {
         Navigation.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
-        
     }
+    
 }
 
 
