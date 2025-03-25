@@ -56,6 +56,20 @@
     {
         // Redirect to SSO provider (placeholder)
         NavigationManager.NavigateTo("https://login.microsoftonline.com/", forceLoad: true);
+
+        // var clientId = "1ecb520a-e9f1-40d7-bcb9-5bebfa98174e";
+        // var tenantId = "d043ca51-898d-4bc1-bc1a-1931222e72fb"; // from Azure AD, same as in appsettings.json
+        // var redirectUri = "https://localhost:7189/signin-oidc";
+
+        // var signInUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize" +
+        //                 $"?client_id={clientId}" +
+        //                 $"&response_type=code" +
+        //                 $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+        //                 $"&response_mode=form_post" +
+        //                 $"&scope=openid%20profile%20email" +
+        //                 $"&state=12345"; // dummy state (optional)
+
+        // NavigationManager.NavigateTo(signInUrl, forceLoad: true);
     }
 
     [Inject] NavigationManager NavigationManager { get; set; } = default!;

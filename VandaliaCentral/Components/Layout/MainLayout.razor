@@ -37,7 +37,12 @@
     
     private void SignOut()
     {
-        Navigation.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
+        //Navigation.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
+        var logoutUrl =
+            "https://login.microsoftonline.com/d043ca51-898d-4bc1-bc1a-1931222e72fb/oauth2/v2.0/logout" +
+            "?post_logout_redirect_uri=https://localhost:7189/";
+
+        Navigation.NavigateTo(logoutUrl, forceLoad: true);
     }
     
 }
