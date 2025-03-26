@@ -11,6 +11,15 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+
+//TODO: Uncomment this line when real database is live
+//builder.Services.AddDbContext<MondayMinuteContext>(options =>
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddDbContext<MondayMinuteContext>(options =>
+    options.UseInMemoryDatabase("MondayMinuteDb"));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
