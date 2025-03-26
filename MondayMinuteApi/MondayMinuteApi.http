@@ -1,0 +1,6 @@
+@MondayMinuteApi_HostAddress = http://localhost:5258
+
+GET {{MondayMinuteApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
