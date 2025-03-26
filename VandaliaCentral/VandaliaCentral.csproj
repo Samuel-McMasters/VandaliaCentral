@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.14" />
     <PackageReference Include="Microsoft.Identity.Web" Version="3.8.1" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.8.1" />
+    <PackageReference Include="Radzen.Blazor" Version="6.3.2" />
   </ItemGroup>
 
   <ItemGroup>

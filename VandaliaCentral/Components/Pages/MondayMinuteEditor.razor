@@ -1,0 +1,34 @@
+﻿@page "/monday"
+@using Radzen
+@using Radzen.Blazor
+
+<h3>Newsletter Editor</h3>
+
+<RadzenTextBox @bind-Value="Title" Placeholder="Enter title..." Style="width: 100%;" />
+
+
+
+
+
+<RadzenButton Text="Publish" Click="Publish" Style="margin-top: 1rem;" ButtonStyle="ButtonStyle.Primary" />
+
+@if (Published)
+{
+    <div class="mt-5 border p-3 rounded" style="background-color: #f9f9f9;">
+        <h4>@Title</h4>
+        <p><em>Published on @DateTime.Now.ToString("MMMM dd, yyyy")</em></p>
+        <div>@((MarkupString)Body)</div>
+    </div>
+}
+
+@code {
+    private string Title { get; set; } = "";
+    private string Body { get; set; } = "";
+    private bool Published { get; set; } = false;
+
+    private void Publish()
+    {
+        Published = true;
+        // TODO: Save to a database or service
+    }
+}
