@@ -22,7 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\pdf\" />
+    <Folder Include="wwwroot\pdf\mm\" />
+    <Folder Include="wwwroot\pdf\bc\" />
   </ItemGroup>
 
 </Project>
