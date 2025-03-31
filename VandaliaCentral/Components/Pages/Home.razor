@@ -14,30 +14,30 @@
             <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Monday Minute - March 31, 2025</h5>
-                    <a href="./pdf/mm/Monday Minute - March 31, 2025.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href="@mmFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
 
-                @* <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">
+                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">
                     
-                    <object data="./pdf/mm/Monday Minute - March 31, 2025.pdf" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                        <p>Your browser does not support PDFs. <a href="./pdf/mm/Monday Minute - March 31, 2025.pdf" target="_blank">Download the PDF</a></p>
-                    </object>
+                    
+
+                    @if (mmFileUrl != null)
+                    {
+                        <object data="@mmFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                            <p>Your browser cannot display this PDF. <a href="@mmFileUrl">Download it instead</a>.</p>
+                        </object>
+                    }
+                    else
+                    {
+                        <p>No newsletter PDF found.</p>
+                    }
 
                     
-                </div> *@
+                </div>
 
-                @if (localFileUrl != null)
-                {
-                    <object data="@localFileUrl" type="application/pdf" width="100%" height="800px">
-                        <p>Your browser cannot display this PDF. <a href="@localFileUrl">Download it instead</a>.</p>
-                    </object>
-                }
-                else
-                {
-                    <p>No newsletter PDF found.</p>
-                }
+                
 
             </div>
         </div>
@@ -49,15 +49,25 @@
             <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Bonus Chart</h5>
-                    <a href="./pdf/bc/20250330.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href="@bcFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
-                <div style="height: 400px; background-color: #e9ecef;" class="w-100 rounded">
-                    <object data="./pdf/bc/20250330.pdf#zoom=FitH" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                        <p>Your browser does not support PDFs. <a href="./pdf/bc/20250330.pdf" target="_blank">Download the PDF</a></p>
-                    </object>
+                <div class="w-100 rounded overflow-hidden" style="height: 400px; background-color: #e9ecef;">
+
+                    @if (bcFileUrl != null)
+                    {
+                        <object data="@bcFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                            <p>Your browser cannot display this PDF. <a href="@bcFileUrl">Download it instead</a>.</p>
+                        </object>
+                    }
+                    else
+                    {
+                        <p>No newsletter PDF found.</p>
+                    }
                 </div>
+
+
             </div>
 
             <div class="p-4 border rounded bg-white shadow-sm flex-fill d-flex flex-column" style="min-height: 350px;">
@@ -129,15 +139,16 @@
 
 
 @code {
-    private string? localFileUrl;
+    private string? mmFileUrl;
+    private string? bcFileUrl;
 
     protected override void OnInitialized()
     {
-        var pdfFolder = System.IO.Path.Combine(Env.WebRootPath, "pdf", "mm");
+        var mmFolder = System.IO.Path.Combine(Env.WebRootPath, "pdf", "mm");
 
-        if (System.IO.Directory.Exists(pdfFolder))
+        if (System.IO.Directory.Exists(mmFolder))
         {
-            string[] filePaths = System.IO.Directory.GetFiles(pdfFolder, "*.pdf");
+            string[] filePaths = System.IO.Directory.GetFiles(mmFolder, "*.pdf");
 
             System.IO.FileInfo? latestFile = null;
 
@@ -153,8 +164,33 @@
 
             if (latestFile != null)
             {
-                string relativeUrl = $"/pdf/mm/{latestFile.Name}";
-                localFileUrl = relativeUrl.Replace("\\", "/");
+                string mmRelativeUrl = $"/pdf/mm/{latestFile.Name}#zoom=FitH";
+                mmFileUrl = mmRelativeUrl.Replace("\\", "/");
+            }
+        }
+
+        var bcFolder = System.IO.Path.Combine(Env.WebRootPath, "pdf", "bc");
+
+        if (System.IO.Directory.Exists(bcFolder))
+        {
+            string[] filePaths = System.IO.Directory.GetFiles(bcFolder, "*.pdf");
+
+            System.IO.FileInfo? latestFile = null;
+
+            foreach (var filePath in filePaths)
+            {
+                var fileInfo = new System.IO.FileInfo(filePath);
+
+                if (latestFile == null || fileInfo.LastWriteTime > latestFile.LastWriteTime)
+                {
+                    latestFile = fileInfo;
+                }
+            }
+
+            if (latestFile != null)
+            {
+                string bcRelativeUrl = $"/pdf/bc/{latestFile.Name}#zoom=FitH";
+                bcFileUrl = bcRelativeUrl.Replace("\\", "/");
             }
         }
     }
