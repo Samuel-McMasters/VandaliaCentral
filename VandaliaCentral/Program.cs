@@ -11,6 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
+//For pdf api controller
+builder.Services.AddControllers();
+
 //===================================================
 //Uncomment when I figure out IIS hosting issue
 //builder.Services
@@ -37,7 +40,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 var app = builder.Build();
 
 
-
+app.MapControllers();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -48,6 +51,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+
 
 
 //Uncomment when figured out IIS hosting stuff
