@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 //For pdf api controller
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue

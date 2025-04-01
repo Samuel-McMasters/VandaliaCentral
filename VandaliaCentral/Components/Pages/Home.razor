@@ -1,5 +1,7 @@
 ﻿@page "/"
 @inject IWebHostEnvironment Env
+@inject HttpClient Http
+@inject NavigationManager Nav
 
 
 <PageTitle>Vandalia Central</PageTitle>
@@ -14,7 +16,7 @@
             <!-- Monday Minute -->
             <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    @* <h5 class="mb-0"> @mmHeader </h5> *@
+                    <h5 class="mb-0">@mmHeader</h5>
                     <a href="@mmFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
@@ -151,7 +153,26 @@
     //variables to hold api endpoints for pdfs
     private string bcFileUrl = "/api/pdfs/latest-bonus-chart#zoom=FitH";
     private string mmFileUrl = "/api/pdfs/latest-monday-minute#zoom=FitH";
+    
+    private string mmHeader = "Loading...";
 
+    protected override async Task OnInitializedAsync()
+    {
+
+        //calls endpoint to get monday minute title
+        try
+        {
+            // Get the full base URL from the running app (e.g., http://localhost:5000/)
+            var baseUri = Nav.BaseUri;
+            var requestUri = new Uri(new Uri(baseUri), "api/pdfs/latest-monday-minute-title");
+
+            mmHeader = await Http.GetStringAsync(requestUri);
+        }
+        catch (Exception ex)
+        {
+            mmHeader = $"Error: {ex.Message}";
+        }
+    }
   
 }
 
