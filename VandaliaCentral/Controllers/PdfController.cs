@@ -65,5 +65,29 @@ namespace VandaliaCentral.Controllers
             return new FileStreamResult(fileStream, "application/pdf");
 
         }
+
+        //Endpoint for dynamically naming Monday Minute header
+        [HttpGet("latest-monday-minute-title")]
+        public IActionResult GetLatestMondayMinuteTitle()
+        {
+            if (!Directory.Exists(mmFolder))
+            {
+                return NotFound("PDF folder not found");
+            }
+
+            var files = Directory.GetFiles(mmFolder, "*.pdf");
+            var latestFile = files
+                .Select(f => new FileInfo(f))
+                .OrderByDescending(f => f.LastWriteTime)
+                .FirstOrDefault();
+
+            if (latestFile == null)
+            {
+                return NotFound("No PDF files found.");
+            }
+
+            var title = Path.GetFileNameWithoutExtension(latestFile.Name);
+            return Ok(title);
+        }
     }
 }
