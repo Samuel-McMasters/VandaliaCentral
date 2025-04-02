@@ -20,8 +20,8 @@ namespace VandaliaCentral.Services
                     {
                         text.Span("Employee Termination Form\n").FontSize(18).Bold();
                         text.Span($"Name: {model.EmployeeName}\n");
-                        text.Span($"Date: {model.TerminationDate.ToShortDateString()}\n");
-                        text.Span($"Reason: {model.Reason}");
+                        text.Span($"Date: {model.LastDateOfEmployment.ToShortDateString()}\n");
+                        //text.Span($"Reason: {model.Reason}");
                     });
                 });
             }).GeneratePdf();
