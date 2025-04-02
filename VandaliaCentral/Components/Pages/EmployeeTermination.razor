@@ -40,7 +40,7 @@
     {
         try
         {
-            var pdfBytes = PDFGenerator.Generate(formModel);
+            var pdfBytes = PDFTemplateFiller.Fill(formModel);
             await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
             success = true;
         }

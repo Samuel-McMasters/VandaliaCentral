@@ -18,8 +18,8 @@ namespace VandaliaCentral.Services
             var fields = stamper.AcroFields;
 
             fields.SetField("EmployeeName", model.EmployeeName);
-            fields.SetField("TerminationDate", model.TerminationDate.ToString("MM/dd/yyyy"));
-            fields.SetField("Reason", model.Reason);
+            fields.SetField("LastDateOfEmployment", model.TerminationDate.ToString("MM/dd/yyyy"));
+            //fields.SetField("Reason", model.Reason);
 
             // Optional: flatten the form so fields can't be edited after filling
             stamper.FormFlattening = true;

@@ -14,7 +14,7 @@ namespace VandaliaCentral.Services
         private readonly string fromEmail = "sam.mcmasters@vandaliarental.com";
 
         //TODO --> Add a distrogroup
-        private readonly string distroGroup = "Jeff.Hunter@vandaliarental.com";
+        private readonly string distroGroup = "sam.mcmasters@vandaliarental.com";
 
         public async Task SendTerminationFormAsync(byte[] pdfBytes, string employeeName)
         {
