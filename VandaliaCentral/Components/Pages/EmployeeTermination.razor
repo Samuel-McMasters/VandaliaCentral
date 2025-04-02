@@ -1,7 +1,46 @@
 ﻿@page "/employeetermination"
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject EmailService EmailService
 
-<h3>EmployeeTermination</h3>
+
+<h3>Employee Termination Form</h3>
+
+<EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label>Employee Name:</label>
+        <InputText @bind-Value="formModel.EmployeeName" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Termination Date:</label>
+        <InputDate @bind-Value="formModel.TerminationDate" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Reason:</label>
+        <InputTextArea @bind-Value="formModel.Reason" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-2">Submit</button>
+</EditForm>
+
+@if (success)
+{
+    <p class="text-success mt-2">Form submitted successfully.</p>
+}
 
 @code {
+    private TerminationFormModel formModel = new();
+    private bool success = false;
 
+    private Task HandleValidSubmit()
+    {
+        // Placeholder for now — we'll add the PDF/email logic later
+        success = true;
+        return Task.CompletedTask;
+    }
 }

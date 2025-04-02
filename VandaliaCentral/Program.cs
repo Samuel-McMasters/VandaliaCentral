@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
+using VandaliaCentral.Services;
 
 
 
@@ -14,6 +15,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 //For pdf api controller
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<EmailService>();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue
