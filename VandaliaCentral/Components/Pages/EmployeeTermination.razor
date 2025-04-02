@@ -1,0 +1,180 @@
+﻿@page "/employeetermination"
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject EmailService EmailService
+
+<h3>Employee Termination Form</h3>
+
+<EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    
+    <!-- Employee Information Block -->
+    <div class="row py-5">
+        <div class="row">
+            <div class="col-12 col-md-3  d-flex flex-column mb-2">
+                <label>Employee Name:</label>
+                <InputText @bind-Value="formModel.EmployeeName" class="form-control" />
+            </div>
+            <div class="col-12 col-md-3 mb-2">
+                <label>Employee #:</label>
+                <InputText @bind-Value="formModel.EmployeeNumber" class="form-control" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 col-md-3 mb-2">
+                <label>Location:</label>
+                <InputText @bind-Value="formModel.Location" class="form-control" />
+            </div>
+            <div class="col-12 col-md-3 mb-2">
+                <label>Last Date of Employment:</label>
+                <InputDate @bind-Value="formModel.LastDateOfEmployment" class="form-control" />
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- Items To Be Collected Block -->
+    <div class="py-5">
+        <h5>Items to be collected (please mark items returned; leave BLANK if not applicable)</h5>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Cellphone" class="form-check-input" />
+                <label class="form-check-label">Cellphone</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Notepad" class="form-check-input" />
+                <label class="form-check-label">Notepad</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.DeviceAccounts" class="form-check-input" />
+                <label class="form-check-label">All Device Accounts Logged Out</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Uniforms" class="form-check-input" />
+                <label class="form-check-label">Uniforms</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.CompanyVehicle" class="form-check-input" />
+                <label class="form-check-label">Company Vehicle</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.CreditCard" class="form-check-input" />
+                <label class="form-check-label">Credit Card</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Laptop" class="form-check-input" />
+                <label class="form-check-label">Laptop</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Hotspot" class="form-check-input" />
+                <label class="form-check-label">Mobile Hotspot</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.DeviceLock" class="form-check-input" />
+                <label class="form-check-label">Device Lock Passwords Removed</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Keys" class="form-check-input" />
+                <label class="form-check-label">Keys (i.e. Building/Vehicle)</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.PromotionalItems" class="form-check-input" />
+                <label class="form-check-label">Promotional Items</label>
+            </div>
+        </div>
+    </div>
+    
+    
+    
+
+    <!-- Access To Be Terminated Block -->
+    <div class="py-5">
+        <h5>Access to be Terminated (leave BLANK if not applicable)</h5>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Microsoft365" class="form-check-input" />
+                <label class="form-check-label">Microsoft 365</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Vizion" class="form-check-input" />
+                <label class="form-check-label">Vizion /Targit</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Salesforce" class="form-check-input" />
+                <label class="form-check-label">Salesforce</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Certify" class="form-check-input" />
+                <label class="form-check-label">Certify</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.RentalMan" class="form-check-input" />
+                <label class="form-check-label">RentalMan</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Telematics" class="form-check-input" />
+                <label class="form-check-label">Telematics</label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Paylocity" class="form-check-input" />
+                <label class="form-check-label">Paylocity</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Ninety" class="form-check-input" />
+                <label class="form-check-label">90.i.o</label>
+            </div>
+            <div class="col-12 col-md-2 mb-2">
+                <InputCheckbox @bind-Value="formModel.Other" class="form-check-input" />
+                <label class="form-check-label pb-1">Other</label>
+                <InputTextArea @bind-Value="formModel.OtherText" class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-2">Submit</button>
+</EditForm>
+
+@if (success)
+{
+    <p class="text-success mt-2">Form submitted and emailed successfully.</p>
+}
+
+@code {
+    private TerminationFormModel formModel = new();
+    private bool success = false;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var pdfBytes = PDFTemplateFiller.Fill(formModel);
+            await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+            success = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"PDF or Email Error: {ex.Message}");
+
+            if (ex.InnerException != null)
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
+    }
+}

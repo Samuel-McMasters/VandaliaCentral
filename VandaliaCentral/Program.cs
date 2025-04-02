@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
+using VandaliaCentral.Services;
+using QuestPDF.Infrastructure;
 
 
 
@@ -14,6 +16,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 //For pdf api controller
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<EmailService>();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue
@@ -40,7 +43,7 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-
+QuestPDF.Settings.License = LicenseType.Community;
 app.MapControllers();
 
 // Configure the HTTP request pipeline.
