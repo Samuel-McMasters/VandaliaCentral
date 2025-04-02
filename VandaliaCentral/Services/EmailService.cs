@@ -7,18 +7,20 @@ namespace VandaliaCentral.Services
 {
     public class EmailService
     {
-        private readonly string smtpServer = "smtp.vandaliarental.com";
+        private readonly string smtpServer = "smtp.office365.com";
         private readonly int smtpPort = 587;
-        private readonly string fromEmail = "noreply@vandaliarental.com";
+
+        //TODO --> Update this email
+        private readonly string fromEmail = "sam.mcmasters@vandaliarental.com";
 
         //TODO --> Add a distrogroup
-        private readonly string distroGroup = "";
+        private readonly string distroGroup = "trevor.mackey@vandaliarental.com ";
 
         public async Task SendTerminationFormAsync(byte[] pdfBytes, string employeeName)
         {
             using var client = new SmtpClient(smtpServer, smtpPort)
             {
-                Credentials = new NetworkCredential("your-smtp-user", "your-smtp-pass"),
+                Credentials = new NetworkCredential("sam.mcmasters@vandaliarental.com", "Yosemite2023Zion2021!"),
                 EnableSsl = true
             };
 

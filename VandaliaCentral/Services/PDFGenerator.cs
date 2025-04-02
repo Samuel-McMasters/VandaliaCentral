@@ -16,15 +16,14 @@ namespace VandaliaCentral.Services
                 {
                     page.Size(PageSizes.A4);
                     page.Margin(50);
-                    page.Content().Column(col =>
+                    page.Content().Text(text =>
                     {
-                        col.Item().Text("Employee Termination Form").FontSize(20).Bold().Underline().AlignCenter();
-                        col.Item().Text($"Employee Name: {model.EmployeeName}");
-                        col.Item().Text($"Termination Date: {model.TerminationDate:MMMM dd, yyyy}");
-                        col.Item().Text($"Reason:\n{model.Reason}");
+                        text.Span("Employee Termination Form\n").FontSize(18).Bold();
+                        text.Span($"Name: {model.EmployeeName}\n");
+                        text.Span($"Date: {model.TerminationDate.ToShortDateString()}\n");
+                        text.Span($"Reason: {model.Reason}");
                     });
                 });
-
             }).GeneratePdf();
         }
     }

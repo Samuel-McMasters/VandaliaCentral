@@ -27,4 +27,10 @@
     <Folder Include="wwwroot\pdf\bc\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\forms\EmployeeTerminationTemplate.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

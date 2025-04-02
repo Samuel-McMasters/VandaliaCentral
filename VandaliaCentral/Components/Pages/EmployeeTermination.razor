@@ -3,7 +3,6 @@
 @using VandaliaCentral.Services
 @inject EmailService EmailService
 
-
 <h3>Employee Termination Form</h3>
 
 <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
@@ -30,17 +29,27 @@
 
 @if (success)
 {
-    <p class="text-success mt-2">Form submitted successfully.</p>
+    <p class="text-success mt-2">Form submitted and emailed successfully.</p>
 }
 
 @code {
     private TerminationFormModel formModel = new();
     private bool success = false;
 
-    private Task HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        // Placeholder for now — we'll add the PDF/email logic later
-        success = true;
-        return Task.CompletedTask;
+        try
+        {
+            var pdfBytes = PDFGenerator.Generate(formModel); // <-- Potential failure here
+            await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+            success = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"PDF or Email Error: {ex.Message}");
+
+            if (ex.InnerException != null)
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
     }
 }
