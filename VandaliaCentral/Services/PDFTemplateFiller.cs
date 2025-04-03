@@ -8,7 +8,7 @@ namespace VandaliaCentral.Services
 {
     public class PDFTemplateFiller
     {
-        public static byte[] Fill(TerminationFormModel model)
+        public static byte[] FillTermination(TerminationFormModel model)
         {
             var templatePath = Path.Combine("wwwroot", "forms", "EmployeeTerminationTemplate.pdf");
             using var reader = new PdfReader(templatePath);

@@ -1,0 +1,30 @@
+﻿@page "/test"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Auth Debug Page</h3>
+
+@if (user is null)
+{
+    <p>Loading...</p>
+}
+else if (!user.Identity?.IsAuthenticated ?? false)
+{
+    <p>You are NOT logged in. <a href="MicrosoftIdentity/Account/SignIn">Click here to login</a></p>
+}
+else
+{
+    <p>Welcome, @user.Identity.Name!</p>
+    
+}
+
+@code {
+    private ClaimsPrincipal? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+    }
+}
