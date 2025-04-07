@@ -52,5 +52,43 @@ namespace VandaliaCentral.Services
 
             return output.ToArray();
         }
+
+
+        public static byte[] FillChange(ChangeFormModel model)
+        {
+            var templatePath = Path.Combine("wwwroot", "forms", "EmployeeChangeTemplate.pdf");
+            using var reader = new PdfReader(templatePath);
+            using var output = new MemoryStream();
+            using var stamper = new PdfStamper(reader, output);
+
+            var fields = stamper.AcroFields;
+
+            fields.SetField("FirstName", model.FirstName);
+            fields.SetField("LastName", model.LastName);
+            fields.SetField("PreviousJobTitle", model.PreviousJobTitle);
+            fields.SetField("BranchNumber", model.BranchNumber);
+            fields.SetField("BranchName", model.BranchName);
+            fields.SetField("ManagerName", model.ManagerName);
+            fields.SetField("EffectiveDate", model.EffectiveDate.ToString("MM/dd/yyyy"));
+            fields.SetField("NewPosition", model.NewPosition);
+            fields.SetField("JobTitle", model.JobTitle);
+            fields.SetField("FullTime", model.FullTime ? "Yes" : "Off");
+            fields.SetField("PartTime", model.Hourly ? "Yes" : "Off");
+            fields.SetField("Salary", model.Salary ? "Yes" : "Off");
+            fields.SetField("NewLocBranchNumber", model.NewLocBranchNumber);
+            fields.SetField("NewLocBranchName", model.NewLocBranchName);
+            fields.SetField("NewLocManagerName", model.NewLocManagerName);
+
+            fields.SetField("AdditionalNotes", model.AdditionalNotes);
+            
+
+            // Optional: flatten the form so fields can't be edited after filling
+            stamper.FormFlattening = true;
+
+            stamper.Close();
+            reader.Close();
+
+            return output.ToArray();
+        }
     }
 }
