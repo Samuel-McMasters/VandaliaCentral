@@ -73,7 +73,8 @@ namespace VandaliaCentral.Services
             fields.SetField("NewPosition", model.NewPosition);
             fields.SetField("JobTitle", model.JobTitle);
             fields.SetField("FullTime", model.FullTime ? "Yes" : "Off");
-            fields.SetField("PartTime", model.Hourly ? "Yes" : "Off");
+            fields.SetField("PartTime", model.PartTime ? "Yes" : "Off");
+            fields.SetField("Hourly", model.Hourly ? "Yes" : "Off");
             fields.SetField("Salary", model.Salary ? "Yes" : "Off");
             fields.SetField("NewLocBranchNumber", model.NewLocBranchNumber);
             fields.SetField("NewLocBranchName", model.NewLocBranchName);
