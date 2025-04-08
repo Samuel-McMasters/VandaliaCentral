@@ -1,5 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 
 namespace VandaliaCentral.Services
@@ -80,6 +81,20 @@ namespace VandaliaCentral.Services
             }
 
             return null;
+        }
+
+        public async Task UploadPdfAsync(string containerName, IBrowserFile file)
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+
+            // Optional: Generate a unique file name with timestamp
+            var fileName = $"{Path.GetFileNameWithoutExtension(file.Name)}_{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
+
+            var blobClient = containerClient.GetBlobClient(fileName);
+
+            // Upload file stream with content type
+            var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+            await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" });
         }
     }
 }

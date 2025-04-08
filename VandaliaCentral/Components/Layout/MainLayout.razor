@@ -1,6 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
 @namespace VandaliaCentral.Components.Layout
+@using VandaliaCentral.Services
+@inject PdfService PdfService
 
 
 
@@ -10,8 +13,19 @@
         <a class="navbar-brand" href="https://vandaliarental.com/" target="_blank">
             <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
         </a>
-        <div class="container-fluid justify-content-end">
-            <button class="mmbtn btn btn-primary" @onclick="SignOut">Upload Monday Minute</button>
+        <div class="container-fluid justify-content-end gap-3">
+            
+            @if (!string.IsNullOrEmpty(uploadStatus))
+            {
+                <div class="btn-success rounded px-2 py-1" >
+                    @uploadStatus
+                </div>
+            }
+            <label class="btn btn-primary mmbtn custom-upload-button ml-4">
+                Upload Monday Minute
+                <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
+            </label>
+            
 
         </div>
 
@@ -33,18 +47,49 @@
 </div>
 
 @code {
-    [Inject] NavigationManager Navigation { get; set; }
+    private string? uploadStatus;
+    private string? statusClass;
 
-    
-    private void SignOut()
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
-        //Navigation.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
-        var logoutUrl =
-            "https://login.microsoftonline.com/d043ca51-898d-4bc1-bc1a-1931222e72fb/oauth2/v2.0/logout" +
-            "?post_logout_redirect_uri=https://localhost:7189/";
+        var file = e.File;
 
-        Navigation.NavigateTo(logoutUrl, forceLoad: true);
+        if (file is null || !file.Name.EndsWith(".pdf"))
+        {
+            uploadStatus = "Please select a valid PDF file.";
+
+            return;
+        }
+
+        try
+        {
+            await PdfService.UploadPdfAsync("mondayminute", file);
+            uploadStatus = "Upload successful!";
+           
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                uploadStatus = null;
+                
+                await InvokeAsync(StateHasChanged); // Tell Blazor to re-render
+            });
+            
+        }
+        catch (Exception ex)
+        {
+            uploadStatus = $"Upload failed: {ex.Message}";
+        }
+
+        
+        
+
+
+
+
+
+
     }
+    
     
 }
 
