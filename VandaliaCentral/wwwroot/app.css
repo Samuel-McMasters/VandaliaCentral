@@ -201,3 +201,8 @@ a.disabled {
     pointer-events: none;
     cursor: default;
 }
+
+.mmbtn:hover {
+    background-color: cornflowerblue !important;
+    border-color: cornflowerblue !important;
+}

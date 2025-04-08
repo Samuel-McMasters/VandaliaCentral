@@ -47,7 +47,7 @@ var app = builder.Build();
 QuestPDF.Settings.License = LicenseType.Community;
 app.MapControllers();
 
-// Configure the HTTP request pipeline.
+//Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

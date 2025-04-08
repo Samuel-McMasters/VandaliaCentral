@@ -34,12 +34,7 @@
                     }
                     else
                     {
-                        <object data="@mmPdf" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                            <p>
-                                Your browser cannot display this PDF.
-                                <a href="@mmPdf" target="_blank">Download it instead</a>.
-                            </p>
-                        </object>
+                        <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
                     }
                 </div>
 
@@ -67,12 +62,8 @@
                     }
                     else
                     {
-                        <object data=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                            <p>
-                                Your browser cannot display this PDF.
-                                <a href=@bcPdf target="_blank">Download it instead</a>.
-                            </p>
-                        </object>
+                        <embed src=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
+                                                    
                     }
 
 
