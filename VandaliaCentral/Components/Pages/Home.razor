@@ -3,7 +3,7 @@
 @inject HttpClient Http
 @inject NavigationManager Nav
 @using VandaliaCentral.Services
-@inject PDFService PDFService
+@inject PdfService PdfService
 
 
 
@@ -19,25 +19,27 @@
             <!-- Monday Minute -->
             <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    @* <h5 class="mb-0">@mmHeader</h5> *@
-                    <a href="https://vandaliacentral.blob.core.windows.net/mondayminute/Monday Minute - April 7, 2025.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <h5 class="mb-0">@mmPdfName</h5>
+                    <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
 
                 <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
-                    @if (pdfUrl != null)
+                    @if (mmPdf == null)
                     {
-                        <object data="@pdfUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                            <p>
-                                Your browser cannot display this PDF.
-                                <a href="@pdfUrl" target="_blank">Download it instead</a>.
-                            </p>
-                        </object>
+
+                        <p>Loading latest Monday Minute PDF...</p>
+
                     }
                     else
                     {
-                        <p>No newsletter PDF found.</p>
+                        <object data="@mmPdf" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                            <p>
+                                Your browser cannot display this PDF.
+                                <a href="@mmPdf" target="_blank">Download it instead</a>.
+                            </p>
+                        </object>
                     }
                 </div>
 
@@ -53,19 +55,27 @@
             <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Bonus Chart</h5>
-                    <a href="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href=@bcPdf target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
                 <div class="w-100 rounded overflow-hidden" style="height: 400px; background-color: #e9ecef;">
+                    @if (bcPdf == null)
+                    {
+                        <p>Loading latest Monday Minute PDF...</p>
 
-                        <object data="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                    }
+                    else
+                    {
+                        <object data=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
                             <p>
                                 Your browser cannot display this PDF.
-                                <a href="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" target="_blank">Download it instead</a>.
+                                <a href=@bcPdf target="_blank">Download it instead</a>.
                             </p>
                         </object>
-                    
+                    }
+
+
                 </div>
 
 
@@ -141,14 +151,21 @@
 
 @code {
     //variables to hold api endpoints for pdfs
-    
-    private string? pdfUrl;
+
+    private string mmPdf;
+    private string mmPdfName;
+
+    private string bcPdf;
+
+
 
     protected override async Task OnInitializedAsync()
     {
-        pdfUrl = await PDFService.GetLatestPdfUrlAsync();
+        mmPdf = await PdfService.GetLatestPdfUrlAsync("mondayminute");
+        mmPdfName = await PdfService.GetMmPdfNameAsync("mondayminute");
 
-       
+        bcPdf = await PdfService.GetLatestPdfUrlAsync("bonuschart");
+        
     }
 
     

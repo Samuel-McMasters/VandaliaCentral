@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-builder.Services.AddSingleton<PDFService>();
+builder.Services.AddSingleton<PdfService>();
 
 //For pdf api controller
 builder.Services.AddControllers();
