@@ -34,5 +34,24 @@ namespace VandaliaCentral.Services
 
             await client.SendMailAsync(mail);
         }
+
+        public async Task SendChangeFormAsync(byte[] pdfBytes, string employeeName)
+        {
+            using var client = new SmtpClient(smtpServer, smtpPort)
+            {
+                Credentials = new NetworkCredential("sam.mcmasters@vandaliarental.com", "Yosemite2023Zion2021!"),
+                EnableSsl = true
+            };
+
+            var mail = new MailMessage(fromEmail, distroGroup)
+            {
+                Subject = $"Employee Change Form: {employeeName}",
+                Body = $"Attached is the Employee Change Form for {employeeName}"
+            };
+
+            mail.Attachments.Add(new Attachment(new MemoryStream(pdfBytes), $"{employeeName}_change.pdf"));
+
+            await client.SendMailAsync(mail);
+        }
     }
 }

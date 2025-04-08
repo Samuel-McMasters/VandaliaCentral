@@ -8,7 +8,7 @@ namespace VandaliaCentral.Services
 {
     public class PDFTemplateFiller
     {
-        public static byte[] Fill(TerminationFormModel model)
+        public static byte[] FillTermination(TerminationFormModel model)
         {
             var templatePath = Path.Combine("wwwroot", "forms", "EmployeeTerminationTemplate.pdf");
             using var reader = new PdfReader(templatePath);
@@ -43,6 +43,45 @@ namespace VandaliaCentral.Services
             fields.SetField("Ninety", model.Ninety ? "Yes" : "Off");
             fields.SetField("Other", model.Other ? "Yes" : "Off");
             fields.SetField("OtherText", model.OtherText);
+
+            // Optional: flatten the form so fields can't be edited after filling
+            stamper.FormFlattening = true;
+
+            stamper.Close();
+            reader.Close();
+
+            return output.ToArray();
+        }
+
+
+        public static byte[] FillChange(ChangeFormModel model)
+        {
+            var templatePath = Path.Combine("wwwroot", "forms", "EmployeeChangeTemplate.pdf");
+            using var reader = new PdfReader(templatePath);
+            using var output = new MemoryStream();
+            using var stamper = new PdfStamper(reader, output);
+
+            var fields = stamper.AcroFields;
+
+            fields.SetField("FirstName", model.FirstName);
+            fields.SetField("LastName", model.LastName);
+            fields.SetField("PreviousJobTitle", model.PreviousJobTitle);
+            fields.SetField("BranchNumber", model.BranchNumber);
+            fields.SetField("BranchName", model.BranchName);
+            fields.SetField("ManagerName", model.ManagerName);
+            fields.SetField("EffectiveDate", model.EffectiveDate.ToString("MM/dd/yyyy"));
+            fields.SetField("NewPosition", model.NewPosition);
+            fields.SetField("JobTitle", model.JobTitle);
+            fields.SetField("FullTime", model.FullTime ? "Yes" : "Off");
+            fields.SetField("PartTime", model.PartTime ? "Yes" : "Off");
+            fields.SetField("Hourly", model.Hourly ? "Yes" : "Off");
+            fields.SetField("Salary", model.Salary ? "Yes" : "Off");
+            fields.SetField("NewLocBranchNumber", model.NewLocBranchNumber);
+            fields.SetField("NewLocBranchName", model.NewLocBranchName);
+            fields.SetField("NewLocManagerName", model.NewLocManagerName);
+
+            fields.SetField("AdditionalNotes", model.AdditionalNotes);
+            
 
             // Optional: flatten the form so fields can't be edited after filling
             stamper.FormFlattening = true;

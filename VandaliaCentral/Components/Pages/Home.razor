@@ -163,7 +163,7 @@
         try
         {
             // Get the full base URL from the running app (e.g., http://localhost:5000/)
-            var baseUri = Nav.BaseUri;
+            var baseUri = Nav.BaseUri; 
             var requestUri = new Uri(new Uri(baseUri), "api/pdfs/latest-monday-minute-title");
 
             mmHeader = await Http.GetStringAsync(requestUri);
