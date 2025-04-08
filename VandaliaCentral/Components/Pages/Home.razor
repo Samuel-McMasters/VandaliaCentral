@@ -2,6 +2,9 @@
 @inject IWebHostEnvironment Env
 @inject HttpClient Http
 @inject NavigationManager Nav
+@using VandaliaCentral.Services
+@inject PDFService PDFService
+
 
 
 <PageTitle>Vandalia Central</PageTitle>
@@ -16,22 +19,19 @@
             <!-- Monday Minute -->
             <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">@mmHeader</h5>
-                    <a href="@mmFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    @* <h5 class="mb-0">@mmHeader</h5> *@
+                    <a href="https://vandaliacentral.blob.core.windows.net/mondayminute/Monday Minute - April 7, 2025.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
 
-                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">
-                    
-                    
-
-                    @if (mmFileUrl != null)
+                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
+                    @if (pdfUrl != null)
                     {
-                        <object data="@mmFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                        <object data="@pdfUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
                             <p>
                                 Your browser cannot display this PDF.
-                                <a href="@bcFileUrl" target="_blank">Download it instead</a>.
+                                <a href="@pdfUrl" target="_blank">Download it instead</a>.
                             </p>
                         </object>
                     }
@@ -39,8 +39,6 @@
                     {
                         <p>No newsletter PDF found.</p>
                     }
-
-
                 </div>
 
 
@@ -55,27 +53,19 @@
             <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Bonus Chart</h5>
-                    <a href="@bcFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
                 <div class="w-100 rounded overflow-hidden" style="height: 400px; background-color: #e9ecef;">
 
-                    @if (bcFileUrl != null)
-                    {
-                       
-
-                        <object data="@bcFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
+                        <object data="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
                             <p>
                                 Your browser cannot display this PDF.
-                                <a href="@bcFileUrl" target="_blank">Download it instead</a>.
+                                <a href="https://vandaliacentral.blob.core.windows.net/bonuschart/20250405.pdf" target="_blank">Download it instead</a>.
                             </p>
                         </object>
-                    }
-                    else
-                    {
-                        <p>No newsletter PDF found.</p>
-                    }
+                    
                 </div>
 
 
@@ -151,28 +141,17 @@
 
 @code {
     //variables to hold api endpoints for pdfs
-    private string bcFileUrl = "/api/pdfs/latest-bonus-chart#zoom=FitH";
-    private string mmFileUrl = "/api/pdfs/latest-monday-minute#zoom=FitH";
     
-    private string mmHeader = "Loading...";
+    private string? pdfUrl;
 
     protected override async Task OnInitializedAsync()
     {
+        pdfUrl = await PDFService.GetLatestPdfUrlAsync();
 
-        //calls endpoint to get monday minute title
-        try
-        {
-            // Get the full base URL from the running app (e.g., http://localhost:5000/)
-            var baseUri = Nav.BaseUri; 
-            var requestUri = new Uri(new Uri(baseUri), "api/pdfs/latest-monday-minute-title");
-
-            mmHeader = await Http.GetStringAsync(requestUri);
-        }
-        catch (Exception ex)
-        {
-            mmHeader = $"Error: {ex.Message}";
-        }
+       
     }
+
+    
   
 }
 
