@@ -21,12 +21,12 @@ builder.Services.AddScoped<EmailService>();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue
-//builder.Services
-//    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+builder.Services
+    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
 
 
-//builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
+builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
 //builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 //{
 //    options.LogoutPath = "/MicrosoftIdentity/Account/SignOut";
@@ -35,10 +35,10 @@ builder.Services.AddScoped<EmailService>();
 
 
 
-//builder.Services.AddAuthorization(options =>
-//{
-//    options.FallbackPolicy = options.DefaultPolicy;
-//});
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
 //===================================================
 
@@ -61,8 +61,8 @@ app.UseHttpsRedirection();
 
 
 //Uncomment when figured out IIS hosting stuff
-//app.UseAuthentication();
-//app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 
 
