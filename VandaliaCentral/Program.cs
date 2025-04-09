@@ -74,7 +74,6 @@ app.UseRouting(); // optional if you're already routing
 
 app.UseStaticFiles();
 app.UseAntiforgery();
-
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
