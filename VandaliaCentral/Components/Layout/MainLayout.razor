@@ -20,18 +20,18 @@
 
         @if (IsUploader)
         {
-        <div class="container-fluid justify-content-end gap-3">
-                @if (!string.IsNullOrEmpty(uploadStatus))
-                {
-                    <div class="btn-success rounded px-2 py-1">
-                        @uploadStatus
-                    </div>
-                }
-            <label class="btn btn-primary mmbtn custom-upload-button ml-4">
-                Upload Monday Minute
-                <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
-            </label>
-        </div>
+            <div class="container-fluid justify-content-end gap-3">
+                    @if (!string.IsNullOrEmpty(uploadStatus))
+                    {
+                        <div class="btn-success rounded px-2 py-1">
+                            @uploadStatus
+                        </div>
+                    }
+                <label class="btn btn-primary mmbtn custom-upload-button ml-4">
+                    Upload Monday Minute
+                    <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
+                </label>
+            </div>
         }
 
 
@@ -54,7 +54,7 @@
 @code {
     private string? uploadStatus;
     private string? statusClass;
-    private bool IsUploader = false;
+    private bool IsUploader = true;
 
     private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
