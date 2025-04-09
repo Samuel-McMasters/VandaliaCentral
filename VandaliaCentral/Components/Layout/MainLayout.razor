@@ -4,6 +4,8 @@
 @namespace VandaliaCentral.Components.Layout
 @using VandaliaCentral.Services
 @inject PdfService PdfService
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 
 
@@ -13,21 +15,24 @@
         <a class="navbar-brand" href="https://vandaliarental.com/" target="_blank">
             <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
         </a>
+
+
+
+        @if (IsUploader)
+        {
         <div class="container-fluid justify-content-end gap-3">
-            
-            @if (!string.IsNullOrEmpty(uploadStatus))
-            {
-                <div class="btn-success rounded px-2 py-1" >
-                    @uploadStatus
-                </div>
-            }
+                @if (!string.IsNullOrEmpty(uploadStatus))
+                {
+                    <div class="btn-success rounded px-2 py-1">
+                        @uploadStatus
+                    </div>
+                }
             <label class="btn btn-primary mmbtn custom-upload-button ml-4">
                 Upload Monday Minute
                 <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
             </label>
-            
-
         </div>
+        }
 
 
     </nav>
@@ -49,6 +54,7 @@
 @code {
     private string? uploadStatus;
     private string? statusClass;
+    private bool IsUploader = false;
 
     private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
@@ -89,7 +95,15 @@
 
 
     }
-    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Check if user is in the correct Entra ID group by claim
+        IsUploader = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
+    }
     
 }
 
