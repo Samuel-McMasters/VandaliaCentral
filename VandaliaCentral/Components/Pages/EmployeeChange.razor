@@ -2,6 +2,7 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject EmailService EmailService
+@inject EmailsService EmailsService
 @inject NavigationManager Navigation
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
@@ -156,20 +157,42 @@
     private ChangeFormModel formModel = new();
     private bool success = false;
 
+
+    // private async Task HandleValidSubmit()
+    // {
+        
+    //     try
+    //     {
+
+    //         var pdfBytes = PDFTemplateFiller.FillChange(formModel);
+    //         var employeeName = $"{formModel.FirstName}-{formModel.LastName}";
+
+
+    //         await EmailService.SendChangeFormAsync(pdfBytes, employeeName);
+    //         success = true;
+
+    //         await Task.Delay(3000);
+    //         Navigation.NavigateTo("/");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"PDF or Email Error: {ex.Message}");
+
+    //         if (ex.InnerException != null)
+    //             Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+    //     }
+    // }
     private async Task HandleValidSubmit()
     {
-        
+        var fullName = $"{formModel.FirstName} {formModel.LastName}";
+
         try
         {
-
-            var pdfBytes = PDFTemplateFiller.FillChange(formModel);
-            var employeeName = $"{formModel.FirstName}-{formModel.LastName}";
-
-
-            await EmailService.SendChangeFormAsync(pdfBytes, employeeName);
+            var pdfBytes = PDFTemplateFiller.FillChange(formModel); // You likely already have this
+            await EmailsService.SendChangeFormAsync(pdfBytes, fullName);
             success = true;
 
-            await Task.Delay(3000);
+            await Task.Delay(3000); // Optional UX pause
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
@@ -180,4 +203,6 @@
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
         }
     }
+
+
 }
