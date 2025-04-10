@@ -156,32 +156,6 @@
 @code {
     private ChangeFormModel formModel = new();
     private bool success = false;
-
-
-    // private async Task HandleValidSubmit()
-    // {
-        
-    //     try
-    //     {
-
-    //         var pdfBytes = PDFTemplateFiller.FillChange(formModel);
-    //         var employeeName = $"{formModel.FirstName}-{formModel.LastName}";
-
-
-    //         await EmailService.SendChangeFormAsync(pdfBytes, employeeName);
-    //         success = true;
-
-    //         await Task.Delay(3000);
-    //         Navigation.NavigateTo("/");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"PDF or Email Error: {ex.Message}");
-
-    //         if (ex.InnerException != null)
-    //             Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-    //     }
-    // }
     private async Task HandleValidSubmit()
     {
         var fullName = $"{formModel.FirstName} {formModel.LastName}";
