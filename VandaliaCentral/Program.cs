@@ -1,6 +1,9 @@
 using VandaliaCentral.Components;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using Microsoft.Graph;
+using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
+
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
 using VandaliaCentral.Services;
@@ -8,7 +11,7 @@ using QuestPDF.Infrastructure;
 
 
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
@@ -21,9 +24,11 @@ builder.Services.AddScoped<EmailService>();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue
-builder.Services
-    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+//builder.Services
+//    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+
+
 
 
 builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
@@ -32,13 +37,29 @@ builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
 //    options.LogoutPath = "/MicrosoftIdentity/Account/SignOut";
 //});
 
-
+//===================================================
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
 
 
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = options.DefaultPolicy;
 });
+
+builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
+{
+    var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
+
+    return new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+    {
+        var accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+    }));
+});
+
 
 //===================================================
 
