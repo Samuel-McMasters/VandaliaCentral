@@ -4,12 +4,19 @@ namespace VandaliaCentral.Services
 {
     public class EmailsService
     {
-        private readonly GraphServiceClient _graphClient;
+        
 
-        public EmailsService(GraphServiceClient graphClient)
+        private readonly GraphServiceClient _graphClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public EmailsService(GraphServiceClient graphClient, IHttpContextAccessor httpContextAccessor)
         {
             _graphClient = graphClient;
+            _httpContextAccessor = httpContextAccessor;
         }
+
+
+       
 
         public async Task SendTerminationFormAsync(byte[] pdfBytes, string employeeName)
         {
@@ -27,7 +34,7 @@ namespace VandaliaCentral.Services
                     {
                         EmailAddress = new EmailAddress
                         {
-                            Address = "sam.mcmasters@vandaliarental.com" // Replace later if needed
+                            Address = "sam.mcmasters@vandaliarental.com" // TODO: Update this email
                         }
                     }
                 },

@@ -20,6 +20,7 @@ builder.Services.AddSingleton<PdfService>();
 //For pdf api controller
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailsService>();
 
@@ -57,7 +58,8 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
     return new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
     {
         var accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
     }));
 });
 
