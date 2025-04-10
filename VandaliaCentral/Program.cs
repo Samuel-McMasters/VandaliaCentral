@@ -21,6 +21,7 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<EmailsService>();
 
 //===================================================
 //Uncomment when I figure out IIS hosting issue
