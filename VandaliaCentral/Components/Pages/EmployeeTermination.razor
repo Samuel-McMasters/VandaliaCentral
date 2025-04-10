@@ -2,6 +2,7 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject EmailService EmailService
+@inject EmailsService EmailsService
 @inject NavigationManager Navigation
 
 
@@ -169,15 +170,35 @@
     private TerminationFormModel formModel = new();
     private bool success = false;
 
+    // private async Task HandleValidSubmit()
+    // {
+    //     try
+    //     {
+    //         var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
+    //         await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+    //         success = true;
+            
+    //         await Task.Delay(3000);
+    //         Navigation.NavigateTo("/");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"PDF or Email Error: {ex.Message}");
+
+    //         if (ex.InnerException != null)
+    //             Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+    //     }
+    // }
+
     private async Task HandleValidSubmit()
     {
         try
         {
-            var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
-            await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+            var pdfBytes = PDFTemplateFiller.FillTermination(formModel); // You likely already have this
+            await EmailsService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
             success = true;
-            
-            await Task.Delay(3000);
+
+            await Task.Delay(3000); // Optional UX pause
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
@@ -188,4 +209,7 @@
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
         }
     }
+
+
+
 }
