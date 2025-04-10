@@ -170,25 +170,6 @@
     private TerminationFormModel formModel = new();
     private bool success = false;
 
-    // private async Task HandleValidSubmit()
-    // {
-    //     try
-    //     {
-    //         var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
-    //         await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
-    //         success = true;
-            
-    //         await Task.Delay(3000);
-    //         Navigation.NavigateTo("/");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"PDF or Email Error: {ex.Message}");
-
-    //         if (ex.InnerException != null)
-    //             Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-    //     }
-    // }
 
     private async Task HandleValidSubmit()
     {
