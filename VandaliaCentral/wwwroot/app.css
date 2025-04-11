@@ -111,13 +111,8 @@ h1:focus {
 
 
 
-.sidebar {
-    width: 220px;
-    min-height: 100vh;
-    padding: 1rem 0.5rem;
-    background-color: #FF6720; /* fallback if class is missing */
-    box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
-}
+
+
 
 /* Ensure the main layout grows properly */
 main {
@@ -172,7 +167,14 @@ main {
     top: 80px; /* same as navbar height */
     bottom: 0;
     left: 0;
-    
+}
+
+.sidebar {
+    width: 220px;
+    min-height: 100vh;
+    padding: 1rem 0.5rem;
+    background-color: #FF6720; /* fallback if class is missing */
+    box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
 }
 
 .main-content {
