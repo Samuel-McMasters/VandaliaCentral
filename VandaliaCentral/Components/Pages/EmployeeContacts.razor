@@ -6,7 +6,8 @@
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
 	<h3>Employee Contacts</h3>
-	
+	<input type="text" class="form-control mb-3" placeholder="Search by name or email..."
+		   @bind="searchTerm" @bind:event="oninput" />
 	<div>
 		@if (employees == null)
 		{
@@ -23,7 +24,7 @@
 						<th>Mobile Phone</th>
 					</tr>
 					<tbody>
-						@foreach (var user in employees)
+						@foreach (var user in FilteredEmployees)
 						{
 							<tr>
 								<td>@user.DisplayName</td>
@@ -45,6 +46,7 @@
 
 @code {
 	private List<User> employees;
+	private string searchTerm = "";
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -79,5 +81,14 @@
 			Console.WriteLine($"Error code: {ex.Error.Code}");
 			Console.WriteLine($"Error details: {ex.Error.Message}");
 		}
+
+
 	}
+	private IEnumerable<User> FilteredEmployees =>
+	string.IsNullOrWhiteSpace(searchTerm)
+		? employees
+		: employees.Where(u =>
+			(!string.IsNullOrWhiteSpace(u.DisplayName) && u.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+			(!string.IsNullOrWhiteSpace(u.Mail) && u.Mail.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+		);
 }
