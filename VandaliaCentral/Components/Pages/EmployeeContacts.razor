@@ -4,12 +4,13 @@
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
+<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
 	<h3>Employee Contacts</h3>
+	
 	<div>
 		@if (employees == null)
 		{
-			<p>Loading contact...</p>
+			<p>Loading contacts...</p>
 		}
 		else
 		{
@@ -19,6 +20,7 @@
 						<th>Name</th>
 						<th>Job Title</th>
 						<th>Email</th>
+						<th>Mobile Phone</th>
 					</tr>
 					<tbody>
 						@foreach (var user in employees)
@@ -27,6 +29,8 @@
 								<td>@user.DisplayName</td>
 								<td>@user.JobTitle</td>
 								<td>@user.Mail</td>
+								<td>@user.MobilePhone</td>
+								
 							</tr>
 						}
 					</tbody>
@@ -44,15 +48,30 @@
 
 	protected override async Task OnInitializedAsync()
 	{
+		var allUsers = new List<User>();
 		try
 		{
-			var users = await GraphClient.Users
+			var page = await GraphClient.Users
 				.Request()
-				.Select(u => new { u.DisplayName, u.Mail, u.JobTitle })
-				.Top(100) // You can paginate or adjust the number
+				.Select(u => new { u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone })
+				.Top(100)
 				.GetAsync();
 
-			employees = users.CurrentPage.ToList();
+			while (page != null)
+			{
+				allUsers.AddRange(page.CurrentPage);
+
+				if (page.NextPageRequest != null)
+				{
+					page = await page.NextPageRequest.GetAsync();
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			employees = allUsers;
 		}
 		catch (ServiceException ex)
 		{
