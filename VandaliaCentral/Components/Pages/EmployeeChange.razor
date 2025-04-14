@@ -1,9 +1,11 @@
 ﻿@page "/employeechange"
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
+@using Microsoft.Identity.Web
 @inject EmailService EmailService
 @inject EmailsService EmailsService
 @inject NavigationManager Navigation
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Employee Change Form</h3>
