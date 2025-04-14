@@ -161,13 +161,17 @@ main {
 }
 
 .vandalia-sidebar {
-    width: 200px; /* adjust as needed */
+    width: 220px;
     background-color: #f8f9fa;
+    box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    z-index: 1030; /* Above content */
+    height: 100vh;
     position: fixed;
-    top: 80px; /* same as navbar height */
-    bottom: 0;
+    top: 80px; /* navbar height */
     left: 0;
 }
+
 
 .sidebar {
     width: 220px;
