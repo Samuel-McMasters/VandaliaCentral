@@ -15,27 +15,31 @@
 		}
 		else
 		{
-				<table class="table table-striped w-100">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Job Title</th>
-							<th>Email</th>
-							<th>Mobile Phone</th>
-						</tr>
-					</thead>
-					<tbody>
+			<table class="table table-striped w-100">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th class="d-none d-md-table-cell">Job Title</th>
+						<th class="d-none d-lg-table-cell">Email</th>
+						<th class="d-none d-xl-table-cell">Mobile Phone</th>
+					</tr>
+				</thead>
+				<tbody>
 					@foreach (var user in FilteredEmployees)
 					{
-					<tr>
-						<td>@user.DisplayName</td>
-						<td>@user.JobTitle</td>
-						<td>@user.Mail</td>
-						<td>@user.MobilePhone</td>
-					</tr>
+						<tr>
+							<td>
+								<NavLink href="@($"/employeecontacts/{user.Id}")" class="text-decoration-none">
+									@user.DisplayName
+								</NavLink>
+							</td>
+							<td class="d-none d-md-table-cell">@user.JobTitle</td>
+							<td class="d-none d-lg-table-cell">@user.Mail</td>
+							<td class="d-none d-xl-table-cell">@user.MobilePhone</td>
+						</tr>
 					}
-		</tbody>
-	</table>
+				</tbody>
+			</table>
 		}
 
 	</div>
@@ -54,7 +58,7 @@
 		{
 			var page = await GraphClient.Users
 				.Request()
-				.Select(u => new { u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone })
+				.Select(u => new { u.Id, u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone })
 				.Top(100)
 				.GetAsync();
 

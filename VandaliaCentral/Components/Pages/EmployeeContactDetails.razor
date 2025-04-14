@@ -1,0 +1,36 @@
+﻿@page "/employeecontacts/{id}"
+@inject Microsoft.Graph.GraphServiceClient GraphClient
+@using Microsoft.Graph
+
+<h4>Employee Details</h4>
+
+@if (contact == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="card p-3">
+        <h5>@contact.DisplayName</h5>
+        <p><strong>Job Title:</strong> @contact.JobTitle</p>
+        <p><strong>Email:</strong> @contact.Mail</p>
+        <p><strong>Phone:</strong> @contact.MobilePhone</p>
+    </div>
+}
+
+@code {
+    [Parameter] public string id { get; set; }
+    private User contact;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            contact = await GraphClient.Users[id].Request().GetAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading contact: {ex.Message}");
+        }
+    }
+}
