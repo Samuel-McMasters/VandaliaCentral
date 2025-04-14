@@ -2,21 +2,23 @@
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @using Microsoft.Graph
 
-<h4>Employee Details</h4>
+<div class="px-3">
+    <h4>Employee Details</h4>
 
-@if (contact == null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <div class="card p-3">
-        <h5>@contact.DisplayName</h5>
-        <p><strong>Job Title:</strong> @contact.JobTitle</p>
-        <p><strong>Email:</strong> @contact.Mail</p>
-        <p><strong>Phone:</strong> @contact.MobilePhone</p>
-    </div>
-}
+    @if (contact == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="card p-3">
+            <h5>@contact.DisplayName</h5>
+            <p><strong>Job Title:</strong> @contact.JobTitle</p>
+            <p><strong>Email:</strong> @contact.Mail</p>
+            <p><strong>Phone:</strong> @contact.MobilePhone</p>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public string id { get; set; }
@@ -34,3 +36,4 @@ else
         }
     }
 }
+
