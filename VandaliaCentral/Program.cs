@@ -25,13 +25,6 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailsService>();
 
 //===================================================
-//Uncomment when I figure out IIS hosting issue
-//builder.Services
-//    .AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-//    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
-
-
-
 
 builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
 //builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
