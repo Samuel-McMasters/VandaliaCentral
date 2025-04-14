@@ -6,7 +6,7 @@
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
 	<h3>Employee Contacts</h3>
-	<input type="text" class="form-control mb-3" placeholder="Search by name or email..."
+	<input type="text" class="form-control w-50 mb-3" placeholder="Search by name or email..."
 		   @bind="searchTerm" @bind:event="oninput" />
 	<div>
 		@if (employees == null)

@@ -4,7 +4,6 @@ using Microsoft.Identity.Web;
 using Microsoft.Graph;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
-
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
 using VandaliaCentral.Services;
