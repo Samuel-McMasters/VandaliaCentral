@@ -2,6 +2,7 @@ using VandaliaCentral.Components;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.Graph;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -50,6 +51,9 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = options.DefaultPolicy;
 });
+
+
+
 
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {

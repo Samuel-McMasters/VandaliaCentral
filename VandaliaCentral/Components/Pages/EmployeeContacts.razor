@@ -1,6 +1,8 @@
 ﻿@page "/employeecontacts"
 @using Microsoft.Graph
+@using Microsoft.Identity.Web
 @inject Microsoft.Graph.GraphServiceClient GraphClient
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
 	<h3>Employee Contacts</h3>
@@ -46,7 +48,8 @@
 		{
 			var users = await GraphClient.Users
 				.Request()
-				.Top(1)
+				.Select(u => new { u.DisplayName, u.Mail, u.JobTitle })
+				.Top(100) // You can paginate or adjust the number
 				.GetAsync();
 
 			employees = users.CurrentPage.ToList();
