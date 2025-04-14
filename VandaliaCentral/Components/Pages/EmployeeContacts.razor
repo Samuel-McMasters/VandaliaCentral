@@ -15,28 +15,27 @@
 		}
 		else
 		{
-			<table class ="table table-striped">
-				<thread>
-					<tr>
-						<th>Name</th>
-						<th>Job Title</th>
-						<th>Email</th>
-						<th>Mobile Phone</th>
-					</tr>
+				<table class="table table-striped w-100">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Job Title</th>
+							<th>Email</th>
+							<th>Mobile Phone</th>
+						</tr>
+					</thead>
 					<tbody>
-						@foreach (var user in FilteredEmployees)
-						{
-							<tr>
-								<td>@user.DisplayName</td>
-								<td>@user.JobTitle</td>
-								<td>@user.Mail</td>
-								<td>@user.MobilePhone</td>
-								
-							</tr>
-						}
-					</tbody>
-				</thread>
-			</table>
+					@foreach (var user in FilteredEmployees)
+					{
+					<tr>
+						<td>@user.DisplayName</td>
+						<td>@user.JobTitle</td>
+						<td>@user.Mail</td>
+						<td>@user.MobilePhone</td>
+					</tr>
+					}
+		</tbody>
+	</table>
 		}
 
 	</div>

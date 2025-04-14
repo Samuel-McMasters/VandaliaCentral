@@ -212,3 +212,7 @@ a.disabled {
     background-color: cornflowerblue !important;
     border-color: cornflowerblue !important;
 }
+
+.employee-contacts-table {
+    width: 100vh !important;
+}

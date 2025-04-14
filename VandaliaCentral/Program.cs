@@ -51,7 +51,16 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = options.DefaultPolicy;
 });
 
+builder.Services.AddSingleton<GraphServiceClient>(sp =>
+{
+    var tokenAcquisition = sp.GetRequiredService<ITokenAcquisition>();
 
+    return new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+    {
+        var token = await tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }));
+});
 
 
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
