@@ -73,6 +73,8 @@
 
         try
         {
+            uploadStatus = "Uploading...";
+
             await PdfService.UploadPdfAsync("mondayminute", file);
             uploadStatus = "Upload successful!";
            

@@ -1,0 +1,61 @@
+﻿@page "/employeecontacts"
+@using Microsoft.Graph
+@inject Microsoft.Graph.GraphServiceClient GraphClient
+
+<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
+	<h3>Employee Contacts</h3>
+	<div>
+		@if (employees == null)
+		{
+			<p>Loading contact...</p>
+		}
+		else
+		{
+			<table class ="table table-striped">
+				<thread>
+					<tr>
+						<th>Name</th>
+						<th>Job Title</th>
+						<th>Email</th>
+					</tr>
+					<tbody>
+						@foreach (var user in employees)
+						{
+							<tr>
+								<td>@user.DisplayName</td>
+								<td>@user.JobTitle</td>
+								<td>@user.Mail</td>
+							</tr>
+						}
+					</tbody>
+				</thread>
+			</table>
+		}
+
+	</div>
+
+</div>
+
+
+@code {
+	private List<User> employees;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var users = await GraphClient.Users
+				.Request()
+				.Top(1)
+				.GetAsync();
+
+			employees = users.CurrentPage.ToList();
+		}
+		catch (ServiceException ex)
+		{
+			Console.WriteLine($"Error fetching users: {ex.Message}");
+			Console.WriteLine($"Error code: {ex.Error.Code}");
+			Console.WriteLine($"Error details: {ex.Error.Message}");
+		}
+	}
+}
