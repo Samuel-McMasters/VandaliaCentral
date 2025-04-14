@@ -88,7 +88,7 @@ namespace VandaliaCentral.Services
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
             // Optional: Generate a unique file name with timestamp
-            var fileName = $"{Path.GetFileNameWithoutExtension(file.Name)}_{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
+            var fileName = $"{Path.GetFileNameWithoutExtension(file.Name)}.pdf";
 
             var blobClient = containerClient.GetBlobClient(fileName);
 
