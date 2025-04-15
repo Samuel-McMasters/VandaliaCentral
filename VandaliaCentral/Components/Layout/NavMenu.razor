@@ -5,10 +5,12 @@
 
 <div class="sidebar bg-vandalia-gray pt-3" style="height: 100%; overflow-y: auto;">
     <div class="menu btn-group-vertical gap-4 align-items-center w-100">
+
         <NavLink href="/employeecontacts" @onclick="HandleLinkClick"  class="btn btn-success " activeClass="active">
             <span class="oi oi-people me-2" aria-hidden="true"></span>
             Employee Contacts
         </NavLink>
+
         @if (IsBranchManager)
         {
             <div class="dropdown w-100">
@@ -16,13 +18,14 @@
                     Branch Manager
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="" target="_blank" @onclick="HandleLinkClick">Store Audit Quality</a></li>
-                    <li><a class="dropdown-item" href="" target="_blank" @onclick="HandleLinkClick">Checklists</a></li>
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Store Audit Quality</a></li>
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Checklists</a></li>
                     
 
                 </ul>
             </div>
         }
+
         <div class="dropdown w-100">
             <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Rentals
