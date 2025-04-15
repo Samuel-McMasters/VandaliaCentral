@@ -48,7 +48,9 @@
     <div class="main-content-wrapper d-flex">
         <!-- Sidebar -->
         <div class=@SidebarCssClass id="sidebarMenu">        
-            <NavMenu></NavMenu>   
+            <CascadingValue Value="(Action)CloseSidebar">
+                <NavMenu></NavMenu>
+            </CascadingValue>
         </div>
 
         <!-- Content -->
@@ -59,7 +61,6 @@
 </div>
 
 @code {
-    [CascadingParameter] public Action? CloseSidebar { get; set; }
     private string SidebarCssClass => showSidebar ? "vandalia-sidebar show d-lg-block" : "vandalia-sidebar d-lg-block";
     private bool showSidebar = false;
     private string? uploadStatus;
@@ -69,6 +70,11 @@
     private void ToggleSidebar()
     {
         showSidebar = !showSidebar;
+    }
+
+    private void CloseSidebar()
+    {
+        showSidebar = false;
     }
 
 
