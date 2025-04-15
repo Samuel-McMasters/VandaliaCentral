@@ -4,7 +4,7 @@
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+<div class="container-fluid d-flex ps-4 flex-column border rounded bg-white shadow-sm col-md-12 py-4">
 	<h3>Employee Contacts</h3>
 	<input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
 		   @bind="searchTerm" @bind:event="oninput" />
@@ -18,10 +18,11 @@
 			<table class="table table-striped w-100">
 				<thead>
 						<tr class="w-100">
-						<th>Name</th>
-						<th class="d-none d-md-table-cell">Job Title</th>
-						<th class="d-none d-lg-table-cell">Email</th>
-						<th class="d-none d-xl-table-cell">Mobile Phone</th>
+						<th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="20%">Name</th>
+						<th class="d-none d-md-table-cell" width="20%">Job Title</th>
+						<th class="d-none d-lg-table-cell" width="20%">Email</th>
+						<th class="d-none d-xl-table-cell" width="20%">Mobile Phone</th>
+						<th class="d-none d-xl-table-cell" width="20%">IP Phone</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -36,6 +37,7 @@
 							<td class="d-none d-md-table-cell">@user.JobTitle</td>
 							<td class="d-none d-lg-table-cell">@user.Mail</td>
 							<td class="d-none d-xl-table-cell">@user.MobilePhone</td>
+							<td class="d-none d-xl-table-cell">@(user.BusinessPhones?.FirstOrDefault() ?? "")</td>
 						</tr>
 					}
 				</tbody>
@@ -56,11 +58,19 @@
 		var allUsers = new List<User>();
 		try
 		{
+			// var page = await GraphClient.Users
+			// 	.Request()
+			// 	.Select(u => new { u.Id, u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone, u.BusinessPhones })
+			// 	.Top(100)
+			// 	.GetAsync();
+
 			var page = await GraphClient.Users
 				.Request()
-				.Select(u => new { u.Id, u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone })
+				.Select("id,displayName,mail,jobTitle,mobilePhone,businessPhones")
 				.Top(100)
 				.GetAsync();
+
+
 
 			while (page != null)
 			{

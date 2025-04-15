@@ -56,6 +56,8 @@ builder.Services.AddSingleton<GraphServiceClient>(sp =>
 });
 
 
+
+
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {
     var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
