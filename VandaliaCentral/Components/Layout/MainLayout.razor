@@ -16,14 +16,17 @@
         
         <div class="d-flex w-100 align-items-center justify-content-between">
             <!-- Brand -->
+            <button class="btn btn-light d-lg-none me-2" @onclick="ToggleSidebar">
+                <i class="bi bi-list"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+</svg></i> <!-- or use "☰" if not using Bootstrap icons -->
+            </button>
             <a class="navbar-brand" href="/">
                 <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
             </a>
             
             <!--Mobile responsive hamburger menu button-->
-            <button class="btn btn-light d-lg-none me-2" @onclick="ToggleSidebar">
-                <i class="bi bi-list"></i> <!-- or use "☰" if not using Bootstrap icons -->
-            </button>
+            
             <!--Mobile responsive hamburger menu button-->
 
             @if (IsUploader)
