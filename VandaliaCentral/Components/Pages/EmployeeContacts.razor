@@ -3,6 +3,8 @@
 @using Microsoft.Identity.Web
 @using Microsoft.Identity.Client;
 @inject Microsoft.Graph.GraphServiceClient GraphClient
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor contextAccessor
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container-fluid d-flex ps-4 flex-column border rounded bg-white shadow-sm col-md-12 py-4">
@@ -18,7 +20,7 @@
 		{
 			<table class="table table-striped w-100">
 				<thead>
-						<tr class="w-100">
+					<tr class="w-100">
 						<th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="20%">Name</th>
 						<th class="d-none d-md-table-cell" width="20%">Job Title</th>
 						<th class="d-none d-lg-table-cell" width="20%">Email</th>
@@ -53,17 +55,21 @@
 @code {
 	private List<User> employees;
 	private string searchTerm = "";
+	private HttpContext context => contextAccessor.HttpContext;
 
 	protected override async Task OnInitializedAsync()
 	{
+		if (!context.User.Identity.IsAuthenticated)
+		{
+			Navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", true);
+			return;
+		}
+
+		
 		var allUsers = new List<User>();
 		try
 		{
-			// var page = await GraphClient.Users
-			// 	.Request()
-			// 	.Select(u => new { u.Id, u.DisplayName, u.Mail, u.JobTitle, u.MobilePhone, u.BusinessPhones })
-			// 	.Top(100)
-			// 	.GetAsync();
+		
 
 			var page = await GraphClient.Users
 				.Request()
@@ -88,12 +94,13 @@
 			}
 
 			employees = allUsers;
-		}
+		}		
 		catch (ServiceException ex)
 		{
 			Console.WriteLine($"Error fetching users: {ex.Message}");
 			Console.WriteLine($"Error code: {ex.Error.Code}");
 			Console.WriteLine($"Error details: {ex.Error.Message}");
+			
 		}
 
 
