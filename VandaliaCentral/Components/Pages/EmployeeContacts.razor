@@ -6,7 +6,7 @@
 
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-<div class="container-fluid d-flex ps-4 flex-column border rounded bg-white shadow-sm col-md-12 py-4 ms-2">
+<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4 ms-2">
 	<h3>Employee Contacts</h3>
 	<input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
 		   @bind="searchTerm" @bind:event="oninput" />
