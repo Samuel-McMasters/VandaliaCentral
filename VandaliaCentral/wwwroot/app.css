@@ -175,22 +175,18 @@ main {
 }
 
 
-.sidebar {
-    width: 220px;
-    
-    padding: 1rem 0.5rem;
-    background-color: #FF6720; /* fallback if class is missing */
-    box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
-}
 
 .sidebar {
+    width: 220px;
     flex: 1 1 auto;
     overflow-y: auto;
+    max-height: 100%;
     padding: 1rem 0.5rem;
     background-color: #FF6720;
-    max-height: 100%; /* NEW — ensures it doesn't grow past the parent */
-    -webkit-overflow-scrolling: touch;
+    box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
+    -webkit-overflow-scrolling: touch; /*native iOS scrolling */
     scroll-behavior: smooth;
+    overscroll-behavior: contain; /*prevents bounce through */
 }
 
 
