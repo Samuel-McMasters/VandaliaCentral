@@ -6,6 +6,7 @@
 @inject PdfService PdfService
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
 
 
 
@@ -36,7 +37,7 @@
                     }
 
                     <label class="btn btn-primary mmbtn custom-upload-button text-nowrap " style="max-width: 200px;">
-                        Upload Monday Minute
+                        @(isMobile ? "Upload" : "Upload Monday Minute")
                         <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
                     </label>
                 </div>
@@ -66,6 +67,7 @@
     private string? uploadStatus;
     private string? statusClass;
     private bool IsUploader = true;
+    private bool isMobile = false;
 
     private void ToggleSidebar()
     {
@@ -77,6 +79,15 @@
         showSidebar = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
+            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            StateHasChanged();
+        }
+    }
 
     private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
