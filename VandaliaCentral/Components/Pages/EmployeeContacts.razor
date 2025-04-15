@@ -1,6 +1,7 @@
 ﻿@page "/employeecontacts"
 @using Microsoft.Graph
 @using Microsoft.Identity.Web
+@using Microsoft.Identity.Client;
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
