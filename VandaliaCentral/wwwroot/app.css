@@ -165,21 +165,34 @@ main {
     background-color: #f8f9fa;
     box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    z-index: 1030; /* Above content */
-    height: 100vh;
+    z-index: 1030;
     position: fixed;
     top: 80px; /* navbar height */
     left: 0;
+    bottom: 0; /* important */
+    display: flex;
+    flex-direction: column;
 }
 
 
 .sidebar {
     width: 220px;
-    min-height: 100vh;
+    
     padding: 1rem 0.5rem;
     background-color: #FF6720; /* fallback if class is missing */
     box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
 }
+
+.sidebar {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 0.5rem;
+    background-color: #FF6720;
+    max-height: 100%; /* NEW — ensures it doesn't grow past the parent */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
 
 .main-content {
     margin-left: 200px; /* same as sidebar width */
