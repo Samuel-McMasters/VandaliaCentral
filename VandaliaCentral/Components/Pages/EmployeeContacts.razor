@@ -3,8 +3,7 @@
 @using Microsoft.Identity.Web
 @using Microsoft.Identity.Client;
 @inject Microsoft.Graph.GraphServiceClient GraphClient
-@inject NavigationManager Navigation
-@inject IHttpContextAccessor contextAccessor
+
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container-fluid d-flex ps-4 flex-column border rounded bg-white shadow-sm col-md-12 py-4">
@@ -55,15 +54,10 @@
 @code {
 	private List<User> employees;
 	private string searchTerm = "";
-	private HttpContext context => contextAccessor.HttpContext;
+
 
 	protected override async Task OnInitializedAsync()
 	{
-		if (!context.User.Identity.IsAuthenticated)
-		{
-			Navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", true);
-			return;
-		}
 
 		
 		var allUsers = new List<User>();
@@ -100,7 +94,6 @@
 			Console.WriteLine($"Error fetching users: {ex.Message}");
 			Console.WriteLine($"Error code: {ex.Error.Code}");
 			Console.WriteLine($"Error details: {ex.Error.Message}");
-			
 		}
 
 
