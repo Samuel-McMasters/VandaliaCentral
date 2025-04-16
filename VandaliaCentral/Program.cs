@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
 using VandaliaCentral.Services;
 using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 
 
@@ -38,6 +39,14 @@ builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .EnableTokenAcquisitionToCallDownstreamApi()
     .AddInMemoryTokenCaches();
 
+builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Session timeout
+    options.SlidingExpiration = false;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
 
 builder.Services.AddAuthorization(options =>
 {
