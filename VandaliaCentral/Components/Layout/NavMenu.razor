@@ -117,22 +117,25 @@
                 <li><a class="dropdown-item" href="https://www.intempomx.com/Account/Login" target="_blank" @onclick="HandleLinkClick">InTempoMX</a></li>
                 <li>
                     <a class="dropdown-item" href="https://login.salesforce.com/" target="_blank"
-                       style="white-space: normal; word-wrap: break-word; max-width: 250px;"
-                       @onclick="HandleLinkClick">
+                    style="white-space: normal; word-wrap: break-word; max-width: 250px;"
+                    @onclick="HandleLinkClick">
                         Rental Transfer (Salesforce)
                     </a>
                 </li>
             </ul>
         </div>
 
-        <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Safety & Training
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Blank</a></li>
-            </ul>
-        </div>
+        @if (IsSafetyTrainer)
+        {
+            <div class="dropdown w-100">
+                <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Safety & Training
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Blank</a></li>
+                </ul>
+            </div>
+        }    
 
         <div class="dropdown w-100">
             <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -163,6 +166,7 @@
     [CascadingParameter] public Action? CloseSidebar { get; set; }
     private int windowWidth;
     private bool IsBranchManager = false;
+    private bool IsSafetyTrainer = false;
 
     private void HandleLinkClick()
     {
