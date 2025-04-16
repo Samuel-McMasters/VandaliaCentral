@@ -5,10 +5,15 @@
 
 <div class="sidebar bg-vandalia-gray pt-3" style="height: 100%; overflow-y: auto;">
     <div class="menu btn-group-vertical gap-4 align-items-center w-100">
-
-        <NavLink href="/employeecontacts" @onclick="HandleLinkClick"  class="btn btn-success " activeClass="active">
+        
+        
+        <NavLink href="/employeecontacts" @onclick="HandleLinkClick"  class="btn btn-primary " activeClass="active">
             <span class="oi oi-people me-2" aria-hidden="true"></span>
             Employee Contacts
+        </NavLink>
+        <NavLink href="/supportticket" @onclick="HandleLinkClick" class="btn btn-danger" activeClass="active">
+            <span class="oi oi-people me-2" aria-hidden="true"></span>
+            Submit An IT Ticket
         </NavLink>
 
         @if (IsBranchManager)
@@ -31,7 +36,7 @@
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="https://roleplayv3.intemposoftware.com/roleplay&3.03.001/Login" target="_blank" @onclick="HandleLinkClick">Roleplay</a></li>
                 <li><a class="dropdown-item" href="https://login.salesforce.com/" target="_blank" @onclick="HandleLinkClick">Salesforce</a></li>
-                <li><a class="dropdown-item disabled" href="" target="" @onclick="HandleLinkClick">Delivery Zones</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/:x:/g/EXqeRtIeKlZElUNkYodlQUEBmZ0Msp5pgTZP4jdqGLq2Kg?e=SrmP8C" target="_blank" @onclick="HandleLinkClick">Delivery Zones</a></li>
                 <li><a class="dropdown-item disabled" href="" target="" @onclick="HandleLinkClick">Heavy Haul Calculator</a></li>
 
             </ul>
@@ -190,8 +195,7 @@
 
         // Check if user is in the correct Entra ID group by claim
         IsBranchManager = user.Claims.Any(c =>
-            c.Type == "groups" && c.Value == "159d4d29-7b2e-4a17-bc09-fda3b261204b" || 
-            c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096" ); //TODO: Remove group, was testing is multiple groups could be added to conditions
+            c.Type == "groups" && c.Value == "159d4d29-7b2e-4a17-bc09-fda3b261204b" );
     }
 
 
