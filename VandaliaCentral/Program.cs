@@ -23,6 +23,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<EmailsService>();
 builder.Services.AddScoped<GraphUserService>();
+builder.Services.AddScoped<GraphEmailService>();
 
 //===================================================
 

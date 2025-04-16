@@ -2,8 +2,8 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
+@inject GraphEmailService EmailService
 
-@inject EmailsService EmailsService
 @inject NavigationManager Navigation
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -175,13 +175,21 @@
     private TerminationFormModel formModel = new();
     private bool success = false;
 
-
     private async Task HandleValidSubmit()
     {
         try
         {
+            // Generate and email PDF (existing logic)
             var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
-            await EmailsService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+            
+
+            // Send a confirmation email via GraphEmailService
+            string toEmail = "sam.mcmasters@vandaliarental.com"; // TODO: replace or make dynamic
+            string subject = $"Termination Form Submitted: {formModel.EmployeeName}";
+            string body = $"The termination form for {formModel.EmployeeName} was successfully submitted on {DateTime.Now:MM/dd/yyyy}.";
+
+            await EmailService.SendEmailAsync(toEmail, subject, body);
+
             success = true;
             StateHasChanged();
             await Task.Delay(4000);
@@ -195,7 +203,4 @@
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
         }
     }
-
-
-
 }
