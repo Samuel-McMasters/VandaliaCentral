@@ -21,8 +21,8 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
-
 builder.Services.AddScoped<EmailsService>();
+builder.Services.AddScoped<GraphUserService>();
 
 //===================================================
 
@@ -44,27 +44,14 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = options.DefaultPolicy;
 });
 
-builder.Services.AddSingleton<GraphServiceClient>(sp =>
-{
-    var tokenAcquisition = sp.GetRequiredService<ITokenAcquisition>();
-
-    return new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
-    {
-        var token = await tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-    }));
-});
-
-
-
-
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {
     var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
 
     return new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
     {
-        var accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+        var accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(
+            new[] { "User.Read.All", "Mail.Send" });
         request.Headers.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
     }));
@@ -92,13 +79,10 @@ app.UseHttpsRedirection();
 
 
 //Uncomment when figured out IIS hosting stuff
+app.UseHttpsRedirection();
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-
-
-
-app.UseRouting(); // optional if you're already routing
-app.MapRazorPages(); // THIS is key for the built-in SignOut page to render and redirect
 //================================
 
 

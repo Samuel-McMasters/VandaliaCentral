@@ -3,7 +3,9 @@
 @using Microsoft.Identity.Web
 @using Microsoft.Identity.Client;
 @using Microsoft.AspNetCore.Authorization
+@using VandaliaCentral.Services
 @inject Microsoft.Graph.GraphServiceClient GraphClient
+@inject GraphUserService UserService
 @attribute [Authorize]
 
 
@@ -55,58 +57,39 @@
 
 
 @code {
-	private List<User> employees;
+	private List<User> employees = new();
 	private string searchTerm = "";
-
 
 	protected override async Task OnInitializedAsync()
 	{
-
-		
-		var allUsers = new List<User>();
 		try
 		{
-		
+			var allUsers = new List<User>();
 
-			var page = await GraphClient.Users
-				.Request()
-				.Select("id,displayName,mail,jobTitle,mobilePhone,businessPhones")
-				.Top(100)
-				.GetAsync();
+			var usersPage = await UserService.GetUsersAsync();
 
-
-
-			while (page != null)
-			{
-				allUsers.AddRange(page.CurrentPage);
-
-				if (page.NextPageRequest != null)
-				{
-					page = await page.NextPageRequest.GetAsync();
-				}
-				else
-				{
-					break;
-				}
-			}
+			allUsers.AddRange(usersPage);
 
 			employees = allUsers;
-		}		
+		}
 		catch (ServiceException ex)
 		{
 			Console.WriteLine($"Error fetching users: {ex.Message}");
 			Console.WriteLine($"Error code: {ex.Error.Code}");
 			Console.WriteLine($"Error details: {ex.Error.Message}");
 		}
-
-
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Unexpected error: {ex.Message}");
+		}
 	}
+
 	private IEnumerable<User> FilteredEmployees =>
-	string.IsNullOrWhiteSpace(searchTerm)
-		? employees
-		: employees.Where(u =>
-			(u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-			(u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-			(u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
-		);
+		string.IsNullOrWhiteSpace(searchTerm)
+			? employees
+			: employees.Where(u =>
+				(u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+				(u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+				(u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+			);
 }
