@@ -4,6 +4,7 @@
 @using Microsoft.Identity.Client;
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 
+
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
