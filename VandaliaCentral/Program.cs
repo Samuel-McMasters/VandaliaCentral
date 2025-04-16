@@ -21,7 +21,7 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<EmailService>();
+
 builder.Services.AddScoped<EmailsService>();
 
 //===================================================
