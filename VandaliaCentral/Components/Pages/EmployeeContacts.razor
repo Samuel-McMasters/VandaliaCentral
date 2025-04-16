@@ -1,95 +1,97 @@
 ﻿@page "/employeecontacts"
 @using Microsoft.Graph
 @using Microsoft.Identity.Web
-@using Microsoft.Identity.Client;
+@using Microsoft.Identity.Client
 @using Microsoft.AspNetCore.Authorization
 @using VandaliaCentral.Services
-@inject Microsoft.Graph.GraphServiceClient GraphClient
 @inject GraphUserService UserService
-@attribute [Authorize]
-
 
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
-	<h3>Employee Contacts</h3>
-	<input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
-		   @bind="searchTerm" @bind:event="oninput" />
-	<div>
-		@if (employees == null)
-		{
-			<p>Loading contacts...</p>
-		}
-		else
-		{
-			<table class="table table-striped w-100">
-				<thead>
-					<tr class="w-100">
-						<th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="20%">Name</th>
-						<th class="d-none d-md-table-cell" width="20%">Job Title</th>
-						<th class="d-none d-lg-table-cell" width="20%">Email</th>
-						<th class="d-none d-xl-table-cell" width="20%">Mobile Phone</th>
-						<th class="d-none d-xl-table-cell" width="20%">IP Phone</th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach (var user in FilteredEmployees)
-					{
-						<tr>
-							<td>
-								<NavLink href="@($"/employeecontacts/{user.Id}")" class="text-decoration-none">
-									@user.DisplayName
-								</NavLink>
-							</td>
-							<td class="d-none d-md-table-cell">@user.JobTitle</td>
-							<td class="d-none d-lg-table-cell">@user.Mail</td>
-							<td class="d-none d-xl-table-cell">@user.MobilePhone</td>
-							<td class="d-none d-xl-table-cell">@(user.BusinessPhones?.FirstOrDefault() ?? "")</td>
-						</tr>
-					}
-				</tbody>
-			</table>
-		}
+<AuthorizeView>
+    <Authorized>
+        <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+            <h3>Employee Contacts</h3>
+            <input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
+                   @bind="searchTerm" @bind:event="oninput" />
 
-	</div>
-
-</div>
-
+            <div>
+                @if (isLoading)
+                {
+                    <p>Loading contacts...</p>
+                }
+                else
+                {
+                    <table class="table table-striped w-100">
+                        <thead>
+                            <tr class="w-100">
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="20%">Name</th>
+                                <th class="d-none d-md-table-cell" width="20%">Job Title</th>
+                                <th class="d-none d-lg-table-cell" width="20%">Email</th>
+                                <th class="d-none d-xl-table-cell" width="20%">Mobile Phone</th>
+                                <th class="d-none d-xl-table-cell" width="20%">IP Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in FilteredEmployees)
+                            {
+                                <tr>
+                                    <td>
+                                        <NavLink href="@($"/employeecontacts/{user.Id}")" class="text-decoration-none">
+                                            @user.DisplayName
+                                        </NavLink>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">@user.JobTitle</td>
+                                    <td class="d-none d-lg-table-cell">@user.Mail</td>
+                                    <td class="d-none d-xl-table-cell">@user.MobilePhone</td>
+                                    <td class="d-none d-xl-table-cell">@(user.BusinessPhones?.FirstOrDefault() ?? "")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-	private List<User> employees = new();
-	private string searchTerm = "";
+    private List<User> employees = new();
+    private string searchTerm = "";
+    private bool isLoading = true;
 
-	protected override async Task OnInitializedAsync()
-	{
-		try
-		{
-			var allUsers = new List<User>();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var users = await UserService.GetUsersAsync();
+            employees = users.ToList();
+        }
+        catch (ServiceException ex)
+        {
+            Console.WriteLine($"Error fetching users: {ex.Message}");
+            Console.WriteLine($"Error code: {ex.Error.Code}");
+            Console.WriteLine($"Error details: {ex.Error.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 
-			var usersPage = await UserService.GetUsersAsync();
-
-			allUsers.AddRange(usersPage);
-
-			employees = allUsers;
-		}
-		catch (ServiceException ex)
-		{
-			Console.WriteLine($"Error fetching users: {ex.Message}");
-			Console.WriteLine($"Error code: {ex.Error.Code}");
-			Console.WriteLine($"Error details: {ex.Error.Message}");
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Unexpected error: {ex.Message}");
-		}
-	}
-
-	private IEnumerable<User> FilteredEmployees =>
-		string.IsNullOrWhiteSpace(searchTerm)
-			? employees
-			: employees.Where(u =>
-				(u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-				(u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-				(u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
-			);
+    private IEnumerable<User> FilteredEmployees =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? employees
+            : employees.Where(u =>
+                (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
 }
