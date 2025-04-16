@@ -14,7 +14,12 @@ namespace VandaliaCentral.Services
             _tokenAcquisition = tokenAcquisition;
         }
 
-        public async Task SendEmailAsync(string toEmail, string subject, string bodyText)
+        public async Task SendEmailWithAttachmentAsync(
+            string toEmail,
+            string subject,
+            string bodyText,
+            byte[] pdfBytes,
+            string pdfFileName)
         {
             var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
             {
@@ -38,6 +43,15 @@ namespace VandaliaCentral.Services
                         {
                             Address = toEmail
                         }
+                    }
+                },
+                Attachments = new MessageAttachmentsCollectionPage
+                {
+                    new FileAttachment
+                    {
+                        Name = pdfFileName,
+                        ContentBytes = pdfBytes,
+                        ContentType = "application/pdf"
                     }
                 }
             };

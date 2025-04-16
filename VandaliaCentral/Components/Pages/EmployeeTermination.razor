@@ -179,16 +179,15 @@
     {
         try
         {
-            // Generate and email PDF (existing logic)
             var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
-            
 
-            // Send a confirmation email via GraphEmailService
-            string toEmail = "sam.mcmasters@vandaliarental.com"; // TODO: replace or make dynamic
-            string subject = $"Termination Form Submitted: {formModel.EmployeeName}";
-            string body = $"The termination form for {formModel.EmployeeName} was successfully submitted on {DateTime.Now:MM/dd/yyyy}.";
-
-            await EmailService.SendEmailAsync(toEmail, subject, body);
+            await EmailService.SendEmailWithAttachmentAsync(
+                toEmail: "sam.mcmasters@vandaliarental.com",
+                subject: $"Termination Form: {formModel.EmployeeName}",
+                bodyText: $"Attached is the termination form for {formModel.EmployeeName}.",
+                pdfBytes: pdfBytes,
+                pdfFileName: $"{formModel.EmployeeName}_termination.pdf"
+            );
 
             success = true;
             StateHasChanged();

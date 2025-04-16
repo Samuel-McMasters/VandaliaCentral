@@ -3,7 +3,8 @@
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
 
-@inject EmailsService EmailsService
+
+@inject GraphEmailService EmailService
 @inject NavigationManager Navigation
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -143,6 +144,7 @@
 @code {
     private ChangeFormModel formModel = new();
     private bool success = false;
+
     private async Task HandleValidSubmit()
     {
         var fullName = $"{formModel.FirstName} {formModel.LastName}";
@@ -150,7 +152,15 @@
         try
         {
             var pdfBytes = PDFTemplateFiller.FillChange(formModel);
-            await EmailsService.SendChangeFormAsync(pdfBytes, fullName);
+
+            await EmailService.SendEmailWithAttachmentAsync(
+                toEmail: "sam.mcmasters@vandaliarental.com",
+                subject: $"Employee Change Form: {fullName}",
+                bodyText: $"Attached is the Employee Change form for {fullName}.",
+                pdfBytes: pdfBytes,
+                pdfFileName: $"{fullName}_change.pdf"
+            );
+
             success = true;
             StateHasChanged();
             await Task.Delay(4000);
@@ -164,6 +174,4 @@
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
         }
     }
-
-
 }
