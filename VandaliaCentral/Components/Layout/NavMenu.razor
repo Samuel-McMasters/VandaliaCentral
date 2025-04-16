@@ -82,7 +82,8 @@
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="/employeecontacts" target="" @onclick="HandleLinkClick">Employee Contacts</a></li>
-                <li><a class="dropdown-item" href="https://support.vandaliarental.com/support/home" target="_blank" @onclick="HandleLinkClick">Help Desk</a></li>
+                <li><a class="dropdown-item" href="https://support.vandaliarental.com/support/home" target="_blank" @onclick="HandleLinkClick">View Your Support Tickets</a></li>
+                <li><a class="dropdown-item" href="/supportticket" @onclick="HandleLinkClick">Submit A Ticket</a></li>
             </ul>
         </div>
 
@@ -189,7 +190,8 @@
 
         // Check if user is in the correct Entra ID group by claim
         IsBranchManager = user.Claims.Any(c =>
-            c.Type == "groups" && c.Value == "159d4d29-7b2e-4a17-bc09-fda3b261204b");
+            c.Type == "groups" && c.Value == "159d4d29-7b2e-4a17-bc09-fda3b261204b" || 
+            c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096" ); //TODO: Remove group, was testing is multiple groups could be added to conditions
     }
 
 

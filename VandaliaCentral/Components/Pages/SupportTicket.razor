@@ -1,0 +1,83 @@
+﻿@page "/supportticket"
+@using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Identity.Web
+@inject GraphEmailService EmailService
+@inject NavigationManager Navigation
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
+
+
+<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
+    <h3>Submit a Support Ticket</h3>
+
+    @if (success)
+    {
+        <p class="text-success mt-2">Your support ticket has been sent!</p>
+    }
+    else
+    {
+        <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Subject</strong></label>
+                <InputText @bind-Value="formModel.Subject" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Priority</strong></label>
+                <InputSelect @bind-Value="formModel.Priority" class="form-select">
+                    <option value="">Select Priority</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Details</strong></label>
+                <InputTextArea @bind-Value="formModel.Body" class="form-control" rows="5" />
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-2">Submit</button>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private SupportTicketModel formModel = new();
+    private bool success = false;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var subjectLine = $"[Support - {formModel.Priority} Priority] {formModel.Subject}";
+            var body = formModel.Body;
+
+            await EmailService.SendEmailAsync(
+                toEmail: "trevor.mackey@vandaliarental.com", // TODO: change this email
+                subject: subjectLine,
+                bodyText: body
+            );
+
+            success = true;
+            StateHasChanged();
+            await Task.Delay(4000);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Support ticket error: {ex.Message}");
+        }
+    }
+
+    public class SupportTicketModel
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+    }
+}
