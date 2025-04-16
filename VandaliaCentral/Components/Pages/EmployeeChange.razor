@@ -2,10 +2,10 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
-
-
+@using Microsoft.AspNetCore.Authorization
 @inject GraphEmailService EmailService
 @inject NavigationManager Navigation
+@attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">

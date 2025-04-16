@@ -2,9 +2,10 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
+@using Microsoft.AspNetCore.Authorization
 @inject GraphEmailService EmailService
-
 @inject NavigationManager Navigation
+@attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 

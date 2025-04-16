@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using VandaliaCentral.Services
 @inject GraphUserService UserService
-
+@attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <AuthorizeView>
