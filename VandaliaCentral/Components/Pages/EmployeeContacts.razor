@@ -2,7 +2,9 @@
 @using Microsoft.Graph
 @using Microsoft.Identity.Web
 @using Microsoft.Identity.Client;
+@using Microsoft.AspNetCore.Authorization
 @inject Microsoft.Graph.GraphServiceClient GraphClient
+@attribute [Authorize]
 
 
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]

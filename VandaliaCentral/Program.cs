@@ -98,7 +98,7 @@ app.UseAuthorization();
 
 
 app.UseRouting(); // optional if you're already routing
-//app.MapRazorPages(); // THIS is key for the built-in SignOut page to render and redirect
+app.MapRazorPages(); // THIS is key for the built-in SignOut page to render and redirect
 //================================
 
 
