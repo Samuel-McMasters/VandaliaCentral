@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
 @inject GraphEmailService EmailService
-@inject NavigationManager Navigation
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -50,6 +50,8 @@
     private SupportTicketModel formModel = new();
     private bool success = false;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     private async Task HandleValidSubmit()
     {
         try
@@ -58,9 +60,10 @@
             var body = formModel.Body;
 
             await EmailService.SendEmailAsync(
-                toEmail: "trevor.mackey@vandaliarental.com", // TODO: change this email
+                toEmail: "trevor.mackey@vandaliarental.com",
                 subject: subjectLine,
-                bodyText: body
+                bodyText: body,
+                navigation: Navigation
             );
 
             success = true;
