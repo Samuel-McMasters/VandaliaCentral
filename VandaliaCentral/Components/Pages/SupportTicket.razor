@@ -15,8 +15,7 @@
     {
         <p class="text-success mt-2">Your support ticket has been sent!</p>
     }
-
-    @if (failure)
+    else if (failure)
     {
         <h4 class="text-danger mt-2">There was an error submitting your ticket:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
