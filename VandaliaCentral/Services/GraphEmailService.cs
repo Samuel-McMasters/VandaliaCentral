@@ -1,18 +1,22 @@
 ﻿using Microsoft.Graph;
 using Microsoft.Identity.Web;
-using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Identity.Client;
+using System.Net.Http.Headers;
 
 namespace VandaliaCentral.Services
 {
     public class GraphEmailService
     {
         private readonly ITokenAcquisition _tokenAcquisition;
+        private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
-        public GraphEmailService(ITokenAcquisition tokenAcquisition)
+        public GraphEmailService(
+            ITokenAcquisition tokenAcquisition,
+            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
         {
             _tokenAcquisition = tokenAcquisition;
+            _consentHandler = consentHandler;
         }
 
         public async Task SendEmailWithAttachmentAsync(
@@ -20,12 +24,11 @@ namespace VandaliaCentral.Services
             string subject,
             string bodyText,
             byte[] pdfBytes,
-            string pdfFileName,
-            NavigationManager navigation)
+            string pdfFileName)
         {
             try
             {
-                var graphClient = await GetGraphClientAsync(navigation);
+                var graphClient = await GetGraphClientAsync();
 
                 var message = new Message
                 {
@@ -60,17 +63,17 @@ namespace VandaliaCentral.Services
                     .Request()
                     .PostAsync();
             }
-            catch (MsalUiRequiredException)
+            catch (Exception ex)
             {
-                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
+                _consentHandler.HandleException(ex);
             }
         }
 
-        public async Task SendEmailAsync(string toEmail, string subject, string bodyText, NavigationManager navigation)
+        public async Task SendEmailAsync(string toEmail, string subject, string bodyText)
         {
             try
             {
-                var graphClient = await GetGraphClientAsync(navigation);
+                var graphClient = await GetGraphClientAsync();
 
                 var message = new Message
                 {
@@ -96,28 +99,20 @@ namespace VandaliaCentral.Services
                     .Request()
                     .PostAsync();
             }
-            catch (MsalUiRequiredException)
+            catch (Exception ex)
             {
-                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
+                _consentHandler.HandleException(ex);
             }
         }
 
-        private async Task<GraphServiceClient> GetGraphClientAsync(NavigationManager navigation)
+        private async Task<GraphServiceClient> GetGraphClientAsync()
         {
-            try
+            var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            return new GraphServiceClient(new DelegateAuthenticationProvider(request =>
             {
-                var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
-                return new GraphServiceClient(new DelegateAuthenticationProvider(request =>
-                {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                    return Task.CompletedTask;
-                }));
-            }
-            catch (MsalUiRequiredException)
-            {
-                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
-                throw; // Still throw to avoid further execution
-            }
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                return Task.CompletedTask;
+            }));
         }
     }
 }
