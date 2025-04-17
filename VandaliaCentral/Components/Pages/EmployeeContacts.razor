@@ -76,7 +76,7 @@
     {
         try
         {
-            var users = await UserService.GetUsersAsync(Navigation); // Updated to pass Navigation
+            var users = await UserService.GetUsersAsync(); // Updated to pass Navigation
             employees = users.ToList();
         }
         catch (ServiceException ex)
