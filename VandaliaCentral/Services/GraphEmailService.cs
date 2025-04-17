@@ -1,7 +1,8 @@
 ﻿using Microsoft.Graph;
 using Microsoft.Identity.Web;
-
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Identity.Client;
 
 namespace VandaliaCentral.Services
 {
@@ -19,79 +20,104 @@ namespace VandaliaCentral.Services
             string subject,
             string bodyText,
             byte[] pdfBytes,
-            string pdfFileName)
+            string pdfFileName,
+            NavigationManager navigation)
         {
-            var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+            try
             {
-                var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }));
+                var graphClient = await GetGraphClientAsync(navigation);
 
-            var message = new Message
-            {
-                Subject = subject,
-                Body = new ItemBody
+                var message = new Message
                 {
-                    ContentType = BodyType.Text,
-                    Content = bodyText
-                },
-                ToRecipients = new List<Recipient>
-                {
-                    new Recipient
+                    Subject = subject,
+                    Body = new ItemBody
                     {
-                        EmailAddress = new EmailAddress
+                        ContentType = BodyType.Text,
+                        Content = bodyText
+                    },
+                    ToRecipients = new List<Recipient>
+                    {
+                        new Recipient
                         {
-                            Address = toEmail
+                            EmailAddress = new EmailAddress
+                            {
+                                Address = toEmail
+                            }
+                        }
+                    },
+                    Attachments = new MessageAttachmentsCollectionPage
+                    {
+                        new FileAttachment
+                        {
+                            Name = pdfFileName,
+                            ContentBytes = pdfBytes,
+                            ContentType = "application/pdf"
                         }
                     }
-                },
-                Attachments = new MessageAttachmentsCollectionPage
-                {
-                    new FileAttachment
-                    {
-                        Name = pdfFileName,
-                        ContentBytes = pdfBytes,
-                        ContentType = "application/pdf"
-                    }
-                }
-            };
+                };
 
-            await graphClient.Me.SendMail(message, true)
-                .Request()
-                .PostAsync();
-        }
-
-        public async Task SendEmailAsync(string toEmail, string subject, string bodyText)
-        {
-            var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                await graphClient.Me.SendMail(message, true)
+                    .Request()
+                    .PostAsync();
+            }
+            catch (MsalUiRequiredException)
             {
-                var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }));
-
-            var message = new Message
-            {
-                Subject = subject,
-                Body = new ItemBody
-                {
-                    ContentType = BodyType.Text,
-                    Content = bodyText
-                },
-                ToRecipients = new List<Recipient>
-        {
-            new Recipient
-            {
-                EmailAddress = new EmailAddress
-                {
-                    Address = toEmail
-                }
+                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
             }
         }
-            };
 
-            await graphClient.Me.SendMail(message, true)
-                .Request()
-                .PostAsync();
+        public async Task SendEmailAsync(string toEmail, string subject, string bodyText, NavigationManager navigation)
+        {
+            try
+            {
+                var graphClient = await GetGraphClientAsync(navigation);
+
+                var message = new Message
+                {
+                    Subject = subject,
+                    Body = new ItemBody
+                    {
+                        ContentType = BodyType.Text,
+                        Content = bodyText
+                    },
+                    ToRecipients = new List<Recipient>
+                    {
+                        new Recipient
+                        {
+                            EmailAddress = new EmailAddress
+                            {
+                                Address = toEmail
+                            }
+                        }
+                    }
+                };
+
+                await graphClient.Me.SendMail(message, true)
+                    .Request()
+                    .PostAsync();
+            }
+            catch (MsalUiRequiredException)
+            {
+                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
+            }
+        }
+
+        private async Task<GraphServiceClient> GetGraphClientAsync(NavigationManager navigation)
+        {
+            try
+            {
+                var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+                return new GraphServiceClient(new DelegateAuthenticationProvider(request =>
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    return Task.CompletedTask;
+                }));
+            }
+            catch (MsalUiRequiredException)
+            {
+                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
+                throw; // Still throw to avoid further execution
+            }
         }
     }
 }
