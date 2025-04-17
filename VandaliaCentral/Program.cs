@@ -41,8 +41,8 @@ builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
 
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Session timeout
-    options.SlidingExpiration = false;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(20);        
+    options.SlidingExpiration = true;                        
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;

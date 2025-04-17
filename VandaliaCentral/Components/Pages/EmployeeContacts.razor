@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using VandaliaCentral.Services
 @inject GraphUserService UserService
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -63,11 +64,13 @@
     private string searchTerm = "";
     private bool isLoading = true;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var users = await UserService.GetUsersAsync();
+            var users = await UserService.GetUsersAsync(Navigation); // Updated to pass Navigation
             employees = users.ToList();
         }
         catch (ServiceException ex)
