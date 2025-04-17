@@ -15,6 +15,11 @@
     {
         <p class="text-success mt-2">Your Finance Inquiry has been sent!</p>
     }
+    @if (failure)
+    {
+        <h4 class="text-danger mt-2">There was an error submitting your finance inquiry:</h4>
+        <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+    }
     else
     {
         <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
@@ -39,6 +44,7 @@
 @code {
     private FinanceIniquryModel formModel = new();
     private bool success = false;
+    private bool failure = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -64,6 +70,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Finance inquiry error: {ex.Message}");
+            failure = true;
         }
     }
 

@@ -15,6 +15,12 @@
     {
         <p class="text-success mt-2">Your support ticket has been sent!</p>
     }
+
+    @if (failure)
+    {
+        <h4 class="text-danger mt-2">There was an error submitting your ticket:</h4>
+        <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+    }
     else
     {
         <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
@@ -49,6 +55,7 @@
 @code {
     private SupportTicketModel formModel = new();
     private bool success = false;
+    private bool failure = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -74,6 +81,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Support ticket error: {ex.Message}");
+            failure = true;
         }
     }
 

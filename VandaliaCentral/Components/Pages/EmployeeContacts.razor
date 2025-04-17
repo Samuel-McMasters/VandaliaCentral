@@ -21,6 +21,11 @@
                 {
                     <p>Loading contacts...</p>
                 }
+                @if (failure)
+                {
+                    <h4 class="text-danger mt-2">There was an error loading the contacts:</h4>
+                    <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+                }
                 else
                 {
                     <table class="table table-striped w-100">
@@ -55,7 +60,7 @@
         </div>
     </Authorized>
     <NotAuthorized>
-        
+
     </NotAuthorized>
 </AuthorizeView>
 
@@ -63,6 +68,7 @@
     private List<User> employees = new();
     private string searchTerm = "";
     private bool isLoading = true;
+    private bool failure = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -78,10 +84,12 @@
             Console.WriteLine($"Error fetching users: {ex.Message}");
             Console.WriteLine($"Error code: {ex.Error.Code}");
             Console.WriteLine($"Error details: {ex.Error.Message}");
+            failure = true;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Unexpected error: {ex.Message}");
+            failure = true;
         }
         finally
         {
