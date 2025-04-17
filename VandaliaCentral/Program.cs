@@ -46,7 +46,10 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddServerSideBlazor()
     .AddMicrosoftIdentityConsentHandler();
 
-builder.Services.AddRazorPages(); // Needed for MicrosoftIdentity UI pages
+builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews()
+    .AddMicrosoftIdentityUI(); // <- this is the correct usage // Needed for MicrosoftIdentity UI pages
+
 
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {
@@ -82,6 +85,7 @@ app.UseAuthorization();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.MapRazorPages(); // <-- ADD THIS
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
