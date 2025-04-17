@@ -4,7 +4,7 @@
 @using Microsoft.Identity.Web
 @using Microsoft.AspNetCore.Authorization
 @inject GraphEmailService EmailService
-@inject NavigationManager Navigation
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -176,6 +176,8 @@
     private TerminationFormModel formModel = new();
     private bool success = false;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     private async Task HandleValidSubmit()
     {
         try
@@ -187,7 +189,8 @@
                 subject: $"Termination Form: {formModel.EmployeeName}",
                 bodyText: $"Attached is the termination form for {formModel.EmployeeName}.",
                 pdfBytes: pdfBytes,
-                pdfFileName: $"{formModel.EmployeeName}_termination.pdf"
+                pdfFileName: $"{formModel.EmployeeName}_termination.pdf",
+                navigation: Navigation
             );
 
             success = true;
