@@ -4,7 +4,7 @@
 @using Microsoft.Identity.Web
 @using Microsoft.AspNetCore.Authorization
 @inject GraphEmailService EmailService
-@inject NavigationManager Navigation
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -145,6 +145,8 @@
     private ChangeFormModel formModel = new();
     private bool success = false;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     private async Task HandleValidSubmit()
     {
         var fullName = $"{formModel.FirstName} {formModel.LastName}";
@@ -154,11 +156,12 @@
             var pdfBytes = PDFTemplateFiller.FillChange(formModel);
 
             await EmailService.SendEmailWithAttachmentAsync(
-                toEmail: "sam.mcmasters@vandaliarental.com",//TODO Change this email
+                toEmail: "sam.mcmasters@vandaliarental.com", // TODO: change this email
                 subject: $"Employee Change Form: {fullName}",
                 bodyText: $"Attached is the Employee Change form for {fullName}.",
                 pdfBytes: pdfBytes,
-                pdfFileName: $"{fullName}_change.pdf"
+                pdfFileName: $"{fullName}_change.pdf",
+                navigation: Navigation
             );
 
             success = true;
