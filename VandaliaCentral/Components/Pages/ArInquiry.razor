@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
 @inject GraphEmailService EmailService
-@inject NavigationManager Navigation
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -41,6 +41,8 @@
     private ArIniquryModel formModel = new();
     private bool success = false;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     private async Task HandleValidSubmit()
     {
         try
@@ -51,7 +53,8 @@
             await EmailService.SendEmailAsync(
                 toEmail: "sam.mcmasters@vandaliarental.com", // TODO: change this email
                 subject: subjectLine,
-                bodyText: body
+                bodyText: body,
+                navigation: Navigation
             );
 
             success = true;
@@ -61,7 +64,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"AP inquiry ap error: {ex.Message}");
+            Console.WriteLine($"AR inquiry error: {ex.Message}");
         }
     }
 
@@ -69,6 +72,5 @@
     {
         public string Subject { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
-
     }
 }
