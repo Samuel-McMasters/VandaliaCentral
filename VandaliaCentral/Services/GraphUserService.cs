@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.Graph;
+﻿using Microsoft.Graph;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
-
 
 using System.Net.Http.Headers;
 
@@ -11,13 +9,17 @@ namespace VandaliaCentral.Services
     public class GraphUserService
     {
         private readonly ITokenAcquisition _tokenAcquisition;
+        private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
-        public GraphUserService(ITokenAcquisition tokenAcquisition)
+        public GraphUserService(
+            ITokenAcquisition tokenAcquisition,
+            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
         {
             _tokenAcquisition = tokenAcquisition;
+            _consentHandler = consentHandler;
         }
 
-        public async Task<IEnumerable<User>> GetUsersAsync(NavigationManager navigation)
+        public async Task<IEnumerable<User>> GetUsersAsync()
         {
             try
             {
@@ -50,15 +52,9 @@ namespace VandaliaCentral.Services
 
                 return allUsers;
             }
-            catch (MsalUiRequiredException)
-            {
-                // Force reauthentication if the session is expired
-                navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
-                return Enumerable.Empty<User>(); // Prevent null return
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching users: {ex.Message}");
+                _consentHandler.HandleException(ex);
                 return Enumerable.Empty<User>();
             }
         }
