@@ -14,8 +14,9 @@
     @if (success)
     {
         <p class="text-success mt-2">Your Finance Inquiry has been sent!</p>
+        <p class="text-success mt-2">Redirecting to home page...</p>
     }
-    @if (failure)
+    else if (failure)
     {
         <h4 class="text-danger mt-2">There was an error submitting your finance inquiry:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
