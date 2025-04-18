@@ -249,4 +249,25 @@ a.disabled {
     }
 
     
+
+    
+    
+}
+
+
+
+input.form-control {
+    border: 1px solid #333 !important;
+}
+
+textarea.form-control {
+    border: 1px solid #333 !important;
+}
+
+input.form-check-input[type="checkbox"] {
+    border: 1px solid #333 !important;
+}
+
+select.form-select {
+    border: 1px solid #333 !important;
 }
