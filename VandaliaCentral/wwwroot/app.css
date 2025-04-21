@@ -132,6 +132,7 @@ main {
     background-color: #F79239 !important;
 }
 
+/* ================================ */
 /* General dropdown button styling */
 .btn.btn-secondary.dropdown-toggle {
     transition: box-shadow 0.3s ease, transform 0.3s ease;
@@ -145,7 +146,34 @@ main {
         z-index: 2;
     }
 
+.btn.btn-primary {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
+    .btn.btn-primary:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+    }
+
+.btn.btn-danger {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .btn.btn-danger:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
+    }
+
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* For primary */
+}
+
+.btn.btn-danger:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25); /* For danger */
+}
+
+/* ================================ */
 
 .btn {
     border-radius: 6px !important;
