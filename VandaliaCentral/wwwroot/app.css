@@ -132,6 +132,19 @@ main {
     background-color: #F79239 !important;
 }
 
+/* General dropdown button styling */
+.btn.btn-secondary.dropdown-toggle {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+    /* Hover effect to lift the button visually */
+    .btn.btn-secondary.dropdown-toggle:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        transform: translateY(-2px);
+        z-index: 2;
+    }
+
 
 
 .btn {
