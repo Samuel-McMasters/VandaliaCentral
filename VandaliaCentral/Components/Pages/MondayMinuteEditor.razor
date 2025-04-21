@@ -33,21 +33,23 @@
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th style="min-width: 200px;">File Name</th>
-                        <th class="d-none d-md-table-cell" style="min-width: 150px;">Date Uploaded</th>
-                        <th class="text-start" style="width: 1%;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="min-width: 200px;">File Name</th>
+                    <th class="d-none d-md-table-cell" style="min-width: 150px;">Date Uploaded</th>
+                    <th class="text-start" style="width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
                     @foreach (var file in fileItems)
                     {
                         <tr>
                             <td class="text-break">@file.Blob.Name</td>
-                            <td>@(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")</td>
+                            <td class="d-none d-md-table-cell">
+                                @(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")
+                            </td>
                             <td>
                                 <div class="d-flex justify-content-end">
                                     <a class="btn btn-sm btn-primary me-1"
@@ -60,9 +62,9 @@
                             </td>
                         </tr>
                     }
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
+    </div>
     }
 </div>
 
