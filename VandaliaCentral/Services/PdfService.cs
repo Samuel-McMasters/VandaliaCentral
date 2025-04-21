@@ -11,6 +11,8 @@ namespace VandaliaCentral.Services
         public string Url { get; set; } = string.Empty;
     }
 
+
+
     public class PdfService
     {
         private readonly BlobServiceClient _blobServiceClient;
@@ -19,6 +21,11 @@ namespace VandaliaCentral.Services
         {
             string connectionString = configuration["AzureStorage:ConnectionString"];
             _blobServiceClient = new BlobServiceClient(connectionString);
+        }
+
+        public BlobContainerClient GetBlobContainerClient(string containerName)
+        {
+            return _blobServiceClient.GetBlobContainerClient(containerName);
         }
 
         public async Task<string?> GetLatestPdfUrlAsync(string containerName)
