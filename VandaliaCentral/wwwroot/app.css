@@ -271,3 +271,24 @@ input.form-check-input[type="checkbox"] {
 select.form-select {
     border: 1px solid #333 !important;
 }
+
+.form-check-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 991.98px) {
+    .form-check-wrapper {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+.form-check-label {
+    margin: 0;
+    
+    
+}
