@@ -2,10 +2,26 @@
 @using VandaliaCentral.Services
 @using Azure.Storage.Blobs
 @using Azure.Storage.Blobs.Models
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject PdfService PdfService
 
 <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
     <h3>Monday Minute File Manager</h3>
+    <div class="d-flex justify-content-start gap-3">
+        <label class="btn btn-primary mmbtn custom-upload-button text-nowrap " style="max-width: 200px;">
+            @(isMobile ? "Upload" : "Upload Monday Minute")
+            <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
+        </label>
+        @if (!string.IsNullOrEmpty(uploadStatus))
+        {
+            <div class="btn-success rounded px-2 py-1">
+                @uploadStatus
+            </div>
+        }
+
+    </div>
+    
 
     @if (fileItems == null)
     {
@@ -33,9 +49,9 @@
                         <td>@(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")</td>
                         <td>
                             <a class="btn btn-sm btn-primary"
-                               href="@file.Url" target="_blank">Open</a>
+                            href="@file.Url" target="_blank">Open</a>
                             <button class="btn btn-sm btn-danger"
-                                    @onclick="() => DeleteFile(file.Blob.Name)">
+                            @onclick="() => DeleteFile(file.Blob.Name)">
                                 Delete
                             </button>
                         </td>
@@ -47,6 +63,53 @@
 </div>
 
 @code {
+    private bool isMobile = false;
+    private string? uploadStatus;
+
+
+    //Checks if viewport is mobile
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
+            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file is null || !file.Name.EndsWith(".pdf"))
+        {
+            uploadStatus = "Please select a valid PDF file.";
+
+            return;
+        }
+
+        try
+        {
+            uploadStatus = "Uploading...";
+            await PdfService.UploadPdfAsync("mondayminute", file);
+            
+            uploadStatus = "Upload successful!";
+
+
+
+            await Task.Delay(2000);
+            var currentUri = Navigation.Uri;
+            Navigation.NavigateTo("/mondayminuteeditor", forceLoad: true);
+
+        }
+        catch (Exception ex)
+        {
+            uploadStatus = $"Upload failed: {ex.Message}";
+        }
+    }
+
+
     private class FileItem
     {
         public BlobItem Blob { get; set; } = default!;
