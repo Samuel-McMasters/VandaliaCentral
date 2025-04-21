@@ -128,24 +128,26 @@ main {
     color: #333;
 }
 
-.btn:hover {
-    background-color: #F79239 !important;
-}
+
 
 /* ================================ */
-/* General dropdown button styling */
+/* === General Dropdown Button Styling === */
 .btn.btn-secondary.dropdown-toggle {
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    background-color: #6c757d; /* fallback Bootstrap secondary color */
 }
 
-    /* Hover effect to lift the button visually */
-    .btn.btn-secondary.dropdown-toggle:hover {
+    /* Hover + Open State Styling for Dropdown Buttons */
+    .btn.btn-secondary.dropdown-toggle:hover,
+    .btn.btn-secondary.dropdown-toggle[aria-expanded="true"] {
+        background-color: #F79239 !important;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         transform: translateY(-2px);
         z-index: 2;
     }
 
+/* === Primary Button Styling (Blue) === */
 .btn.btn-primary {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -155,6 +157,7 @@ main {
         box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
     }
 
+/* === Danger Button Styling (Red) === */
 .btn.btn-danger {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -164,6 +167,7 @@ main {
         box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
     }
 
+/* === Focus Styles for Accessibility === */
 .btn:focus {
     outline: none;
     box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* For primary */
@@ -172,7 +176,6 @@ main {
 .btn.btn-danger:focus {
     box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25); /* For danger */
 }
-
 /* ================================ */
 
 .btn {
