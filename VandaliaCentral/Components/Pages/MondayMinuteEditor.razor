@@ -8,20 +8,20 @@
 
 <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
     <h3>Monday Minute File Manager</h3>
-    <div class="pt-4 pb-2 d-flex justify-content-start gap-3">
-        <label class="btn btn-primary mmbtn custom-upload-button text-nowrap " style="max-width: 200px;">
+
+    <div class="pt-4 pb-2 d-flex flex-wrap gap-3">
+        <label class="btn btn-primary mmbtn custom-upload-button text-nowrap" style="max-width: 200px;">
             @(isMobile ? "Upload" : "Upload Monday Minute")
             <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
         </label>
+
         @if (!string.IsNullOrEmpty(uploadStatus))
         {
             <div class="btn-success rounded px-2 py-1">
                 @uploadStatus
             </div>
         }
-
     </div>
-    
 
     @if (fileItems == null)
     {
@@ -33,32 +33,36 @@
     }
     else
     {
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>File Name</th>
-                    <th>Date Uploaded</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var file in fileItems)
-                {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
                     <tr>
-                        <td>@file.Blob.Name</td>
-                        <td>@(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")</td>
-                        <td>
-                            <a class="btn btn-sm btn-primary"
-                            href="@file.Url" target="_blank">Open</a>
-                            <button class="btn btn-sm btn-danger"
-                            @onclick="() => DeleteFile(file.Blob.Name)">
-                                Delete
-                            </button>
-                        </td>
+                        <th style="min-width: 200px;">File Name</th>
+                        <th class="d-none d-md-table-cell" style="min-width: 150px;">Date Uploaded</th>
+                        <th class="text-start" style="width: 1%;">Actions</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var file in fileItems)
+                    {
+                        <tr>
+                            <td class="text-break">@file.Blob.Name</td>
+                            <td>@(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")</td>
+                            <td>
+                                <div class="d-flex justify-content-end">
+                                    <a class="btn btn-sm btn-primary me-1"
+                                       href="@file.Url" target="_blank">Open</a>
+                                    <button class="btn btn-sm btn-danger"
+                                            @onclick="() => DeleteFile(file.Blob.Name)">
+                                        Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </div>
 
