@@ -40,7 +40,7 @@
 
             @if (IsUploader)
             {
-                <div class="d-flex align-items-center gap-3">
+                @* <div class="d-flex align-items-center gap-3">
                     @if (!string.IsNullOrEmpty(uploadStatus))
                     {
                         <div class="btn-success rounded px-2 py-1">
@@ -49,11 +49,15 @@
                     }
 
                     <label class="btn btn-primary mmbtn custom-upload-button text-nowrap " style="max-width: 200px;">
-                        @* @(isMobile ? "Upload" : "Upload Monday Minute")
-                        <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" /> *@
-          
+                        @(isMobile ? "Upload" : "Upload Monday Minute")
+                        <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />       
                     </label>
-                </div>
+                </div> *@
+                <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
+                        style="max-width: 200px;"
+                        @onclick="NavigateToEditor">
+                    @(isMobile ? "Upload" : "Upload Monday Minute")
+                </button>
             }
         </div>
     </nav>
@@ -142,6 +146,12 @@
         IsUploader = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
     }
+
+    private void NavigateToEditor()
+    {
+        Navigation.NavigateTo("/mondayminuteeditor");
+    }
+
     
 }
 
