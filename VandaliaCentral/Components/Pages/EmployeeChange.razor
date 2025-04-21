@@ -20,6 +20,10 @@
         <h4 class="text-danger mt-2">There was an error submitting your employee change form:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
     }
+    else if (!isAuthorized)
+    {
+        <p>Checking sign-in status...</p>
+    }
     else
     {
         <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
@@ -29,7 +33,7 @@
             <!-- Employee Information Block -->
             <div class="row py-5">
                 <div class="row">
-                    <div class="col-12 col-md-6  d-flex flex-column mb-2">
+                    <div class="col-12 col-md-6 d-flex flex-column mb-2">
                         <label><strong>First Name:</strong></label>
                         <InputText @bind-Value="formModel.FirstName" class="form-control" />
                     </div>
@@ -40,13 +44,12 @@
                 </div>
                 <div class="row">
                     <div class="col-12 col-md-12 mb-2">
-                        <label><strong>Previous Job Title:</strong></label><p>(i.e. Inside Sales, Rental Coordinator, Mechanic, Road Tech, etc.)</p>
+                        <label><strong>Previous Job Title:</strong></label>
+                        <p>(i.e. Inside Sales, Rental Coordinator, Mechanic, Road Tech, etc.)</p>
                         <InputText @bind-Value="formModel.PreviousJobTitle" class="form-control" />
                     </div>
-
                 </div>
                 <div class="row">
-
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch #:</strong></label>
                         <InputText @bind-Value="formModel.BranchNumber" class="form-control" />
@@ -66,7 +69,7 @@
             <div class="row py-5">
                 <h5 class="pb-3">Change Employee Position To</h5>
                 <div class="row">
-                    <div class="col-12 col-md-3  d-flex flex-column mb-2">
+                    <div class="col-12 col-md-3 d-flex flex-column mb-2">
                         <label><strong>Effective Date:</strong></label>
                         <InputDate @bind-Value="formModel.EffectiveDate" class="form-control" />
                     </div>
@@ -80,13 +83,11 @@
                         <label><strong>Job Title:</strong></label>
                         <InputText @bind-Value="formModel.JobTitle" class="form-control" />
                     </div>
-
                 </div>
                 <div class="row pt-4">
-
                     <div class="col-12 col-md-2 mb-2">
                         <InputCheckbox @bind-Value="formModel.FullTime" class="form-check-input" />
-                        <label class="form-check-label">FullTime</label>
+                        <label class="form-check-label">Full Time</label>
                     </div>
                     <div class="col-12 col-md-2 mb-2">
                         <InputCheckbox @bind-Value="formModel.PartTime" class="form-check-input" />
@@ -103,11 +104,12 @@
                 </div>
             </div>
 
-            <!-- Change Emplopyee Branch Location To Block -->
+            <!-- Change Employee Branch Location To Block -->
             <div class="row py-5">
-                <h5 class="pt-3">Change Employee Branch Location To</h5><p class="pb-3">(If No Branch Change DO NOT Complete)</p>
+                <h5 class="pt-3">Change Employee Branch Location To</h5>
+                <p class="pb-3">(If No Branch Change DO NOT Complete)</p>
                 <div class="row">
-                    <div class="col-12 col-md-6  d-flex flex-column mb-2">
+                    <div class="col-12 col-md-6 d-flex flex-column mb-2">
                         <label><strong>Branch Number:</strong></label>
                         <InputText @bind-Value="formModel.NewLocBranchNumber" class="form-control" />
                     </div>
@@ -121,38 +123,45 @@
                         <label><strong>Manager Name:</strong></label>
                         <InputText @bind-Value="formModel.NewLocManagerName" class="form-control" />
                     </div>
-
                 </div>
                 <div class="row pt-4">
-
                     <div class="col-12 col-md-6 mb-2">
                         <label class="form-check-label pb-1">Additional Notes</label>
                         <InputTextArea @bind-Value="formModel.AdditionalNotes"
-                        class="form-control"
-                        rows="5"
-                        style="resize: none;" />
+                                       class="form-control"
+                                       rows="5"
+                                       style="resize: none;" />
                     </div>
                 </div>
             </div>
 
             <button type="submit" class="btn btn-primary mt-2">Submit</button>
-
         </EditForm>
     }
-
-
-
-
-
 </div>
-
 
 @code {
     private ChangeFormModel formModel = new();
     private bool success = false;
     private bool failure = false;
+    private bool isAuthorized = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
+    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            isAuthorized = true;
+        }
+        catch (Exception ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
 
     private async Task HandleValidSubmit()
     {
@@ -168,7 +177,6 @@
                 bodyText: $"Attached is the Employee Change form for {fullName}.",
                 pdfBytes: pdfBytes,
                 pdfFileName: $"{fullName}_change.pdf"
-                
             );
 
             success = true;
@@ -182,6 +190,7 @@
 
             if (ex.InnerException != null)
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+
             failure = true;
         }
     }

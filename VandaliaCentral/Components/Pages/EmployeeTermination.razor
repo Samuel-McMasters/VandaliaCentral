@@ -8,7 +8,6 @@
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Employee Termination Form</h3>
     @if (success)
@@ -20,6 +19,10 @@
     {
         <h4 class="text-danger mt-2">There was an error submitting your employee termination form:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+    }
+    else if (!isAuthorized)
+    {
+        <p>Checking sign-in status...</p>
     }
     else
     {
@@ -145,14 +148,14 @@
                         <div class="form-check-wrapper">
                             <InputCheckbox @bind-Value="formModel.Other" class="form-check-input" />
                             <label class="form-check-label pb-1">Other</label>
-                            
+
                         </div>
                         <div class="col-lg-12 col-md-5 col-sm-5 mb-2">
 
                             <InputTextArea @bind-Value="formModel.OtherText"
-                                           class="form-control"
-                                           rows="5"
-                                           style="resize: none;" />
+                                            class="form-control"
+                                            rows="5"
+                                            style="resize: none;" />
                         </div>
                     </div>
                 </div>
@@ -162,12 +165,31 @@
     }
 </div>
 
+
+
 @code {
     private TerminationFormModel formModel = new();
     private bool success = false;
     private bool failure = false;
+    private bool isAuthorized = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
+    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Attempt to get token when page loads
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            isAuthorized = true;
+        }
+        catch (Exception ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
 
     private async Task HandleValidSubmit()
     {
