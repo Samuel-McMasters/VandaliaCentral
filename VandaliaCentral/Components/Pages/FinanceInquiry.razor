@@ -21,6 +21,10 @@
         <h4 class="text-danger mt-2">There was an error submitting your finance inquiry:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
     }
+    else if (!isAuthorized)
+    {
+        <p>Checking sign-in status...</p>
+    }
     else
     {
         <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
@@ -46,8 +50,24 @@
     private FinanceIniquryModel formModel = new();
     private bool success = false;
     private bool failure = false;
+    private bool isAuthorized = false;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
+    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            isAuthorized = true;
+        }
+        catch (Exception ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
 
     private async Task HandleValidSubmit()
     {
@@ -60,7 +80,6 @@
                 toEmail: "sam.mcmasters@vandaliarental.com", // TODO: change this email
                 subject: subjectLine,
                 bodyText: body
-                
             );
 
             success = true;
