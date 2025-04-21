@@ -38,25 +38,12 @@
 
 
 
-            @if (IsUploader)
+            @if (IsUploader && !IsOnEditorPage)
             {
-                @* <div class="d-flex align-items-center gap-3">
-                    @if (!string.IsNullOrEmpty(uploadStatus))
-                    {
-                        <div class="btn-success rounded px-2 py-1">
-                            @uploadStatus
-                        </div>
-                    }
-
-                    <label class="btn btn-primary mmbtn custom-upload-button text-nowrap " style="max-width: 200px;">
-                        @(isMobile ? "Upload" : "Upload Monday Minute")
-                        <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />       
-                    </label>
-                </div> *@
                 <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
-                        style="max-width: 200px;"
-                        @onclick="NavigateToEditor">
-                    @(isMobile ? "Upload" : "Monday Minute Editor")
+                    style="max-width: 200px;"
+                    @onclick="NavigateToEditor">
+                        @(isMobile ? "Upload" : "Monday Minute Editor")
                 </button>
             }
         </div>
@@ -80,11 +67,14 @@
 
 @code {
     private string SidebarCssClass => showSidebar ? "vandalia-sidebar show d-lg-block" : "vandalia-sidebar d-lg-block";
+   
     private bool showSidebar = false;
     private string? uploadStatus;
     private string? statusClass;
     private bool IsUploader = true;
     private bool isMobile = false;
+
+    private bool IsOnEditorPage => Navigation.Uri.Contains("/mondayminuteeditor", StringComparison.OrdinalIgnoreCase);
 
     private void ToggleSidebar()
     {
