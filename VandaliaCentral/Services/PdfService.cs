@@ -96,5 +96,24 @@ namespace VandaliaCentral.Services
             var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
             await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" });
         }
+
+        public async Task<List<BlobItem>> ListBlobsAsync(string containerName)
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blobs = new List<BlobItem>();
+
+            await foreach (var blob in containerClient.GetBlobsAsync())
+            {
+                blobs.Add(blob);
+            }
+
+            return blobs;
+        }
+
+        public async Task DeleteBlobAsync(string containerName, string blobName)
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            await containerClient.DeleteBlobIfExistsAsync(blobName);
+        }
     }
 }
