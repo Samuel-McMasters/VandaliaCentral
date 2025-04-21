@@ -1,34 +1,75 @@
-﻿@page "/mondayminute"
-@using Radzen
-@using Radzen.Blazor
+﻿@page "/mondayminuteeditor"
+@using VandaliaCentral.Services
+@using Azure.Storage.Blobs;
+@using Azure.Storage.Blobs.Models;
+@using Microsoft.AspNetCore.Components.Forms;
+@inject PdfService PdfService
 
-<h3>Newsletter Editor</h3>
+<h3>Monday Minute File Manager</h3>
 
-<RadzenTextBox @bind-Value="Title" Placeholder="Enter title..." Style="width: 100%;" />
-
-
-
-
-
-<RadzenButton Text="Publish" Click="Publish" Style="margin-top: 1rem;" ButtonStyle="ButtonStyle.Primary" />
-
-@if (Published)
+@if (files == null)
 {
-    <div class="mt-5 border p-3 rounded" style="background-color: #f9f9f9;">
-        <h4>@Title</h4>
-        <p><em>Published on @DateTime.Now.ToString("MMMM dd, yyyy")</em></p>
-        <div>@((MarkupString)Body)</div>
-    </div>
+    <p>Loading files...</p>
+}
+else if (files.Count == 0)
+{
+    <p>No PDF files found in the container.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Size (Bytes)</th>
+                <th>Last Modified</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var file in files)
+            {
+                <tr>
+                    <td>@file.Name</td>
+                    <td>@(file.Properties.ContentLength ?? 0)</td>
+                    <td>@(file.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary"
+                           href="@GetBlobUrl(file.Name)" target="_blank">Open</a>
+                        <button class="btn btn-sm btn-danger"
+                                @onclick="() => DeleteFile(file.Name)">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-    private string Title { get; set; } = "";
-    private string Body { get; set; } = "";
-    private bool Published { get; set; } = false;
+    private List<BlobItem>? files;
 
-    private void Publish()
+    protected override async Task OnInitializedAsync()
     {
-        Published = true;
-        // TODO: Save to a database or service
+        await LoadFilesAsync();
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        files = await PdfService.ListBlobsAsync("mondayminute");
+    }
+
+    private string GetBlobUrl(string blobName)
+    {
+        return $"https://yourstorageaccount.blob.core.windows.net/mondayminute/{blobName}";
+        // Replace with a SAS URL if your container is private
+    }
+
+    private async Task DeleteFile(string blobName)
+    {
+        await PdfService.DeleteBlobAsync("mondayminute", blobName);
+        await LoadFilesAsync(); // Refresh list after deletion
+        StateHasChanged();
     }
 }
