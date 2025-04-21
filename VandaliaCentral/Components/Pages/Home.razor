@@ -150,6 +150,7 @@
     protected override async Task OnInitializedAsync()
     {
         mmPdf = await PdfService.GetLatestPdfUrlAsync("mondayminute");
+
         mmPdfName = await PdfService.GetMmPdfNameAsync("mondayminute");
 
         bcPdf = await PdfService.GetLatestPdfUrlAsync("bonuschart");
