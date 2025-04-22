@@ -151,6 +151,7 @@ main {
 /* === Primary Button Styling (Blue) === */
 .btn.btn-primary {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    
 }
 
     .btn.btn-primary:hover {
@@ -254,7 +255,7 @@ main {
     scroll-behavior: smooth;
     overscroll-behavior: contain; /*prevents bounce through */
     background: linear-gradient(180deg, #2E2E2F, #3E3E40);
-    padding: 1.5rem 1rem;
+    
     max-height: 100vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* already here, good! */
@@ -374,9 +375,16 @@ select.form-select {
 }
 
 .sidebar .btn {
-    max-height: 48px;  
+    max-height: 48px;
     display: flex;
     align-items: center;
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide anything that overflows */
+    text-overflow: ellipsis; /* Show "..." if it does overflow */
+    display: flex;
+    align-items: center;
+    width: 100%;
+    
 }
 
 .main-content::-webkit-scrollbar {
@@ -398,7 +406,3 @@ select.form-select {
         background-color: #909090;
     }
 
-.custom-upload-button:focus {
-    outline: none !important;
-    box-shadow: none !important;
-}
