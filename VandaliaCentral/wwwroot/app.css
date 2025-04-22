@@ -172,15 +172,7 @@ main {
         background-color: darkred;
     }
 
-/* === Focus Styles for Accessibility === */
-.btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* For primary */
-}
 
-.btn.btn-danger:focus {
-    box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25); /* For danger */
-}
 
 
 
