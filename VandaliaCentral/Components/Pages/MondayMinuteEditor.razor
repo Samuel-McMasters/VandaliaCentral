@@ -46,7 +46,13 @@
                     @foreach (var file in fileItems)
                     {
                         <tr>
-                            <td class="text-break">@file.Blob.Name</td>
+                            <td class="text-break">
+                                @file.Blob.Name
+                                @if (file.Blob.Name == latestFileName)
+                                {
+                                    <span class="badge bg-success ms-2">Displayed</span>
+                                }
+                            </td>
                             <td class="d-none d-md-table-cell">
                                 @(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")
                             </td>
@@ -71,6 +77,7 @@
 @code {
     private bool isMobile = false;
     private string? uploadStatus;
+    private string? latestFileName;
 
 
     //Checks if viewport is mobile
@@ -151,6 +158,9 @@
                     Url = containerClient.GetBlobClient(blob.Name).Uri.ToString()
                 })
             .ToList();
+
+        // ✅ Track the latest file name (first in the list)
+        latestFileName = fileItems.FirstOrDefault()?.Blob.Name;
     }
 
     private async Task DeleteFile(string blobName)
