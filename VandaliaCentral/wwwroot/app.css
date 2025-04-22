@@ -255,8 +255,17 @@ main {
     overscroll-behavior: contain; /*prevents bounce through */
     background: linear-gradient(180deg, #2E2E2F, #3E3E40);
     padding: 1.5rem 1rem;
+    max-height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* already here, good! */
+    padding-bottom: env(safe-area-inset-bottom); /* NEW - accounts for iOS Safari nav bar */
 }
-   
+
+html, body {
+    height: 100%;
+    overscroll-behavior: none;
+    padding-bottom: env(safe-area-inset-bottom); /* NEW - helps body accommodate iOS UI */
+}
 
 
 .main-content {
@@ -317,12 +326,7 @@ a.disabled {
 
     .main-content {
         margin-left: 0 !important;
-    }
-
-    
-
-    
-    
+    }  
 }
 
 
@@ -359,17 +363,11 @@ select.form-select {
 }
 
 .form-check-label {
-    margin: 0;
-    
-    
+    margin: 0;    
 }
 
 .sidebar .btn {
-    max-height: 48px;
-    
-   
-    
-    
+    max-height: 48px;  
     display: flex;
     align-items: center;
 }
