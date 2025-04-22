@@ -5,7 +5,6 @@
 @inject GraphEmailService EmailService
 @inject LoggingService Logger
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
-
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
