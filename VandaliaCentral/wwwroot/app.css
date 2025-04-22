@@ -178,6 +178,7 @@ main {
 }
 
 
+
 /* ================================ */
 /* Main content animation */
 @keyframes fadeSlideIn {
@@ -196,7 +197,10 @@ main {
     animation: fadeSlideIn 0.5s ease-out;
 }
 
-
+.hidden-before-animation {
+    opacity: 0 !important;
+    pointer-events: none;
+}
 
 /* ================================ */
 

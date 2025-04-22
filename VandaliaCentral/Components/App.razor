@@ -39,11 +39,15 @@
     window.removeAnimationClass = (element, className) => {
         if (element) {
             element.classList.remove(className);
+            element.classList.add("hidden-before-animation");
         }
     };
 
     window.addAnimationClass = (element, className) => {
         if (element) {
+            // Trigger layout reflow before adding animation back
+            void element.offsetWidth;
+            element.classList.remove("hidden-before-animation");
             element.classList.add(className);
         }
     };
