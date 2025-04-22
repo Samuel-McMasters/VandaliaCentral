@@ -73,7 +73,7 @@
         </div>
 
         <!-- Content -->
-        <div class="main-content flex-grow-1" style="background: #F5F5F5;">
+        <div class="main-content flex-grow-1 page-enter" style="background: #F5F5F5;" @ref="mainContentRef">
             @Body
         </div>
     </div>
@@ -81,7 +81,7 @@
 
 @code {
     private string SidebarCssClass => showSidebar ? "vandalia-sidebar show d-lg-block" : "vandalia-sidebar d-lg-block";
-   
+
     private bool showSidebar = false;
     private string? uploadStatus;
     private string? statusClass;
@@ -117,30 +117,24 @@
         if (file is null || !file.Name.EndsWith(".pdf"))
         {
             uploadStatus = "Please select a valid PDF file.";
-
             return;
         }
 
         try
         {
             uploadStatus = "Uploading...";
-
             await PdfService.UploadPdfAsync("mondayminute", file);
-
             uploadStatus = "Upload successful!";
-
-            
-
             await Task.Delay(2000);
             var currentUri = Navigation.Uri;
             Navigation.NavigateTo("/", forceLoad: true);
-            
         }
         catch (Exception ex)
         {
             uploadStatus = $"Upload failed: {ex.Message}";
         }
     }
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -149,11 +143,31 @@
         // Check if user is in the correct Entra ID group by claim
         IsUploader = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
+
+        //  Subscribe to route change for animation
+        currentUri = Navigation.Uri;
+        Navigation.LocationChanged += HandleLocationChanged;
     }
 
     private void NavigateToEditor()
     {
         Navigation.NavigateTo("/mondayminuteeditor");
+    }
+
+    // ===  NEW FOR ANIMATION ON PAGE CHANGE ===
+    private ElementReference mainContentRef;
+    private string? currentUri;
+
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (e.Location != currentUri)
+        {
+            currentUri = e.Location;
+
+            await JS.InvokeVoidAsync("removeAnimationClass", mainContentRef, "page-enter");
+            await Task.Delay(50); // slight pause before re-adding class
+            await JS.InvokeVoidAsync("addAnimationClass", mainContentRef, "page-enter");
+        }
     }
 
     

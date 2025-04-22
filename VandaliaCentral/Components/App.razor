@@ -36,6 +36,17 @@
     window.blazorGetWindowWidth = () => {
         return window.innerWidth;
     };
+    window.removeAnimationClass = (element, className) => {
+        if (element) {
+            element.classList.remove(className);
+        }
+    };
+
+    window.addAnimationClass = (element, className) => {
+        if (element) {
+            element.classList.add(className);
+        }
+    };
 </script>
 
 </html>
