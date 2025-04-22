@@ -381,3 +381,22 @@ select.form-select {
     display: flex;
     align-items: center;
 }
+
+.main-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.main-content::-webkit-scrollbar-track {
+    background: black;
+    border-radius: 8px;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+    background-color: #B0B0B0; /* your new light-medium gray */
+    border-radius: 6px;
+    border: 1px solid black; /* creates a nice padding effect */
+}
+
+    .main-content::-webkit-scrollbar-thumb:hover {
+        background-color: #909090;
+    }
