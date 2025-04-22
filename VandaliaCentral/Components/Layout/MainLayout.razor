@@ -10,6 +10,8 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
 @inject NavigationManager Navigation
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -87,6 +89,7 @@
     private string? statusClass;
     private bool IsUploader = true;
     private bool isMobile = false;
+    private bool hasLoggedLogin = false;
 
     private bool IsOnEditorPage => Navigation.Uri.Contains("/mondayminuteeditor", StringComparison.OrdinalIgnoreCase);
 
@@ -139,6 +142,14 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true && !hasLoggedLogin)
+        {
+            hasLoggedLogin = true;
+
+            var userName = user.Identity.Name ?? "unknown";
+            await Logger.LogActivityAsync(userName, "User logged in");
+        }
 
         // Check if user is in the correct Entra ID group by claim
         IsUploader = user.Claims.Any(c =>
