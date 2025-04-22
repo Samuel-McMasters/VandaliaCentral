@@ -258,7 +258,14 @@ main {
     max-height: 100vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* already here, good! */
-    padding-bottom: env(safe-area-inset-bottom); /* NEW - accounts for iOS Safari nav bar */
+    
+}
+
+@media (max-width: 767px) {
+    .ios-bottom-spacer {
+        height: 100px;
+        flex-shrink: 0;
+    }
 }
 
 html, body {
