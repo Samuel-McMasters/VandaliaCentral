@@ -143,7 +143,7 @@ main {
     .btn.btn-secondary.dropdown-toggle[aria-expanded="true"] {
         background-color: #F79239 !important;
         border-color: #FF6720 !important;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 8px 20px rgba(255, 103, 32, 0.6); /* Orange shadow */
         transform: translateY(-2px);
         z-index: 2;
     }
@@ -252,14 +252,18 @@ main {
     width: 220px;
     flex: 1 1 auto;
     overflow-y: auto;
-    
     padding: 1rem 0.5rem;
     background-color: #FF6720;
     box-shadow: 8px 0 10px -2px rgba(0, 0, 0, 0.1);
     -webkit-overflow-scrolling: touch; /*native iOS scrolling */
     scroll-behavior: smooth;
     overscroll-behavior: contain; /*prevents bounce through */
+    background: linear-gradient(180deg, #2E2E2F, #3E3E40);
+   
+    padding: 1.5rem 1rem;
+
 }
+   
 
 
 .main-content {
@@ -310,6 +314,8 @@ a.disabled {
         z-index: 1040;
         transform: translateX(-100%);
         transition: transform 0.3s ease-in-out;
+        background: linear-gradient(180deg, #2E2E2F, #3E3E40);
+        
     }
 
         .vandalia-sidebar.show {
