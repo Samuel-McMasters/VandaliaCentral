@@ -3,6 +3,8 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
 @inject GraphEmailService EmailService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
@@ -82,6 +84,15 @@
                 bodyText: body
             );
 
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Submitted AP Inquiry with subject: '{formModel.Subject}'";
+            await Logger.LogActivityAsync(userName, activity);
+
+
             success = true;
             StateHasChanged();
             await Task.Delay(4000);
@@ -98,5 +109,7 @@
     {
         public string Subject { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
+
+        
     }
 }

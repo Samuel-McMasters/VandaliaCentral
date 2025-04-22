@@ -10,8 +10,8 @@
 
         public LoggingService(IConfiguration configuration)
         {
-            var connectionString = configuration["AzureBlobStorage:ConnectionString"];
-            _containerClient = new BlobContainerClient(connectionString, "logs");
+            var connectionString = configuration["AzureStorage:ConnectionString"];
+            _containerClient = new BlobContainerClient(connectionString, "userlogs");
             _containerClient.CreateIfNotExists();
         }
 

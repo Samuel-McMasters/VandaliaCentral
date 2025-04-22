@@ -4,6 +4,8 @@
 @using Microsoft.Identity.Web
 @using Microsoft.AspNetCore.Authorization
 @inject GraphEmailService EmailService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
@@ -178,6 +180,16 @@
                 pdfBytes: pdfBytes,
                 pdfFileName: $"{fullName}_change.pdf"
             );
+
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Submitted Employee Change Form For: '{fullName}'";
+            await Logger.LogActivityAsync(userName, activity);
+
+
 
             success = true;
             StateHasChanged();

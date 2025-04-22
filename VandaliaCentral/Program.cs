@@ -14,6 +14,7 @@ var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddSingleton<PdfService>();
+builder.Services.AddSingleton<LoggingService>();
 
 // For PDF API controller
 builder.Services.AddControllers();
