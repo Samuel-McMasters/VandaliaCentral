@@ -2,7 +2,7 @@
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @using Microsoft.Graph
 
-<div class="px-3">
+<div class="px-3 col-4">
     <h4>Employee Details</h4>
 
     @if (contact == null)
@@ -13,6 +13,7 @@
     {
         <div class="card p-3">
             <h5>@contact.DisplayName</h5>
+            <p><strong>Location:</strong> @contact.OfficeLocation</p>
             <p><strong>Job Title:</strong> @contact.JobTitle</p>
             <p><strong>Email:</strong> @contact.Mail</p>
             <p><strong>Phone:</strong> @contact.MobilePhone</p>
