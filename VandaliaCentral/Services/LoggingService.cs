@@ -38,5 +38,30 @@
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
             await blobClient.UploadAsync(stream, overwrite: true);
         }
+
+        public async Task<List<string>> GetLogFileNamesAsync()
+        {
+            var files = new List<string>();
+
+            await foreach (var blob in _containerClient.GetBlobsAsync())
+            {
+                files.Add(blob.Name);
+            }
+
+            return files.OrderByDescending(name => name).ToList();
+        }
+
+        public async Task<string> ReadLogContentAsync(string blobName)
+        {
+            var blobClient = _containerClient.GetBlobClient(blobName);
+
+            if (await blobClient.ExistsAsync())
+            {
+                var download = await blobClient.DownloadContentAsync();
+                return download.Value.Content.ToString();
+            }
+
+            return "Log file not found.";
+        }
     }
 }

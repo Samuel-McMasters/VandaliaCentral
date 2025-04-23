@@ -1,0 +1,48 @@
+﻿@page "/admin"
+@using VandaliaCentral.Services
+@inject LoggingService Logger
+
+<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+    <h3>Admin Dashboard</h3>
+    @if (logFiles == null)
+    {
+        <p>Loading logs...</p>
+    }
+    else
+    {
+        <select @onchange="OnLogSelected" class="form-select w-50 mb-3">
+            <option disabled selected value="">-- Select Log File --</option>
+            @foreach (var file in logFiles)
+            {
+                <option value="@file">@file</option>
+            }
+        </select>
+
+        @if (!string.IsNullOrEmpty(logContent))
+        {
+            <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
+        }
+    }
+</div>
+
+
+
+
+@code {
+    private List<string>? logFiles;
+    private string? logContent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        logFiles = await Logger.GetLogFileNamesAsync();
+    }
+
+    private async Task OnLogSelected(ChangeEventArgs e)
+    {
+        var selectedFile = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selectedFile))
+        {
+            logContent = await Logger.ReadLogContentAsync(selectedFile);
+        }
+    }
+}
