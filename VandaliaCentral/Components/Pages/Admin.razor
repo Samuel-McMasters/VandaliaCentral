@@ -1,17 +1,21 @@
 ﻿@page "/admin"
 @using VandaliaCentral.Services
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Identity.Client
+@using Microsoft.Identity.Web
 @inject LoggingService Logger
 @inject GraphUserService GraphUserService
-@using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject ITokenAcquisition TokenAcquisition
+
 
 
 
 <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
     <h3>Admin Dashboard</h3>
-    
+
     @if (!isAuthorized)
     {
         <p class="text-danger">You are not authorized to view this page.</p>
@@ -25,14 +29,14 @@
                 Monday Minute Editor
             </button>
         </div>
-        
+
         @if (logFiles == null)
         {
             <p>Loading logs...</p>
         }
         else
         {
-            <select @onchange="OnLogSelected" class="form-select w-50 mb-3">
+            <select @onchange="OnLogSelected" class="form-select w-25 mb-3">
                 <option disabled selected value="">-- Select Log File --</option>
                 @foreach (var file in logFiles)
                 {
@@ -44,12 +48,11 @@
             {
                 <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
             }
-        } 
+        }
     }
-    
-    
-</div>
 
+
+</div>
 
 
 
@@ -61,23 +64,37 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (user.Identity?.IsAuthenticated == true)
+        try
         {
-            var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            // Try to get a token — if this fails, redirect
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
 
-            if (!string.IsNullOrEmpty(userId))
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
             {
-                isAuthorized = await GraphUserService.IsUserInGroupAsync(userId, adminGroupId);
+                var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    isAuthorized = await GraphUserService.IsUserInGroupAsync(userId, adminGroupId);
+                }
+            }
+
+            if (isAuthorized)
+            {
+                logFiles = await Logger.GetLogFileNamesAsync();
             }
         }
-
-        if (isAuthorized)
+        catch (MsalUiRequiredException)
         {
-            logFiles = await Logger.GetLogFileNamesAsync();
+            Navigation.NavigateTo("MicrosoftIdentity/Account/SignIn", forceLoad: true);
         }
-        logFiles = await Logger.GetLogFileNamesAsync();
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error during token acquisition or group check: {ex.Message}");
+        }
     }
 
     private async Task OnLogSelected(ChangeEventArgs e)

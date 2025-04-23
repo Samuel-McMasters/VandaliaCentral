@@ -30,11 +30,16 @@ namespace VandaliaCentral.Services
                 }));
 
                 var allUsers = new List<User>();
+                //var page = await graphClient.Users
+                //    .Request()
+                //    .Select("id,displayName,mail,jobTitle,mobilePhone,businessPhones")
+                //    .Top(100)
+                //    .GetAsync();
                 var page = await graphClient.Users
-                    .Request()
-                    .Select("id,displayName,mail,jobTitle,mobilePhone,businessPhones")
-                    .Top(100)
-                    .GetAsync();
+                      .Request()
+                      .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
+                      .Top(100)
+                      .GetAsync();
 
                 while (page != null)
                 {
@@ -50,7 +55,12 @@ namespace VandaliaCentral.Services
                     }
                 }
 
-                return allUsers;
+                //Filter out users with empty OfficeLocation
+                var filteredUsers = allUsers
+                    .Where(user => !string.IsNullOrWhiteSpace(user.OfficeLocation))
+                    .ToList();
+
+                return filteredUsers;
             }
             catch (Exception ex)
             {
