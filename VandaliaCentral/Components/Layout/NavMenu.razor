@@ -4,7 +4,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="sidebar pt-3" style="height: 100%; overflow-y: auto;">
-    <div class="menu btn-group-vertical gap-4 align-items-center ps-2">
+    <div class="menu btn-group-vertical gap-4 align-items-center ">
 
         <a class="d-block d-lg-none" href="/" tabindex="-1" @onclick="HandleLinkClick">
             <svg xmlns="http://www.w3.org/2000/svg" width="45" height="50" fill="white" class="bi bi-house" viewBox="0 0 16 20">
@@ -13,11 +13,11 @@
             </svg>
         </a>
         <NavLink href="/employeecontacts" @onclick="HandleLinkClick"  class="btn btn-primary " activeClass="active">
-            <span class="oi oi-people me-2" aria-hidden="true"></span>
+            
             Employee Contacts
         </NavLink>
         <NavLink href="/supportticket" @onclick="HandleLinkClick" class="btn btn-danger" activeClass="active">
-            <span class="oi oi-people me-2" aria-hidden="true"></span>
+            
             Submit An IT Ticket
         </NavLink>
 
