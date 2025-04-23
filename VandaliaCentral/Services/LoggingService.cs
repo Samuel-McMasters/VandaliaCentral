@@ -22,7 +22,10 @@
 
             var blobClient = _containerClient.GetBlobClient(blobName);
 
-            string logEntry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC | {userId} | {activity}\n";
+            var easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var easternTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+
+            string logEntry = $"{easternTime:yyyy-MM-dd HH:mm:ss} EST | {userId} | {activity}\n";
 
             // Download the existing log (if any), then append
             var sb = new StringBuilder();
