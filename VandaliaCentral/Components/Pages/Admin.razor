@@ -1,28 +1,53 @@
 ﻿@page "/admin"
 @using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Authorization
 @inject LoggingService Logger
+@inject GraphUserService GraphUserService
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+
 
 <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
     <h3>Admin Dashboard</h3>
-    @if (logFiles == null)
+    
+    @if (!isAuthorized)
     {
-        <p>Loading logs...</p>
+        <p class="text-danger">You are not authorized to view this page.</p>
     }
     else
     {
-        <select @onchange="OnLogSelected" class="form-select w-50 mb-3">
-            <option disabled selected value="">-- Select Log File --</option>
-            @foreach (var file in logFiles)
-            {
-                <option value="@file">@file</option>
-            }
-        </select>
-
-        @if (!string.IsNullOrEmpty(logContent))
+        <div class="py-4">
+            <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
+                    style="max-width: 200px;"
+                    @onclick="NavigateToEditor">
+                Monday Minute Editor
+            </button>
+        </div>
+        
+        @if (logFiles == null)
         {
-            <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
+            <p>Loading logs...</p>
         }
+        else
+        {
+            <select @onchange="OnLogSelected" class="form-select w-50 mb-3">
+                <option disabled selected value="">-- Select Log File --</option>
+                @foreach (var file in logFiles)
+                {
+                    <option value="@file">@file</option>
+                }
+            </select>
+
+            @if (!string.IsNullOrEmpty(logContent))
+            {
+                <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
+            }
+        } 
     }
+    
+    
 </div>
 
 
@@ -31,9 +56,27 @@
 @code {
     private List<string>? logFiles;
     private string? logContent;
+    private bool isAuthorized = false;
+    private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                isAuthorized = await GraphUserService.IsUserInGroupAsync(userId, adminGroupId);
+            }
+        }
+
+        if (isAuthorized)
+        {
+            logFiles = await Logger.GetLogFileNamesAsync();
+        }
         logFiles = await Logger.GetLogFileNamesAsync();
     }
 
@@ -44,5 +87,10 @@
         {
             logContent = await Logger.ReadLogContentAsync(selectedFile);
         }
+    }
+
+    private void NavigateToEditor()
+    {
+        Navigation.NavigateTo("/mondayminuteeditor");
     }
 }

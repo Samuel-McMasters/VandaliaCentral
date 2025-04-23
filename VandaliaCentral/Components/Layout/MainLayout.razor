@@ -52,16 +52,28 @@
             </div>
 
             <!-- Editor button (right side) -->
-            @if (IsUploader && !IsOnEditorPage)
+            @if (IsUploader && !IsOnEditorPage && !IsAdmin)
             {
                 <div class="ms-auto">
                     <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
-                            style="max-width: 200px;"
-                            @onclick="NavigateToEditor">
+                    style="max-width: 200px;"
+                    @onclick="NavigateToEditor">
                         @(isMobile ? "Upload" : "Monday Minute Editor")
                     </button>
                 </div>
             }
+            else if (IsAdmin)
+            {
+                <div class="ms-auto">
+                    <NavLink href="/admin" @onclick="NavigateToAdmin" class="button-85" activeClass="active">
+                        <span class="oi oi-people me-2" aria-hidden="true"></span>
+                        @(isMobile ? "Admin" : "Admin Dashboard")
+                    </NavLink>
+                </div>
+                
+                
+            }
+
         </div>
     </nav>
 
@@ -90,6 +102,7 @@
     private bool IsUploader = true;
     private bool isMobile = false;
     private bool hasLoggedLogin = false;
+    private bool IsAdmin = false;
 
     private bool IsOnEditorPage => Navigation.Uri.Contains("/mondayminuteeditor", StringComparison.OrdinalIgnoreCase);
 
@@ -155,6 +168,9 @@
         IsUploader = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
 
+        IsAdmin = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
+
         //  Subscribe to route change for animation
         currentUri = Navigation.Uri;
         Navigation.LocationChanged += HandleLocationChanged;
@@ -163,6 +179,11 @@
     private void NavigateToEditor()
     {
         Navigation.NavigateTo("/mondayminuteeditor");
+    }
+
+    private void NavigateToAdmin()
+    {
+        Navigation.NavigateTo("/admin");
     }
 
     // ===  NEW FOR ANIMATION ON PAGE CHANGE ===

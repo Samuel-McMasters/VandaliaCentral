@@ -5,7 +5,7 @@
 
 <div class="sidebar pt-3" style="height: 100%; overflow-y: auto;">
     <div class="menu btn-group-vertical gap-4 align-items-center ps-2">
-        
+
         <a class="d-block d-lg-none" href="/" tabindex="-1" @onclick="HandleLinkClick">
             <svg xmlns="http://www.w3.org/2000/svg" width="45" height="50" fill="white" class="bi bi-house" viewBox="0 0 16 20">
                 <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5z"/>
@@ -20,6 +20,9 @@
             <span class="oi oi-people me-2" aria-hidden="true"></span>
             Submit An IT Ticket
         </NavLink>
+
+        
+        
 
         @if (IsBranchManager)
         {
@@ -42,7 +45,7 @@
                 <li><a class="dropdown-item" href="https://roleplayv3.intemposoftware.com/roleplay&3.03.001/Login" target="_blank" @onclick="HandleLinkClick">Roleplay</a></li>
                 <li><a class="dropdown-item" href="https://login.salesforce.com/" target="_blank" @onclick="HandleLinkClick">Salesforce</a></li>
                 <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/:x:/g/EXqeRtIeKlZElUNkYodlQUEBmZ0Msp5pgTZP4jdqGLq2Kg?e=SrmP8C" target="_blank" @onclick="HandleLinkClick">Delivery Zones</a></li>
-                
+
 
             </ul>
         </div>
@@ -158,7 +161,7 @@
                 <li><a class="dropdown-item" href="/financeinquiry" target="" @onclick="HandleLinkClick">Finance</a></li>
                 <li><a class="dropdown-item" href="https://expense.certify.com/Login.aspx" target="_blank" @onclick="HandleLinkClick">Emburse</a></li>
                 <li><a class="dropdown-item" href="https://vr.mysquare9.com/square9web/index.html#/view?db=10" target="_blank" @onclick="HandleLinkClick">Square9 (Approvers)</a></li>
-                
+
             </ul>
         </div>
 
@@ -173,7 +176,7 @@
             </ul>
         </div>
         <!-- Force visible bottom padding for iOS Safari -->
-        
+
     </div>
     <div class="ios-bottom-spacer"></div>
 </div>
@@ -183,6 +186,7 @@
     private int windowWidth;
     private bool IsBranchManager = false;
     private bool IsSafetyTrainer = false;
+    private bool IsAdmin = false;
 
     private void HandleLinkClick()
     {
@@ -197,7 +201,7 @@
         return (windowWidth < 992); // match CSS breakpoint
     }
 
-    
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -206,6 +210,9 @@
         // Check if user is in the correct Entra ID group by claim
         IsBranchManager = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "159d4d29-7b2e-4a17-bc09-fda3b261204b" );
+
+        IsAdmin = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
     }
 
 

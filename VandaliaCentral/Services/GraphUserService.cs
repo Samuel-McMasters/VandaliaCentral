@@ -58,5 +58,29 @@ namespace VandaliaCentral.Services
                 return Enumerable.Empty<User>();
             }
         }
+
+        public async Task<bool> IsUserInGroupAsync(string userId, string groupId)
+        {
+            try
+            {
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "GroupMember.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                var result = await graphClient.Users[userId]
+                    .CheckMemberGroups(new List<string> { groupId })
+                    .Request()
+                    .PostAsync();
+
+                return result.Contains(groupId);
+            }
+            catch (ServiceException ex)
+            {
+                Console.WriteLine($"Graph error: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
