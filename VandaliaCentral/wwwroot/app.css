@@ -200,6 +200,26 @@ main {
     pointer-events: none;
 }
 
+.icon-button {
+    display: inline-block;
+    cursor: pointer;
+    text-align: center;
+}
+
+    .icon-button svg {
+        display: block;
+        margin: 0 auto;
+    }
+
+    .icon-button::after {
+        content: "";
+        display: block;
+        width: 100%;
+        height: 2px;
+        background-color: black;
+        margin-top: 4px;
+    }
+
 /* ================================ */
 
 .btn {
