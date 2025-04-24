@@ -2,7 +2,7 @@
 @inject Microsoft.Graph.GraphServiceClient GraphClient
 @using Microsoft.Graph
 
-<div class="px-3 col-4">
+<div class="px-3">
     <h4>Employee Details</h4>
 
     @if (contact == null)
@@ -11,7 +11,7 @@
     }
     else
     {
-        <div class="card p-3">
+        <div class="card p-3 shadow">
             <h5>@contact.DisplayName</h5>
             <br>
             <p><strong>District:</strong> @contact.PostalCode</p>

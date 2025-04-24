@@ -30,11 +30,7 @@ namespace VandaliaCentral.Services
                 }));
 
                 var allUsers = new List<User>();
-                //var page = await graphClient.Users
-                //    .Request()
-                //    .Select("id,displayName,mail,jobTitle,mobilePhone,businessPhones")
-                //    .Top(100)
-                //    .GetAsync();
+                
                 var page = await graphClient.Users
                       .Request()
                       .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
