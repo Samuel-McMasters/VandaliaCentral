@@ -53,7 +53,7 @@
                 }
                 else
                 {
-                    <select @onchange="OnLogSelected" class="form-select w-100 mb-3">
+                    <select @onchange="OnLogSelected" class="form-select w-25 mb-3">
                         <option disabled selected value="">-- Select Log File --</option>
                         @foreach (var file in logFiles)
                         {
@@ -77,7 +77,7 @@
             <div>
                 <h5>Company Calendar Manager</h5>
 
-                <div class="mb-3">
+                <div class="mb-3 w-25">
                     <label>Date:</label>
                     <InputDate @bind-Value="newEvent.Date" class="form-control" />
 
