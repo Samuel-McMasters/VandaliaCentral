@@ -12,10 +12,7 @@
 @inject NavigationManager Navigation
 @inject ITokenAcquisition TokenAcquisition
 
-
-
-
-<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+<div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4">
     <h3>Admin Dashboard</h3>
 
     @if (!isAuthorized)
@@ -24,7 +21,7 @@
     }
     else
     {
-        <div class="py-4">
+        <div class="py-3">
             <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
                     style="max-width: 200px;"
                     @onclick="NavigateToEditor">
@@ -32,93 +29,128 @@
             </button>
         </div>
 
-        @if (logFiles == null)
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("logs"))'
+                        @onclick='() => SetActiveTab("logs")'
+                        type='button'>
+                    Logs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("calendar"))'
+                        @onclick='() => SetActiveTab("calendar")'
+                        type='button'>
+                    Company Calendar
+                </button>
+            </li>
+        </ul>
+
+        <!-- Logs Tab -->
+        @if (activeTab == "logs")
         {
-            <p>Loading logs...</p>
-        }
-        else
-        {
-            <select @onchange="OnLogSelected" class="form-select w-25 mb-3">
-                <option disabled selected value="">-- Select Log File --</option>
-                @foreach (var file in logFiles)
+            <div>
+                <h5>Log Viewer</h5>
+
+                @if (logFiles == null)
                 {
-                    <option value="@file">@file</option>
+                    <p>Loading logs...</p>
                 }
-            </select>
+                else
+                {
+                    <select @onchange="OnLogSelected" class="form-select w-100 mb-3">
+                        <option disabled selected value="">-- Select Log File --</option>
+                        @foreach (var file in logFiles)
+                        {
+                            <option value="@file">@file</option>
+                        }
+                    </select>
 
-            @if (!string.IsNullOrEmpty(logContent))
-            {
-                <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
-            }
-            <hr class="my-5" />
-            <h5>Company Calendar Manager</h5>
-
-            <div class="mb-3">
-                <label>Date:</label>
-                <InputDate @bind-Value="newEvent.Date" class="form-control" />
-
-                <label class="mt-2">Title:</label>
-                <InputText @bind-Value="newEvent.Title" class="form-control" />
-
-                <label class="mt-2">Type:</label>
-                <InputText @bind-Value="newEvent.Type" class="form-control" />
-
-                <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
+                    @if (!string.IsNullOrEmpty(logContent))
+                    {
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
+                        </div>
+                    }
+                }
             </div>
+        }
 
-            @if (calendarEvents == null)
-            {
-                <p>Loading calendar events...</p>
-            }
-            else if (!calendarEvents.Any())
-            {
-                <p class="text-muted">No events yet.</p>
-            }
-            else
-            {
-                <ul class="list-group">
-                    @foreach (var ev in calendarEvents)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
-                                <div class="text-muted small">@ev.Type</div>
-                            </div>
-                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
-                        </li>
-                    }
-                </ul>
+        <!-- Calendar Tab -->
+        @if (activeTab == "calendar")
+        {
+            <div>
+                <h5>Company Calendar Manager</h5>
 
-                <div class="d-flex align-items-center gap-3 mt-3">
-                    <button class="btn btn-primary" @onclick="SaveCalendar">Save Changes</button>
-                    @if (showSaveSuccess)
-                    {
-                        <div class="text-success fw-bold">✓ Saved!</div>
-                    }
+                <div class="mb-3">
+                    <label>Date:</label>
+                    <InputDate @bind-Value="newEvent.Date" class="form-control" />
+
+                    <label class="mt-2">Title:</label>
+                    <InputText @bind-Value="newEvent.Title" class="form-control" />
+
+                    <label class="mt-2">Type:</label>
+                    <InputText @bind-Value="newEvent.Type" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
                 </div>
-            }
+
+                @if (calendarEvents == null)
+                {
+                    <p>Loading calendar events...</p>
+                }
+                else if (!calendarEvents.Any())
+                {
+                    <p class="text-muted">No events yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var ev in calendarEvents)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
+                                    <div class="text-muted small">@ev.Type</div>
+                                </div>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                            </li>
+                        }
+                    </ul>
+
+                    <div class="d-flex align-items-center gap-3 mt-3">
+                        <button class="btn btn-primary" @onclick="SaveCalendar">Save Changes</button>
+                        @if (showSaveSuccess)
+                        {
+                            <div class="text-success fw-bold">✓ Saved!</div>
+                        }
+                    </div>
+                }
+            </div>
         }
     }
-
-
 </div>
-
-
 
 @code {
     private List<string>? logFiles;
+
     private string? logContent;
     private bool isAuthorized = false;
     private bool showSaveSuccess = false;
+    private string activeTab = "logs";
     private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
     private List<CalendarEvent>? calendarEvents;
     private CalendarEvent newEvent = new();
+
+    private void SetActiveTab(string tab) => activeTab = tab;
+
+    private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Try to get a token — if this fails, redirect
             var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -163,6 +195,7 @@
     {
         Navigation.NavigateTo("/mondayminuteeditor");
     }
+
     private void AddEvent()
     {
         if (string.IsNullOrWhiteSpace(newEvent.Title))
@@ -193,7 +226,6 @@
                 showSaveSuccess = true;
                 StateHasChanged();
 
-                // Hide after 4 seconds
                 await Task.Delay(4000);
                 showSaveSuccess = false;
                 StateHasChanged();
