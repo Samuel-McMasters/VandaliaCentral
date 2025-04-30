@@ -24,9 +24,14 @@ namespace VandaliaCentral.Services
             if (await blobClient.ExistsAsync())
             {
                 var download = await blobClient.DownloadContentAsync();
-                var json = download.Value.Content.ToString();
-                var events = JsonSerializer.Deserialize<List<CalendarEvent>>(json) ?? new();
-                return events.OrderBy(e => e.Date).ToList();
+                using var reader = new StreamReader(download.Value.Content.ToStream());
+                var json = await reader.ReadToEndAsync();
+
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    var events = JsonSerializer.Deserialize<List<CalendarEvent>>(json) ?? new();
+                    return events.OrderBy(e => e.Date).ToList();
+                }
             }
 
             return new List<CalendarEvent>();

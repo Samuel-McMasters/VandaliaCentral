@@ -3,8 +3,10 @@
 @inject HttpClient Http
 @inject NavigationManager Nav
 @using VandaliaCentral.Services
+@using VandaliaCentral.Models
 @using Microsoft.AspNetCore.Authorization
 @inject PdfService PdfService
+@inject CalendarService CalendarService
 @attribute [Authorize]
 
 
@@ -78,7 +80,7 @@
 
                 <!-- Scrollable container -->
                 <div style="overflow-y: auto; max-height: 250px;">
-                    <ul class="space-y-3">
+                    @* <ul class="space-y-3">
                         <li class="d-flex">
                             <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
                             <div>
@@ -142,7 +144,30 @@
                                 <div class="text-muted small">Observed Holiday</div>
                             </div>
                         </li>
-                    </ul>
+                    </ul> *@
+                    @if (calendarEvents == null)
+                    {
+                        <p>Loading calendar...</p>
+                    }
+                    else if (!calendarEvents.Any())
+                    {
+                        <p class="text-muted">No upcoming events.</p>
+                    }
+                    else
+                    {
+                        <ul class="space-y-3">
+                            @foreach (var e in calendarEvents)
+                            {
+                                <li class="d-flex">
+                                    <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
+                                    <div>
+                                        <strong>@e.Date.ToString("MMMM d")</strong> – @e.Title
+                                        <div class="text-muted small">@e.Type</div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
             </div>
 
@@ -160,6 +185,7 @@
     private string mmPdf;
     private string mmPdfName;
     private string bcPdf;
+    private List<CalendarEvent>? calendarEvents;
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,6 +194,8 @@
         mmPdfName = await PdfService.GetMmPdfNameAsync("mondayminute");
 
         bcPdf = await PdfService.GetLatestPdfUrlAsync("bonuschart");
+
+        calendarEvents = await CalendarService.LoadCalendarAsync();
         
     }
 
