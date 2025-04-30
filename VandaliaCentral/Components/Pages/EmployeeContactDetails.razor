@@ -17,7 +17,11 @@
             <p><strong>District:</strong> @contact.PostalCode</p>
             <p><strong>Location:</strong> @contact.OfficeLocation</p>
             <p><strong>Job Title:</strong> @contact.JobTitle</p>
-            <p><strong>Email:</strong> @contact.Mail</p>
+            <p>
+                <strong>Email:</strong> <NavLink href="@($"mailto:{contact.Mail}")" class="text-decoration-none">
+                     @contact.Mail
+                </NavLink>
+            </p>
             <p><strong>Phone:</strong> @contact.MobilePhone</p>
             <p><strong>IP Phone:</strong> @(contact.BusinessPhones?.FirstOrDefault() ?? "")</p>
             

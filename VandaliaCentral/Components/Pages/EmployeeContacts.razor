@@ -57,7 +57,12 @@
                                     </td>
                                     <td class="d-none d-xl-table-cell">@user.OfficeLocation</td>
                                     <td class="d-none d-md-table-cell">@user.JobTitle</td>
-                                    <td class="d-none d-lg-table-cell">@user.Mail</td>
+                                    
+                                    <td>
+                                        <NavLink href="@($"mailto:{user.Mail}")" class="text-decoration-none">
+                                            @user.Mail
+                                        </NavLink>
+                                    </td>
                                     <td class="d-none d-xl-table-cell">@user.MobilePhone</td>
                                     <td class="d-none d-xl-table-cell">@(user.BusinessPhones?.FirstOrDefault() ?? "")</td>
                                     
