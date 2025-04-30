@@ -13,6 +13,7 @@
     {
         <div class="card p-3 shadow">
             <h5>@contact.DisplayName</h5>
+            <p>Employee #: @(contact.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? "N/A")</p>
             <br>
             <p><strong>District:</strong> @contact.PostalCode</p>
             <p><strong>Location:</strong> @contact.OfficeLocation</p>
@@ -37,7 +38,10 @@
     {
         try
         {
-            contact = await GraphClient.Users[id].Request().GetAsync();
+            contact = await GraphClient.Users[id]
+            .Request()
+            .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
+            .GetAsync();
         }
         catch (Exception ex)
         {
