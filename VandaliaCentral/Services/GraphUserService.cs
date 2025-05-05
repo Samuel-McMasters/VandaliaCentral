@@ -25,21 +25,22 @@ namespace VandaliaCentral.Services
             {
                 var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
                 {
-                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All", "GroupMember.Read.All" });
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 }));
 
-                var allUsers = new List<User>();
-                
-                var page = await graphClient.Users
-                      .Request()
-                      .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
-                      .Top(100)
-                      .GetAsync();
+                var allGroupUsers = new List<User>();
+
+                var page = await graphClient.Groups["3b1a951d-f7f7-4da9-b6b5-f939475d21d0"].Members
+                    .Request()
+                    .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
+                    .Top(100)
+                    .GetAsync();
 
                 while (page != null)
                 {
-                    allUsers.AddRange(page.CurrentPage);
+                    var users = page.CurrentPage.OfType<User>();
+                    allGroupUsers.AddRange(users);
 
                     if (page.NextPageRequest != null)
                     {
@@ -51,12 +52,12 @@ namespace VandaliaCentral.Services
                     }
                 }
 
-                //Filter out users with empty OfficeLocation
-                var filteredUsers = allUsers
-                    .Where(user => !string.IsNullOrWhiteSpace(user.OfficeLocation))
+                // Sort the list in descending alphabetical order by DisplayName
+                var sortedUsers = allGroupUsers
+                    .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                return filteredUsers;
+                return sortedUsers;
             }
             catch (Exception ex)
             {
