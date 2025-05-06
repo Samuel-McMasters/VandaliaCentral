@@ -16,6 +16,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
+    <PackageReference Include="Blazorise" Version="1.7.6" />
+    <PackageReference Include="Blazorise.Bootstrap5" Version="1.7.6" />
+    <PackageReference Include="Blazorise.Charts" Version="1.7.6" />
+    <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.7.6" />
     <PackageReference Include="iTextSharp" Version="5.5.13.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.14" />
     <PackageReference Include="Microsoft.Graph" Version="4.54.0" />

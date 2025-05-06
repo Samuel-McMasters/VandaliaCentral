@@ -29,6 +29,13 @@
                     Logs
                 </button>
             </li>
+            @* <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("usage"))'
+                        @onclick='() => SetActiveTab("usage")'
+                        type='button'>
+                    Usage Stats
+                </button>
+            </li> *@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
                     Company Calendar
@@ -39,6 +46,7 @@
                     Monday Minute
                 </button>
             </li>
+            
         </ul>
 
         <!-- Logs Tab -->
@@ -70,6 +78,21 @@
                 }
             </div>
         }
+
+        <!-- Usage Stats Tab -->
+       @*  @if (activeTab == "usage")
+{
+            <h5>Monthly Sidebar Link Clicks</h5>
+
+            @if (usageData == null)
+            {
+                <p>Loading usage data...</p>
+            }
+            else
+            {
+                <LineChart Data="@chartData" Options="@chartOptions" />
+            }
+        } *@
 
         <!-- Calendar Tab -->
         @if (activeTab == "calendar")

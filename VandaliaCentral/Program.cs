@@ -8,6 +8,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Identity.Web.UI;
 using VandaliaCentral.Services;
 using QuestPDF.Infrastructure;
+using Blazorise;
+using Blazorise.Bootstrap5;
+using Blazorise.Icons.FontAwesome;
+using Blazorise.Charts;
+
 
 var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
@@ -51,6 +56,8 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddRazorPages();
 builder.Services.AddControllersWithViews()
     .AddMicrosoftIdentityUI(); // <- this is the correct usage // Needed for MicrosoftIdentity UI pages
+
+
 
 
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>

@@ -1,22 +1,25 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
+@using VandaliaCentral.Services
+@inject LoggingService Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 <div class="sidebar pt-3" style="height: 100%; overflow-y: auto;">
     <div class="menu btn-group-vertical gap-4 align-items-center ">
 
-        <a class="d-block d-lg-none" href="/" tabindex="-1" @onclick="HandleLinkClick">
+        <a class="d-block d-lg-none" href="/" tabindex="-1" @onclick='(e) => HandleLinkClick("Home Button")'>
             <svg xmlns="http://www.w3.org/2000/svg" width="45" height="50" fill="white" class="bi bi-house" viewBox="0 0 16 20">
                 <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5z"/>
                 <line x1="2" y1="19" x2="14" y2="19" stroke="white" stroke-width="1.5"/>
             </svg>
         </a>
-        <NavLink href="/employeecontacts" @onclick="HandleLinkClick"  class="btn btn-primary " activeClass="active">
+        <NavLink href="/employeecontacts" @onclick='(e) => HandleLinkClick("Employee Contacts")' class="btn btn-primary " activeClass="active">
             
             Employee Contacts
         </NavLink>
-        <NavLink href="/supportticket" @onclick="HandleLinkClick" class="btn btn-danger" activeClass="active">
+        <NavLink href="/supportticket" @onclick='(e) => HandleLinkClick("Submit an IT Ticket")' class="btn btn-danger" activeClass="active">
             
             Submit An IT Ticket
         </NavLink>
@@ -31,8 +34,8 @@
                     Branch Manager
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Store Audit Quality</a></li>
-                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Checklists</a></li>
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick='(e) => HandleLinkClick("Store Audit Quality Checks")'>Store Audit Quality</a></li>
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick='(e) => HandleLinkClick("Checklists")'>Checklists</a></li>
                 </ul>
             </div>
         }
@@ -42,9 +45,9 @@
                 Rentals
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://roleplayv3.intemposoftware.com/roleplay&3.03.001/Login" target="_blank" @onclick="HandleLinkClick">Roleplay</a></li>
-                <li><a class="dropdown-item" href="https://login.salesforce.com/" target="_blank" @onclick="HandleLinkClick">Salesforce</a></li>
-                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/:x:/g/EXqeRtIeKlZElUNkYodlQUEBmZ0Msp5pgTZP4jdqGLq2Kg?e=SrmP8C" target="_blank" @onclick="HandleLinkClick">Delivery Zones</a></li>
+                <li><a class="dropdown-item" href="https://roleplayv3.intemposoftware.com/roleplay&3.03.001/Login" target="_blank" @onclick='(e) => HandleLinkClick("Roleplay")'>Roleplay</a></li>
+                <li><a class="dropdown-item" href="https://login.salesforce.com/" target="_blank" @onclick='(e) => HandleLinkClick("Salesforce")'>Salesforce</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/:x:/g/EXqeRtIeKlZElUNkYodlQUEBmZ0Msp5pgTZP4jdqGLq2Kg?e=SrmP8C" target="_blank" @onclick='(e) => HandleLinkClick("Delivery Zones")'>Delivery Zones</a></li>
 
 
             </ul>
@@ -55,7 +58,7 @@
                 Sales
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://rdo.rouseanalytics.com" target="_blank" @onclick="HandleLinkClick">Rouse</a></li>
+                <li><a class="dropdown-item" href="https://rdo.rouseanalytics.com" target="_blank" @onclick='(e) => HandleLinkClick("Rouse")'>Rouse</a></li>
             </ul>
         </div>
 
@@ -64,8 +67,8 @@
                 Service
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" target="_blank" @onclick="HandleLinkClick">R Status</a></li>
-                <li><a class="dropdown-item" href="https://vandaliaquality.azurewebsites.net/Login/Index?ReturnUrl=%2fService" target="_blank" @onclick="HandleLinkClick">Quality App</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" target="_blank" @onclick='(e) => HandleLinkClick("R Status")'>R Status</a></li>
+                <li><a class="dropdown-item" href="https://vandaliaquality.azurewebsites.net/Login/Index?ReturnUrl=%2fService" target="_blank" @onclick='(e) => HandleLinkClick("Quality Apps")'>Quality App</a></li>
             </ul>
         </div>
 
@@ -74,8 +77,8 @@
                 Maintenance
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/MechanicTeam/_layouts/15/AccessDenied.aspx?Source=https%3A%2F%2Fvandaliarental%2Esharepoint%2Ecom%2Fsites%2FMechanicTeam%3Fxsdata%3DMDV8MDJ8fDA2N2FiN2E0NWJlNzRkNDE4ZmNjMDhkZDcxMTM0NmUzfGQwNDNjYTUxODk4ZDRiYzFiYzFhMTkzMTIyMmU3MmZifDB8MHw2Mzg3OTEwNDk3NjQxMTQzODB8VW5rbm93bnxWR1ZoYlhOVFpXTjFjbWwwZVZObGNuWnBZMlY4ZXlKV0lqb2lNQzR3TGpBd01EQWlMQ0pRSWpvaVYybHVNeklpTENKQlRpSTZJazkwYUdWeUlpd2lWMVFpT2pFeGZRPT18MXxMMk5vWVhSekx6RTVPalJrWkdOak1UWTBMV0l4TnpFdE5ESmhNaTA1WmpKbUxUa3daalk1T1dKak56Rm1NMTg0WVRkalkyTTFOeTB5TW1GbUxUUmpZMlF0WVdJd1pDMWtOamxpWWpZMFkyVTBPV1JBZFc1eExtZGliQzV6Y0dGalpYTXZiV1Z6YzJGblpYTXZNVGMwTXpVd09ERTNOVFEyTkE9PXxiZGI5ODgzYTQyNTc0Y2ZmOGZjYzA4ZGQ3MTEzNDZlM3wwMTczZDdiNTExN2E0YzI5OTA2MDcwZTQ1OWEwMGJlNA%253d%253d%26sdata%3Dc1pWVFJZOS9iM2NkUnpqSEVMNHByVnMxanRYN0RXN0NpMllOUFB6dEUvWT0%253d%26ovuser%3Dd043ca51%2D898d%2D4bc1%2Dbc1a%2D1931222e72fb%252csam%2Emcmasters%2540vandaliarental%2Ecom%26OR%3DTeams%2DHL%26CT%3D1743508159223%26clickparams%3DeyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI0OS8yNTAzMDIwMTAxMCIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%253d%253d%26SafelinksUrl%3Dhttps%253a%252f%252fvandaliarental%2Esharepoint%2Ecom%252fsites%252fMechanicTeam&correlation=c73590a1%2D90b5%2D0000%2D940a%2D0eab912eed92" target="_blank" @onclick="HandleLinkClick">Mechanics Database</a></li>
-                <li><a class="dropdown-item disabled" href="" target="" @onclick="HandleLinkClick">Service Requests</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/MechanicTeam/_layouts/15/AccessDenied.aspx?Source=https%3A%2F%2Fvandaliarental%2Esharepoint%2Ecom%2Fsites%2FMechanicTeam%3Fxsdata%3DMDV8MDJ8fDA2N2FiN2E0NWJlNzRkNDE4ZmNjMDhkZDcxMTM0NmUzfGQwNDNjYTUxODk4ZDRiYzFiYzFhMTkzMTIyMmU3MmZifDB8MHw2Mzg3OTEwNDk3NjQxMTQzODB8VW5rbm93bnxWR1ZoYlhOVFpXTjFjbWwwZVZObGNuWnBZMlY4ZXlKV0lqb2lNQzR3TGpBd01EQWlMQ0pRSWpvaVYybHVNeklpTENKQlRpSTZJazkwYUdWeUlpd2lWMVFpT2pFeGZRPT18MXxMMk5vWVhSekx6RTVPalJrWkdOak1UWTBMV0l4TnpFdE5ESmhNaTA1WmpKbUxUa3daalk1T1dKak56Rm1NMTg0WVRkalkyTTFOeTB5TW1GbUxUUmpZMlF0WVdJd1pDMWtOamxpWWpZMFkyVTBPV1JBZFc1eExtZGliQzV6Y0dGalpYTXZiV1Z6YzJGblpYTXZNVGMwTXpVd09ERTNOVFEyTkE9PXxiZGI5ODgzYTQyNTc0Y2ZmOGZjYzA4ZGQ3MTEzNDZlM3wwMTczZDdiNTExN2E0YzI5OTA2MDcwZTQ1OWEwMGJlNA%253d%253d%26sdata%3Dc1pWVFJZOS9iM2NkUnpqSEVMNHByVnMxanRYN0RXN0NpMllOUFB6dEUvWT0%253d%26ovuser%3Dd043ca51%2D898d%2D4bc1%2Dbc1a%2D1931222e72fb%252csam%2Emcmasters%2540vandaliarental%2Ecom%26OR%3DTeams%2DHL%26CT%3D1743508159223%26clickparams%3DeyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI0OS8yNTAzMDIwMTAxMCIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%253d%253d%26SafelinksUrl%3Dhttps%253a%252f%252fvandaliarental%2Esharepoint%2Ecom%252fsites%252fMechanicTeam&correlation=c73590a1%2D90b5%2D0000%2D940a%2D0eab912eed92" target="_blank" @onclick='(e) => HandleLinkClick("Mechanics Database")'>Mechanics Database</a></li>
+                <li><a class="dropdown-item disabled" href="" target="" @onclick='(e) => HandleLinkClick("Service Requests")'>Service Requests</a></li>
             </ul>
         </div>
 
@@ -84,8 +87,8 @@
                 Dispatch
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://app.tsomobile.com/#logincustoms" target="_blank" @onclick="HandleLinkClick">TSO</a></li>
-                <li><a class="dropdown-item" href="https://enterprise.wisesystems.io/login" target="_blank" @onclick="HandleLinkClick">InTempoCTX</a></li>
+                <li><a class="dropdown-item" href="https://app.tsomobile.com/#logincustoms" target="_blank" @onclick='(e) => HandleLinkClick("TSO")'>TSO</a></li>
+                <li><a class="dropdown-item" href="https://enterprise.wisesystems.io/login" target="_blank" @onclick='(e) => HandleLinkClick("InTempoCTX")'>InTempoCTX</a></li>
             </ul>
         </div>
 
@@ -94,9 +97,9 @@
                 IT
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/employeecontacts" target="" @onclick="HandleLinkClick">Employee Contacts</a></li>
-                <li><a class="dropdown-item" href="https://support.vandaliarental.com/support/home" target="_blank" @onclick="HandleLinkClick">View Your Support Tickets</a></li>
-                <li><a class="dropdown-item" href="/supportticket" @onclick="HandleLinkClick">Submit A Ticket</a></li>
+                <li><a class="dropdown-item" href="/employeecontacts" target="" @onclick='(e) => HandleLinkClick("Employee Contacts")'>Employee Contacts</a></li>
+                <li><a class="dropdown-item" href="https://support.vandaliarental.com/support/home" target="_blank" @onclick='(e) => HandleLinkClick("View Your Support Tickets")'>View Your Support Tickets</a></li>
+                <li><a class="dropdown-item" href="/supportticket" @onclick='(e) => HandleLinkClick("Submit A Ticket")'>Submit A Ticket</a></li>
             </ul>
         </div>
 
@@ -105,12 +108,12 @@
                 HR
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://access.paylocity.com/" target="_blank" @onclick="HandleLinkClick">Paylocity</a></li>
-                <li><a class="dropdown-item" href="https://access.paylocity.com/" target="_blank" @onclick="HandleLinkClick">Request Time Off</a></li>
-                <li><a class="dropdown-item" href="/employeetermination" @onclick="HandleLinkClick">Employee Termination</a></li>
-                <li><a class="dropdown-item" href="/employeechange" @onclick="HandleLinkClick">Employee Change</a></li>
-                <li><a class="dropdown-item" href="https://talent.paylocity.com/Talent/Jobs/List/" @onclick="HandleLinkClick">Careers</a></li>
-                <li><a class="dropdown-item disabled" href="" @onclick="HandleLinkClick">Training</a></li>
+                <li><a class="dropdown-item" href="https://access.paylocity.com/" target="_blank" @onclick='(e) => HandleLinkClick("Paylocity")'>Paylocity</a></li>
+                <li><a class="dropdown-item" href="https://access.paylocity.com/" target="_blank" @onclick='(e) => HandleLinkClick("Request Time Off")'>Request Time Off</a></li>
+                <li><a class="dropdown-item" href="/employeetermination" @onclick='(e) => HandleLinkClick("Employee Termiantion")'>Employee Termination</a></li>
+                <li><a class="dropdown-item" href="/employeechange" @onclick='(e) => HandleLinkClick("Employee Change")'>Employee Change</a></li>
+                <li><a class="dropdown-item" href="https://talent.paylocity.com/Talent/Jobs/List/" @onclick='(e) => HandleLinkClick("Careers")'>Careers</a></li>
+                <li><a class="dropdown-item disabled" href="" @onclick='(e) => HandleLinkClick("Training")'>Training</a></li>
             </ul>
         </div>
 
@@ -119,7 +122,7 @@
                 Purchasing
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://vandalia.smartequip.net/vandalia/#/user/login?salt=1742918312114&noauto=true" target="_blank" @onclick="HandleLinkClick">Smartequip</a></li>
+                <li><a class="dropdown-item" href="https://vandalia.smartequip.net/vandalia/#/user/login?salt=1742918312114&noauto=true" target="_blank" @onclick='(e) => HandleLinkClick("SmartEquip")'>Smartequip</a></li>
             </ul>
         </div>
 
@@ -128,11 +131,11 @@
                 Fleet
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://www.intempomx.com/Account/Login" target="_blank" @onclick="HandleLinkClick">InTempoMX</a></li>
+                <li><a class="dropdown-item" href="https://www.intempomx.com/Account/Login" target="_blank" @onclick='(e) => HandleLinkClick("InTempoMX")'>InTempoMX</a></li>
                 <li>
                     <a class="dropdown-item" href="https://login.salesforce.com/" target="_blank"
                     style="white-space: normal; word-wrap: break-word; max-width: 250px;"
-                    @onclick="HandleLinkClick">
+                       @onclick='(e) => HandleLinkClick("Rental Transfer (Salesforce)")'>
                         Rental Transfer (Salesforce)
                     </a>
                 </li>
@@ -146,7 +149,7 @@
                     Safety & Training
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick="HandleLinkClick">Blank</a></li>
+                    <li><a class="dropdown-item disabled" href="" target="_blank" @onclick='(e) => HandleLinkClick("Blank")'>Blank</a></li>
                 </ul>
             </div>
         }    
@@ -156,11 +159,11 @@
                 Accounting
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/apinquiry" target="" @onclick="HandleLinkClick">AP</a></li>
-                <li><a class="dropdown-item" href="/arinquiry" target="" @onclick="HandleLinkClick">AR</a></li>
-                <li><a class="dropdown-item" href="/financeinquiry" target="" @onclick="HandleLinkClick">Finance</a></li>
-                <li><a class="dropdown-item" href="https://expense.certify.com/Login.aspx" target="_blank" @onclick="HandleLinkClick">Emburse</a></li>
-                <li><a class="dropdown-item" href="https://vr.mysquare9.com/square9web/index.html#/view?db=10" target="_blank" @onclick="HandleLinkClick">Square9 (Approvers)</a></li>
+                <li><a class="dropdown-item" href="/apinquiry" target="" @onclick='(e) => HandleLinkClick("AP")'>AP</a></li>
+                <li><a class="dropdown-item" href="/arinquiry" target="" @onclick='(e) => HandleLinkClick("AR")'>AR</a></li>
+                <li><a class="dropdown-item" href="/financeinquiry" target="" @onclick='(e) => HandleLinkClick("Finance")'>Finance</a></li>
+                <li><a class="dropdown-item" href="https://expense.certify.com/Login.aspx" target="_blank" @onclick='(e) => HandleLinkClick("Emburse")'>Emburse</a></li>
+                <li><a class="dropdown-item" href="https://vr.mysquare9.com/square9web/index.html#/view?db=10" target="_blank" @onclick='(e) => HandleLinkClick("Sqaure 9 Approvers")'>Square9 (Approvers)</a></li>
 
             </ul>
         </div>
@@ -170,9 +173,9 @@
                 Marketing
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/ITTeam/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FITTeam%2FShared%20Documents%2FMarketing%2FVR%2DDesign%20Guidelines&viewid=271bbbf8%2D3c0c%2D457d%2D892c%2D6ed91ed436d1" target="_blank" @onclick="HandleLinkClick">Logos</a></li>
-                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/ITTeam/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FITTeam%2FShared%20Documents%2FMarketing&viewid=271bbbf8%2D3c0c%2D457d%2D892c%2D6ed91ed436d1" target="_blank" @onclick="HandleLinkClick">Flyers</a></li>
-                <li><a class="dropdown-item" href="https://vandaliarental.com/" target="_blank" @onclick="HandleLinkClick">Website</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/ITTeam/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FITTeam%2FShared%20Documents%2FMarketing%2FVR%2DDesign%20Guidelines&viewid=271bbbf8%2D3c0c%2D457d%2D892c%2D6ed91ed436d1" target="_blank" @onclick='(e) => HandleLinkClick("Logos")'>Logos</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.sharepoint.com/sites/ITTeam/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FITTeam%2FShared%20Documents%2FMarketing&viewid=271bbbf8%2D3c0c%2D457d%2D892c%2D6ed91ed436d1" target="_blank" @onclick='(e) => HandleLinkClick("Flyers")'>Flyers</a></li>
+                <li><a class="dropdown-item" href="https://vandaliarental.com/" target="_blank" @onclick='(e) => HandleLinkClick("Website")'>Website</a></li>
             </ul>
         </div>
         <!-- Force visible bottom padding for iOS Safari -->
@@ -188,17 +191,32 @@
     private bool IsSafetyTrainer = false;
     private bool IsAdmin = false;
 
-    private void HandleLinkClick()
+    private async Task HandleLinkClick(string linkName)
     {
         if (CloseSidebar != null && IsMobileScreen())
         {
             CloseSidebar.Invoke();
         }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
     }
 
     private bool IsMobileScreen()
     {
         return (windowWidth < 992); // match CSS breakpoint
+    }
+
+    private async Task LogNavClick(string linkName)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
     }
 
 
