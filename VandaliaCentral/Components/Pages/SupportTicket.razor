@@ -2,7 +2,9 @@
 @using VandaliaCentral.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
+@inject LoggingService Logger
 @inject GraphEmailService EmailService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
@@ -91,6 +93,14 @@
                 subject: subjectLine,
                 bodyText: body
             );
+
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Submitted IT Support Ticket with subject: '{formModel.Subject}'";
+            await Logger.LogActivityAsync(userName, activity);
 
             success = true;
             StateHasChanged();
