@@ -275,6 +275,13 @@ main {
     
 }
 
+.navbar-divider {
+    position: absolute;
+    top: 0;
+    left: 210px;
+    height: 100%;
+    border-left: 2px solid rgba(0, 0, 0, 1); 
+}
 
 
 .sidebar {
