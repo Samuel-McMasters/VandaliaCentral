@@ -22,7 +22,7 @@
 
 <div>
     <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary ps-2 pe-4" style="height: 80px; overflow: hidden;">
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary ps-4 pe-4" style="height: 80px; overflow: hidden;">
 
         <div class="d-flex w-100 align-items-center position-relative">
 
@@ -42,6 +42,9 @@
                 <a class="navbar-brand me-2" href="/">
                     <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
                 </a>
+
+                <div class="navbar-divider d-none d-lg-block"></div>
+
                 <!-- Home Icon moved here, with underline restored -->
                 <a class="d-none d-lg-block nav-link p-0 icon-button" href="/" tabindex="-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="black" class="bi bi-house"
@@ -51,7 +54,7 @@
                 </a>
             </div>
 
-            <div class="navbar-divider d-none d-lg-block"></div>
+            
 
             <!-- Editor button (right side) -->
             @if (IsUploader && !IsOnEditorPage && !IsAdmin)
