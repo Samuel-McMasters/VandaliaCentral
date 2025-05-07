@@ -129,6 +129,13 @@ main {
 }
 
 
+.btn-dark:hover {
+    border-color: #FF6720 !important;
+    box-shadow: 0 8px 20px rgba(255, 103, 32, 0.6); /* Orange shadow */
+    transform: translateY(-2px);
+    z-index: 2;
+}
+
 
 /* ================================ */
 /* === General Dropdown Button Styling === */

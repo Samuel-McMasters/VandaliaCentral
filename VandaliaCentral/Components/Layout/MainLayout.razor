@@ -78,6 +78,17 @@
                 
                 
             }
+            else
+            {
+                    <div class="ms-auto">
+                        <NavLink href="/admin" @onclick='(e) => NavigateToDashboard("Targit Dashboard")' class="btn btn-dark" activeClass="active">
+
+                        @(isMobile ? "Dashboards" : "My Dashboard")
+                        </NavLink>
+                    </div>
+
+
+            }
 
         </div>
     </nav>
@@ -192,6 +203,19 @@
         await Logger.LogActivityAsync(userName, activity);
 
         Navigation.NavigateTo("/mondayminuteeditor");
+    }
+
+    private async Task NavigateToDashboard(string linkName)
+    {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked Dashboard Button: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
+        Navigation.NavigateTo("https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview");
     }
 
     private async Task NavigateToAdmin(string linkName)
