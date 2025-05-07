@@ -9,9 +9,12 @@
 @inject IJSRuntime JS
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Identity.Web
+@inject LoggingService Logger
 @inject NavigationManager Navigation
 @inject LoggingService Logger
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
@@ -57,7 +60,7 @@
                 <div class="ms-auto">
                     <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
                     style="max-width: 200px;"
-                    @onclick="NavigateToEditor">
+                    @onclick='(e) => NavigateToEditor("Monday Minute Editor")'>
                         @(isMobile ? "Upload" : "Monday Minute Editor")
                     </button>
                 </div>
@@ -65,7 +68,7 @@
             else if (IsAdmin)
             {
                 <div class="ms-auto">
-                    <NavLink href="/admin" @onclick="NavigateToAdmin" class="btn btn-danger" activeClass="active">
+                    <NavLink href="/admin" @onclick='(e) => NavigateToAdmin("Admin Dashboard")' class="btn btn-danger" activeClass="active">
                         
                         @(isMobile ? "Admin" : "Admin Dashboard")
                     </NavLink>
@@ -176,13 +179,29 @@
         Navigation.LocationChanged += HandleLocationChanged;
     }
 
-    private void NavigateToEditor()
+    private async Task NavigateToEditor(string linkName)
     {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
         Navigation.NavigateTo("/mondayminuteeditor");
     }
 
-    private void NavigateToAdmin()
+    private async Task NavigateToAdmin(string linkName)
     {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
         Navigation.NavigateTo("/admin");
     }
 
