@@ -78,7 +78,7 @@
                 
                 
             }
-            else
+            else if (!IsOnEditorPage)
             {
                     <div class="ms-auto">
                         <NavLink href="/admin" @onclick='(e) => NavigateToDashboard("Targit Dashboard")' class="btn btn-dark" activeClass="active">
@@ -86,8 +86,6 @@
                         @(isMobile ? "Dashboards" : "My Dashboard")
                         </NavLink>
                     </div>
-
-
             }
 
         </div>
