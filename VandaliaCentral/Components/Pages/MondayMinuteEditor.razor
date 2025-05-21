@@ -1,8 +1,62 @@
 ﻿@page "/mondayminuteeditor"
+@using VandaliaCentral.Services
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject PdfService PdfService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
+<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+    <h3 class="pb-4">Resource Hub</h3>
 
-<MondayMinuteManager />
+    <div class="py-4 pt-5">
+        <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
+            @(isMobile ? "Dashboards" : "My Targit Dashboard")
+        </NavLink>
+    </div>
+
+    
+        
+
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class='nav-link @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
+                Monday Minute Manager
+            </button>
+        </li>
+            
+
+    </ul>
+        
+    
+
+    <!-- Monday Minute Editor Tab -->
+    @if (activeTab == "mondayminute")
+    {
+        <MondayMinuteManager />
+    }
+</div> 
+
 
 @code {
-    
+    private bool isMobile = false;
+    private string activeTab = "mondayminute";
+
+    private void SetActiveTab(string tab) => activeTab = tab;
+    private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
+
+    private async Task NavigateToDashboard(string linkName)
+    {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked Dashboard Button: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
+        Navigation.NavigateTo("https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview");
+    }
 }
