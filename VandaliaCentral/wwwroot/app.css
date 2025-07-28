@@ -458,6 +458,9 @@ select.form-select {
         background-color: #909090;
     }
 
+.kb-layout .main-content {
+    margin-left: 0; /* eliminate gap */
+}
 
 
 
