@@ -1,0 +1,52 @@
+﻿@page "/employeecontacts/{id}"
+@inject Microsoft.Graph.GraphServiceClient GraphClient
+@using Microsoft.Graph
+
+<div class="px-3">
+    <h4>Employee Details</h4>
+
+    @if (contact == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="card p-3 shadow">
+            <h5>@contact.DisplayName</h5>
+            <p>Employee #: @(contact.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? "N/A")</p>
+            <br>
+            <p><strong>District:</strong> @contact.PostalCode</p>
+            <p><strong>Location:</strong> @contact.OfficeLocation</p>
+            <p><strong>Job Title:</strong> @contact.JobTitle</p>
+            <p>
+                <strong>Email:</strong> <NavLink href="@($"mailto:{contact.Mail}")" class="text-decoration-none">
+                     @contact.Mail
+                </NavLink>
+            </p>
+            <p><strong>Phone:</strong> @contact.MobilePhone</p>
+            <p><strong>IP Phone:</strong> @(contact.BusinessPhones?.FirstOrDefault() ?? "")</p>
+            
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string id { get; set; }
+    private User contact;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            contact = await GraphClient.Users[id]
+            .Request()
+            .Select("id,displayName,mail,userPrincipalName,jobTitle,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode,country,onPremisesExtensionAttributes")
+            .GetAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading contact: {ex.Message}");
+        }
+    }
+}
+

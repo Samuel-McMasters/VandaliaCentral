@@ -1,0 +1,170 @@
+﻿@page "/employeecontacts"
+@using Microsoft.Graph
+@using Microsoft.Identity.Web
+@using Microsoft.Identity.Client
+@using Microsoft.AspNetCore.Authorization
+@using VandaliaCentral.Services
+@inject GraphUserService UserService
+
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+            <h3>Employee Contacts</h3>
+            <input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
+                   @bind="searchTerm" @bind:event="oninput" />
+
+            <div>
+                @if (isLoading)
+                {
+                    <p>Loading contacts...</p>
+                }
+                else if (failure)
+                {
+                    <h4 class="text-danger mt-2">There was an error loading the contacts:</h4>
+                    <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+                }
+                else
+                {
+                    <table class="table table-striped w-100">
+                        <thead>
+                            <tr class="w-100">
+                                
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="5%">District</th>
+                                
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="15%">Name</th>
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="12%">Office Location</th>
+                                <th class="d-none d-md-table-cell" width="15%">Job Title</th>
+                                <th class="d-none d-lg-table-cell" width="20%">Email</th>
+                                <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
+                                <th class="d-none d-xl-table-cell" width="15%">IP Phone</th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in FilteredEmployees)
+                            {
+                                <tr>
+                                    
+                                    <td class="d-none d-xl-table-cell">@user.OnPremisesExtensionAttributes.ExtensionAttribute1</td>
+                                    
+                                    <td>
+                                        <NavLink href="@($"/employeecontacts/{user.Id}")" class="text-decoration-none">
+                                            @user.DisplayName
+                                        </NavLink>
+                                    </td>
+                                    <td class="d-none d-xl-table-cell">@user.OfficeLocation</td>
+                                    <td class="d-none d-md-table-cell">@user.JobTitle</td>
+                                    
+                                    <td>
+                                        <NavLink href="@($"mailto:{user.Mail}")" class="text-decoration-none">
+                                            @user.Mail
+                                        </NavLink>
+                                    </td>
+                                    <td class="d-none d-xl-table-cell">@user.MobilePhone</td>
+                                    <td class="d-none d-xl-table-cell">@(user.BusinessPhones?.FirstOrDefault() ?? "")</td>
+                                    
+
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<User> employees = new();
+    private string searchTerm = "";
+    private bool isLoading = true;
+    private bool failure = false;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // try
+        // {
+        //     var users = await UserService.GetUsersAsync(); // Updated to pass Navigation
+        //     employees = users.ToList();
+        // }
+        try
+        {
+            var users = await UserService.GetUsersAsync();
+            employees = users.ToList();
+
+            foreach (var user in employees)
+            {
+                Console.WriteLine("-------- User Info --------");
+                
+                Console.WriteLine($"Display Name: {user.DisplayName}");
+                Console.WriteLine($"Mail: {user.Mail}");
+                Console.WriteLine($"UserPrincipalName: {user.UserPrincipalName}");
+                Console.WriteLine($"Job Title: {user.JobTitle}");
+                Console.WriteLine($"Mobile Phone: {user.MobilePhone}");
+                Console.WriteLine($"Business Phones: {string.Join(", ", user.BusinessPhones ?? new List<string>())}");
+                Console.WriteLine($"Office Location: {user.OfficeLocation}");
+                Console.WriteLine($"Street Address: {user.StreetAddress}");
+                Console.WriteLine($"City: {user.City}");
+                Console.WriteLine($"State: {user.State}");
+                Console.WriteLine($"Postal Code: {user.PostalCode}");
+                Console.WriteLine($"Country: {user.Country}");
+                Console.WriteLine($"PO Box (ExtAttr): {user.OnPremisesExtensionAttributes?.ExtensionAttribute1}");
+
+                // Dump all extension attributes
+                if (user.OnPremisesExtensionAttributes != null)
+                {
+                    Console.WriteLine("--- Extension Attributes ---");
+                    Console.WriteLine($"ext1: {user.OnPremisesExtensionAttributes.ExtensionAttribute1}");
+                    Console.WriteLine($"ext2: {user.OnPremisesExtensionAttributes.ExtensionAttribute2}");
+                    Console.WriteLine($"ext3: {user.OnPremisesExtensionAttributes.ExtensionAttribute3}");
+                    Console.WriteLine($"ext4: {user.OnPremisesExtensionAttributes.ExtensionAttribute4}");
+                    Console.WriteLine($"ext5: {user.OnPremisesExtensionAttributes.ExtensionAttribute5}");
+                    Console.WriteLine($"ext6: {user.OnPremisesExtensionAttributes.ExtensionAttribute6}");
+                    Console.WriteLine($"ext7: {user.OnPremisesExtensionAttributes.ExtensionAttribute7}");
+                    Console.WriteLine($"ext8: {user.OnPremisesExtensionAttributes.ExtensionAttribute8}");
+                    Console.WriteLine($"ext9: {user.OnPremisesExtensionAttributes.ExtensionAttribute9}");
+                    Console.WriteLine($"ext10: {user.OnPremisesExtensionAttributes.ExtensionAttribute10}");
+                    Console.WriteLine($"ext11: {user.OnPremisesExtensionAttributes.ExtensionAttribute11}");
+                    Console.WriteLine($"ext12: {user.OnPremisesExtensionAttributes.ExtensionAttribute12}");
+                    Console.WriteLine($"ext13: {user.OnPremisesExtensionAttributes.ExtensionAttribute13}");
+                    Console.WriteLine($"ext14: {user.OnPremisesExtensionAttributes.ExtensionAttribute14}");
+                    Console.WriteLine($"ext15: {user.OnPremisesExtensionAttributes.ExtensionAttribute15}");
+                }
+            }
+        }
+        catch (ServiceException ex)
+        {
+            Console.WriteLine($"Error fetching users: {ex.Message}");
+            Console.WriteLine($"Error code: {ex.Error.Code}");
+            Console.WriteLine($"Error details: {ex.Error.Message}");
+            failure = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
+            failure = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    //Search functionality 
+    private IEnumerable<User> FilteredEmployees =>
+        string.IsNullOrWhiteSpace(searchTerm)
+            ? employees
+            : employees.Where(u =>
+                (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+}

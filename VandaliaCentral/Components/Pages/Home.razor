@@ -2,6 +2,13 @@
 @inject IWebHostEnvironment Env
 @inject HttpClient Http
 @inject NavigationManager Nav
+@using VandaliaCentral.Services
+@using VandaliaCentral.Models
+@using Microsoft.AspNetCore.Authorization
+@inject PdfService PdfService
+@inject CalendarService CalendarService
+@attribute [Authorize]
+
 
 
 <PageTitle>Vandalia Central</PageTitle>
@@ -10,37 +17,28 @@
     <!-- Bottom Row -->
     <div class="row g-4 pb-4">
 
-
         <!-- Left Column w/ fullscreen button -->
         <div class="col-12 col-lg-7 d-flex flex-column">
             <!-- Monday Minute -->
             <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">@mmHeader</h5>
-                    <a href="@mmFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <h5 class="mb-0">@mmPdfName</h5>
+                    <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
 
-                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">
-                    
-                    
-
-                    @if (mmFileUrl != null)
+                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
+                    @if (mmPdf == null)
                     {
-                        <object data="@mmFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                            <p>
-                                Your browser cannot display this PDF.
-                                <a href="@bcFileUrl" target="_blank">Download it instead</a>.
-                            </p>
-                        </object>
+
+                        <p>Loading latest Monday Minute PDF...</p>
+
                     }
                     else
                     {
-                        <p>No newsletter PDF found.</p>
+                        <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
                     }
-
-
                 </div>
 
 
@@ -55,27 +53,23 @@
             <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Bonus Chart</h5>
-                    <a href="@bcFileUrl" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <a href=@bcPdf target="_blank" class="btn btn-sm btn-outline-secondary">
                         View Fullscreen
                     </a>
                 </div>
                 <div class="w-100 rounded overflow-hidden" style="height: 400px; background-color: #e9ecef;">
-
-                    @if (bcFileUrl != null)
+                    @if (bcPdf == null)
                     {
-                       
+                        <p>Loading latest Monday Minute PDF...</p>
 
-                        <object data="@bcFileUrl" type="application/pdf" width="100%" height="100%" style="min-height: 100%;">
-                            <p>
-                                Your browser cannot display this PDF.
-                                <a href="@bcFileUrl" target="_blank">Download it instead</a>.
-                            </p>
-                        </object>
                     }
                     else
                     {
-                        <p>No newsletter PDF found.</p>
+                        <embed src=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
+                                                    
                     }
+
+
                 </div>
 
 
@@ -86,7 +80,14 @@
 
                 <!-- Scrollable container -->
                 <div style="overflow-y: auto; max-height: 250px;">
-                    <ul class="space-y-3">
+                    @* <ul class="space-y-3">
+                        <li class="d-flex">
+                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
+                            <div>
+                                <strong>May 5</strong> – SOS "Official" Grand Opening
+                                <div class="text-muted small">Promotional Event</div>
+                            </div>
+                        </li>
                         <li class="d-flex">
                             <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
                             <div>
@@ -99,6 +100,13 @@
                             <div>
                                 <strong>July 4</strong> – Independence Day
                                 <div class="text-muted small">Observed Holiday</div>
+                            </div>
+                        </li>
+                        <li class="d-flex">
+                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
+                            <div>
+                                <strong>July 19</strong> – Mud Volleyball (Dayton)
+                                <div class="text-muted small">Company Event</div>
                             </div>
                         </li>
                         <li class="d-flex">
@@ -136,7 +144,30 @@
                                 <div class="text-muted small">Observed Holiday</div>
                             </div>
                         </li>
-                    </ul>
+                    </ul> *@
+                    @if (calendarEvents == null)
+                    {
+                        <p>Loading calendar...</p>
+                    }
+                    else if (!calendarEvents.Any())
+                    {
+                        <p class="text-muted">No upcoming events.</p>
+                    }
+                    else
+                    {
+                        <ul class="space-y-3">
+                            @foreach (var e in calendarEvents)
+                            {
+                                <li class="d-flex">
+                                    <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
+                                    <div>
+                                        <strong>@e.Date.ToString("MMMM d")</strong> – @e.Title
+                                        <div class="text-muted small">@e.Type</div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
             </div>
 
@@ -151,28 +182,24 @@
 
 @code {
     //variables to hold api endpoints for pdfs
-    private string bcFileUrl = "/api/pdfs/latest-bonus-chart#zoom=FitH";
-    private string mmFileUrl = "/api/pdfs/latest-monday-minute#zoom=FitH";
-    
-    private string mmHeader = "Loading...";
+    private string mmPdf;
+    private string mmPdfName;
+    private string bcPdf;
+    private List<CalendarEvent>? calendarEvents;
 
     protected override async Task OnInitializedAsync()
     {
+        mmPdf = await PdfService.GetLatestPdfUrlAsync("mondayminute");
 
-        //calls endpoint to get monday minute title
-        try
-        {
-            // Get the full base URL from the running app (e.g., http://localhost:5000/)
-            var baseUri = Nav.BaseUri; 
-            var requestUri = new Uri(new Uri(baseUri), "api/pdfs/latest-monday-minute-title");
+        mmPdfName = await PdfService.GetMmPdfNameAsync("mondayminute");
 
-            mmHeader = await Http.GetStringAsync(requestUri);
-        }
-        catch (Exception ex)
-        {
-            mmHeader = $"Error: {ex.Message}";
-        }
+        bcPdf = await PdfService.GetLatestPdfUrlAsync("bonuschart");
+
+        calendarEvents = await CalendarService.LoadCalendarAsync();
+        
     }
+
+    
   
 }
 

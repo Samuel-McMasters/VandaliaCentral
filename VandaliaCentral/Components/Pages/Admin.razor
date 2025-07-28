@@ -1,0 +1,276 @@
+﻿@page "/admin"
+@using VandaliaCentral.Services
+@using VandaliaCentral.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Identity.Client
+@using Microsoft.Identity.Web
+@inject IJSRuntime JS
+@inject CalendarService CalendarService
+@inject LoggingService Logger
+@inject GraphUserService GraphUserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ITokenAcquisition TokenAcquisition
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+
+<div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4">
+    <h3 class="pb-5">Admin Dashboard</h3>
+
+    @if (!isAuthorized)
+    {
+
+        <p class="text-danger">Refresh the page, or please wait while we check your authorizations...</p>
+    }
+    else
+    {
+        <div class="ms-auto pb-5">
+            <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
+
+                @(isMobile ? "Targit Dashboard" : "My Targit Dashboard")
+            </NavLink>
+        </div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
+                    Logs
+                </button>
+            </li>
+            @* <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("usage"))'
+                        @onclick='() => SetActiveTab("usage")'
+                        type='button'>
+                    Usage Stats
+                </button>
+            </li> *@
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
+                    Company Calendar
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
+                    Monday Minute
+                </button>
+            </li>
+
+        </ul>
+
+        <!-- Logs Tab -->
+        @if (activeTab == "logs")
+        {
+            <div>
+                <h5>Log Viewer</h5>
+
+                @if (logFiles == null)
+                {
+                    <p>Loading logs...</p>
+                }
+                else
+                {
+                    <select @onchange="OnLogSelected" class="form-select w-25 mb-3">
+                        <option disabled selected value="">-- Select Log File --</option>
+                        @foreach (var file in logFiles)
+                        {
+                            <option value="@file">@file</option>
+                        }
+                    </select>
+
+                    @if (!string.IsNullOrEmpty(logContent))
+                    {
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <pre class="bg-light p-3 border rounded" style="white-space: pre-wrap;">@logContent</pre>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        <!-- Usage Stats Tab -->
+        @*  @if (activeTab == "usage")
+{
+            <h5>Monthly Sidebar Link Clicks</h5>
+
+            @if (usageData == null)
+            {
+                <p>Loading usage data...</p>
+            }
+            else
+            {
+                <LineChart Data="@chartData" Options="@chartOptions" />
+            }
+        } *@
+
+        <!-- Calendar Tab -->
+        @if (activeTab == "calendar")
+        {
+            <div>
+                <h5>Company Calendar Manager</h5>
+
+                <div class="mb-3 w-25">
+                    <label>Date:</label>
+                    <InputDate @bind-Value="newEvent.Date" class="form-control" />
+
+                    <label class="mt-2">Title:</label>
+                    <InputText @bind-Value="newEvent.Title" class="form-control" />
+
+                    <label class="mt-2">Type:</label>
+                    <InputText @bind-Value="newEvent.Type" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
+                </div>
+
+                @if (calendarEvents == null)
+                {
+                    <p>Loading calendar events...</p>
+                }
+                else if (!calendarEvents.Any())
+                {
+                    <p class="text-muted">No events yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var ev in calendarEvents)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
+                                    <div class="text-muted small">@ev.Type</div>
+                                </div>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                            </li>
+                        }
+                    </ul>
+
+                    <div class="d-flex align-items-center gap-3 mt-3">
+                        <button class="btn btn-primary" @onclick="SaveCalendar">Save Changes</button>
+                        @if (showSaveSuccess)
+                        {
+                            <div class="text-success fw-bold">✓ Saved!</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Monday Minute Editor Tab -->
+        @if (activeTab == "mondayminute")
+        {
+            <MondayMinuteManager />
+        }
+    }
+</div>
+
+@code {
+    private List<string>? logFiles;
+    private string? logContent;
+    private bool isAuthorized = false;
+    private bool showSaveSuccess = false;
+    private bool isMobile = false;
+    private string activeTab = "logs";
+    private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
+    private List<CalendarEvent>? calendarEvents;
+    private CalendarEvent newEvent = new();
+
+    private void SetActiveTab(string tab) => activeTab = tab;
+    private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check token and redirect if needed
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    isAuthorized = await GraphUserService.IsUserInGroupAsync(userId, adminGroupId);
+                }
+            }
+
+            if (isAuthorized)
+            {
+                logFiles = await Logger.GetLogFileNamesAsync();
+                calendarEvents = await CalendarService.LoadCalendarAsync();
+            }
+        }
+        catch (MsalUiRequiredException ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error during token acquisition or group check: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
+            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnLogSelected(ChangeEventArgs e)
+    {
+        var selectedFile = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selectedFile))
+        {
+            logContent = await Logger.ReadLogContentAsync(selectedFile);
+        }
+    }
+
+    private void AddEvent()
+    {
+        if (string.IsNullOrWhiteSpace(newEvent.Title))
+            return;
+
+        calendarEvents?.Add(new CalendarEvent
+            {
+                Date = newEvent.Date,
+                Title = newEvent.Title,
+                Type = newEvent.Type
+            });
+
+        newEvent = new CalendarEvent(); // clear form
+    }
+
+    private void DeleteEvent(CalendarEvent ev)
+    {
+        calendarEvents?.Remove(ev);
+    }
+
+    private async Task SaveCalendar()
+    {
+        try
+        {
+            if (calendarEvents != null)
+            {
+                await CalendarService.SaveCalendarAsync(calendarEvents);
+                showSaveSuccess = true;
+                StateHasChanged();
+
+                await Task.Delay(4000);
+                showSaveSuccess = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error saving calendar: " + ex.Message);
+        }
+    }
+}

@@ -1,34 +1,62 @@
-﻿@page "/monday"
-@using Radzen
-@using Radzen.Blazor
+﻿@page "/mondayminuteeditor"
+@using VandaliaCentral.Services
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject PdfService PdfService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
-<h3>Newsletter Editor</h3>
+<div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
+    <h3 class="pb-4">Resource Hub</h3>
 
-<RadzenTextBox @bind-Value="Title" Placeholder="Enter title..." Style="width: 100%;" />
-
-
-
-
-
-<RadzenButton Text="Publish" Click="Publish" Style="margin-top: 1rem;" ButtonStyle="ButtonStyle.Primary" />
-
-@if (Published)
-{
-    <div class="mt-5 border p-3 rounded" style="background-color: #f9f9f9;">
-        <h4>@Title</h4>
-        <p><em>Published on @DateTime.Now.ToString("MMMM dd, yyyy")</em></p>
-        <div>@((MarkupString)Body)</div>
+    <div class="py-4 pt-5">
+        <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
+            @(isMobile ? "Dashboards" : "My Targit Dashboard")
+        </NavLink>
     </div>
-}
+
+    
+        
+
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class='nav-link @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
+                Monday Minute Manager
+            </button>
+        </li>
+            
+
+    </ul>
+        
+    
+
+    <!-- Monday Minute Editor Tab -->
+    @if (activeTab == "mondayminute")
+    {
+        <MondayMinuteManager />
+    }
+</div> 
+
 
 @code {
-    private string Title { get; set; } = "";
-    private string Body { get; set; } = "";
-    private bool Published { get; set; } = false;
+    private bool isMobile = false;
+    private string activeTab = "mondayminute";
 
-    private void Publish()
+    private void SetActiveTab(string tab) => activeTab = tab;
+    private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
+
+    private async Task NavigateToDashboard(string linkName)
     {
-        Published = true;
-        // TODO: Save to a database or service
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked Dashboard Button: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
+        Navigation.NavigateTo("https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview");
     }
 }

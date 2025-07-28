@@ -1,0 +1,190 @@
+﻿@using VandaliaCentral.Services
+@using Azure.Storage.Blobs
+@using Azure.Storage.Blobs.Models
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject PdfService PdfService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+
+<!-- MM Editor Component for Admin Dashboard -->
+
+
+
+
+    
+
+<div class="pt-4 pb-2 d-flex flex-wrap gap-3">
+    <label class="btn btn-primary mmbtn custom-upload-button text-nowrap" style="max-width: 200px;">
+        @(isMobile ? "Upload" : "Upload Monday Minute")
+        <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
+    </label>
+
+    @if (!string.IsNullOrEmpty(uploadStatus))
+    {
+        <div class="btn-success rounded px-2 py-1">
+            @uploadStatus
+        </div>
+    }
+</div>
+
+@if (fileItems == null)
+{
+    <p>Loading files...</p>
+}
+else if (fileItems.Count == 0)
+{
+    <p>No PDF files found in the container.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="min-width: 200px;">File Name</th>
+                    <th class="d-none d-md-table-cell" style="min-width: 150px;">Date Uploaded</th>
+                    <th class="text-start" style="width: 1%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var file in fileItems)
+                {
+                    <tr>
+                        <td class="text-break">
+                            @file.Blob.Name
+                            @if (file.Blob.Name == latestFileName)
+                            {
+                                <span class="badge bg-success ms-2">Displayed</span>
+                            }
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            @(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")
+                        </td>
+                        <td>
+                            <div class="d-flex justify-content-end">
+                                <a class="btn btn-sm btn-primary me-1"
+                                    href="@file.Url" target="_blank">Open</a>
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => DeleteFile(file.Blob.Name)">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+
+@code {
+    private bool isMobile = false;
+    private string? uploadStatus;
+    private string? latestFileName;
+
+
+    //Checks if viewport is mobile
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
+            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file is null || !file.Name.EndsWith(".pdf"))
+        {
+            uploadStatus = "Please select a valid PDF file.";
+
+            return;
+        }
+
+        try
+        {
+            uploadStatus = "Uploading...";
+            await PdfService.UploadPdfAsync("mondayminute", file);
+
+            uploadStatus = "Upload successful!";
+
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Uploaded File: '{file.Name}'";
+            await Logger.LogActivityAsync(userName, activity);
+
+            await Task.Delay(2000);
+            var currentUri = Navigation.Uri;
+            Navigation.NavigateTo("/mondayminuteeditor", forceLoad: true);
+
+        }
+        catch (Exception ex)
+        {
+            uploadStatus = $"Upload failed: {ex.Message}";
+        }
+    }
+
+
+    private class FileItem
+    {
+        public BlobItem Blob { get; set; } = default!;
+        public string Url { get; set; } = string.Empty;
+    }
+
+    private List<FileItem>? fileItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFilesAsync();
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        var containerClient = PdfService.GetBlobContainerClient("mondayminute");
+
+        var blobs = new List<BlobItem>();
+
+        await foreach (var blobItem in containerClient.GetBlobsAsync())
+        {
+            if (blobItem.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                blobs.Add(blobItem);
+            }
+        }
+
+        fileItems = blobs
+            .OrderByDescending(b => b.Properties.LastModified ?? DateTimeOffset.MinValue)
+            .Select(blob => new FileItem
+                {
+                    Blob = blob,
+                    Url = containerClient.GetBlobClient(blob.Name).Uri.ToString()
+                })
+            .ToList();
+
+        // ✅ Track the latest file name (first in the list)
+        latestFileName = fileItems.FirstOrDefault()?.Blob.Name;
+    }
+
+    private async Task DeleteFile(string blobName)
+    {
+        await PdfService.DeleteBlobAsync("mondayminute", blobName);
+        // Get current user identity
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        // Log the activity
+        var activity = $"Deleted File: '{blobName}'";
+        await Logger.LogActivityAsync(userName, activity);
+        await LoadFilesAsync();
+        StateHasChanged();
+    }
+}

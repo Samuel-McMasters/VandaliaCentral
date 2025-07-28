@@ -1,191 +1,231 @@
 ﻿@page "/employeetermination"
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
-@inject EmailService EmailService
-@inject NavigationManager Navigation
+@using Microsoft.Identity.Web
+@using Microsoft.AspNetCore.Authorization
+@inject GraphEmailService EmailService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
-
-
-<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-8 py-4">
+<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Employee Termination Form</h3>
+    @if (success)
+    {
+        <p class="text-success mt-2">Form submission was successful!</p>
+        <p class="text-success mt-2">Redirecting to home page...</p>
+    }
+    else if (failure)
+    {
+        <h4 class="text-danger mt-2">There was an error submitting your employee termination form:</h4>
+        <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+    }
+    else if (!isAuthorized)
+    {
+        <p>Checking sign-in status...</p>
+    }
+    else
+    {
+        <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-    <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-
-        <!-- Employee Information Block -->
-        <div class="row py-5">
-            <div class="row">
-                <div class="col-12 col-md-4  d-flex flex-column mb-2">
-                    <label>Employee Name:</label>
-                    <InputText @bind-Value="formModel.EmployeeName" class="form-control" />
+            <!-- Employee Information Block -->
+            <div class="row py-5">
+                <div class="row">
+                    <div class="col-12 col-md-4 d-flex flex-column mb-2">
+                        <label>Employee Name:</label>
+                        <InputText @bind-Value="formModel.EmployeeName" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4 mb-2">
+                        <label>Employee #:</label>
+                        <InputText @bind-Value="formModel.EmployeeNumber" class="form-control" />
+                    </div>
                 </div>
-                <div class="col-12 col-md-4 mb-2">
-                    <label>Employee #:</label>
-                    <InputText @bind-Value="formModel.EmployeeNumber" class="form-control" />
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12 col-md-4 mb-2">
-                    <label>Location:</label>
-                    <InputText @bind-Value="formModel.Location" class="form-control" />
-                </div>
-                <div class="col-12 col-md-4 mb-2">
-                    <label>Last Date of Employment:</label>
-                    <InputDate @bind-Value="formModel.LastDateOfEmployment" class="form-control" />
-                </div>
-            </div>
-        </div>
-
-
-        <!-- Items To Be Collected Block -->
-        <div class="py-5">
-            <h5>Items to be collected (please mark items returned; leave BLANK if not applicable)</h5>
-
-            <div class="row">
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Cellphone" class="form-check-input" />
-                    <label class="form-check-label">Cellphone</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Notepad" class="form-check-input" />
-                    <label class="form-check-label">Notepad</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.DeviceAccounts" class="form-check-input" />
-                    <label class="form-check-label">All Device Accounts Logged Out</label>
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-2">
+                        <label>Location:</label>
+                        <InputText @bind-Value="formModel.Location" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4 mb-2">
+                        <label>Last Date of Employment:</label>
+                        <InputDate @bind-Value="formModel.LastDateOfEmployment" class="form-control" />
+                    </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Uniforms" class="form-check-input" />
-                    <label class="form-check-label">Uniforms</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.CompanyVehicle" class="form-check-input" />
-                    <label class="form-check-label">Company Vehicle</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.CreditCard" class="form-check-input" />
-                    <label class="form-check-label">Credit Card</label>
+            <!-- Items To Be Collected Block -->
+            <div class="py-5">
+                <h5>Items to be collected (please mark items returned; leave BLANK if not applicable)</h5>
+
+                <div class="row">
+                    <div class="col-12 col-lg-4">
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Cellphone" class="form-check-input" />
+                            <label class="form-check-label">Cellphone</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Notepad" class="form-check-input" />
+                            <label class="form-check-label">Notepad</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.DeviceAccounts" class="form-check-input" />
+                            <label class="form-check-label">All Device Accounts Logged Out</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Uniforms" class="form-check-input" />
+                            <label class="form-check-label">Uniforms</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.CompanyVehicle" class="form-check-input" />
+                            <label class="form-check-label">Company Vehicle</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.CreditCard" class="form-check-input" />
+                            <label class="form-check-label">Credit Card</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Laptop" class="form-check-input" />
+                            <label class="form-check-label">Laptop</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Hotspot" class="form-check-input" />
+                            <label class="form-check-label">Mobile Hotspot</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.DeviceLock" class="form-check-input" />
+                            <label class="form-check-label">Device Lock Passwords Removed</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Keys" class="form-check-input" />
+                            <label class="form-check-label">Keys (i.e. Building/Vehicle)</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.PromotionalItems" class="form-check-input" />
+                            <label class="form-check-label">Promotional Items</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Laptop" class="form-check-input" />
-                    <label class="form-check-label">Laptop</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Hotspot" class="form-check-input" />
-                    <label class="form-check-label">Mobile Hotspot</label>
-                </div>
-                <div class="col-12 col-md-4 mb-2">
-                    <InputCheckbox @bind-Value="formModel.DeviceLock" class="form-check-input" />
-                    <label class="form-check-label">Device Lock Passwords Removed</label>
+            <!-- Access To Be Terminated Block -->
+            <div class="py-5">
+                <h5>Access to be Terminated (leave BLANK if not applicable)</h5>
+                <div class="row">
+                    <div class="col-12 col-lg-4">
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Microsoft365" class="form-check-input" />
+                            <label class="form-check-label">Microsoft 365</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Vizion" class="form-check-input" />
+                            <label class="form-check-label">Vizion /Targit</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Salesforce" class="form-check-input" />
+                            <label class="form-check-label">Salesforce</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Certify" class="form-check-input" />
+                            <label class="form-check-label">Certify</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.RentalMan" class="form-check-input" />
+                            <label class="form-check-label">RentalMan</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Telematics" class="form-check-input" />
+                            <label class="form-check-label">Telematics</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Paylocity" class="form-check-input" />
+                            <label class="form-check-label">Paylocity</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Ninety" class="form-check-input" />
+                            <label class="form-check-label">90.i.o</label>
+                        </div>
+                        <div class="form-check-wrapper">
+                            <InputCheckbox @bind-Value="formModel.Other" class="form-check-input" />
+                            <label class="form-check-label pb-1">Other</label>
+
+                        </div>
+                        <div class="col-lg-12 col-md-5 col-sm-5 mb-2">
+
+                            <InputTextArea @bind-Value="formModel.OtherText"
+                                            class="form-control"
+                                            rows="5"
+                                            style="resize: none;" />
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Keys" class="form-check-input" />
-                    <label class="form-check-label">Keys (i.e. Building/Vehicle)</label>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <InputCheckbox @bind-Value="formModel.PromotionalItems" class="form-check-input" />
-                    <label class="form-check-label">Promotional Items</label>
-                </div>
-            </div>
-        </div>
-
-
-
-
-        <!-- Access To Be Terminated Block -->
-        <div class="py-5">
-            <h5>Access to be Terminated (leave BLANK if not applicable)</h5>
-
-            <div class="row">
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Microsoft365" class="form-check-input" />
-                    <label class="form-check-label">Microsoft 365</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Vizion" class="form-check-input" />
-                    <label class="form-check-label">Vizion /Targit</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Salesforce" class="form-check-input" />
-                    <label class="form-check-label">Salesforce</label>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Certify" class="form-check-input" />
-                    <label class="form-check-label">Certify</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.RentalMan" class="form-check-input" />
-                    <label class="form-check-label">RentalMan</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Telematics" class="form-check-input" />
-                    <label class="form-check-label">Telematics</label>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Paylocity" class="form-check-input" />
-                    <label class="form-check-label">Paylocity</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Ninety" class="form-check-input" />
-                    <label class="form-check-label">90.i.o</label>
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <InputCheckbox @bind-Value="formModel.Other" class="form-check-input" />
-                    <label class="form-check-label pb-1">Other</label>
-                    <InputTextArea @bind-Value="formModel.OtherText" class="form-control" />
-                </div>
-            </div>
-        </div>
-        @if (success)
-        {
-            <p class="text-success mt-2">Form submitted and emailed successfully.</p>
-        }
-        <button type="submit" class="btn btn-primary mt-2">Submit</button>
-    </EditForm>
-    
-
-
+            <button type="submit" class="btn btn-primary mt-2">Submit</button>
+        </EditForm>
+    }
 </div>
+
 
 
 @code {
     private TerminationFormModel formModel = new();
     private bool success = false;
+    private bool failure = false;
+    private bool isAuthorized = false;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
+    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Attempt to get token when page loads
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            isAuthorized = true;
+        }
+        catch (Exception ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
 
     private async Task HandleValidSubmit()
     {
         try
         {
             var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
-            await EmailService.SendTerminationFormAsync(pdfBytes, formModel.EmployeeName);
+
+            await EmailService.SendEmailWithAttachmentAsync(
+                toEmail: "sam.mcmasters@vandaliarental.com",
+                subject: $"Termination Form: {formModel.EmployeeName}",
+                bodyText: $"Attached is the termination form for {formModel.EmployeeName}.",
+                pdfBytes: pdfBytes,
+                pdfFileName: $"{formModel.EmployeeName}_termination.pdf"
+            );
+
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Submitted Employee Termination Form For: '{formModel.EmployeeName}'";
+            await Logger.LogActivityAsync(userName, activity);
+
             success = true;
-            
-            await Task.Delay(3000);
+            StateHasChanged();
+            await Task.Delay(4000);
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"PDF or Email Error: {ex.Message}");
-
             if (ex.InnerException != null)
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+            failure = true;
         }
     }
 }

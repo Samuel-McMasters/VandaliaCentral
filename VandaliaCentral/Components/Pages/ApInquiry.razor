@@ -1,0 +1,114 @@
+﻿@page "/apinquiry"
+@using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Identity.Web
+@inject GraphEmailService EmailService
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
+
+
+<div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
+    <h3>Submit an AP Inquiry</h3>
+
+    @if (success)
+    {
+        <p class="text-success mt-2">Your AP Inquiry has been sent!</p>
+        <p class="text-success mt-2">Redirecting to home page...</p>
+    }
+    else if (failure)
+    {
+        <h4 class="text-danger mt-2">There was an error submitting your AP inquiry:</h4>
+        <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+    }
+    else if (!isAuthorized)
+    {
+        <p>Checking sign-in status...</p>
+    }
+    else
+    {
+        <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Subject</strong></label>
+                <InputText @bind-Value="formModel.Subject" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Details</strong></label>
+                <InputTextArea @bind-Value="formModel.Body" class="form-control" rows="5" />
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-2">Submit</button>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private ApIniquryModel formModel = new();
+    private bool success = false;
+    private bool failure = false;
+    private bool isAuthorized = false;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
+    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            isAuthorized = true;
+        }
+        catch (Exception ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var subjectLine = $"[Intranet Inquiry] {formModel.Subject}";
+            var body = formModel.Body;
+
+            await EmailService.SendEmailAsync(
+                toEmail: "sam.mcmasters@vandaliarental.com", // TODO: change this email
+                subject: subjectLine,
+                bodyText: body
+            );
+
+            // Get current user identity
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+            // Log the activity
+            var activity = $"Submitted AP Inquiry with subject: '{formModel.Subject}'";
+            await Logger.LogActivityAsync(userName, activity);
+
+
+            success = true;
+            StateHasChanged();
+            await Task.Delay(4000);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"AP inquiry error: {ex.Message}");
+            failure = true;
+        }
+    }
+
+    public class ApIniquryModel
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+
+        
+    }
+}

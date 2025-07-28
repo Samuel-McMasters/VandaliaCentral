@@ -53,53 +53,11 @@
                     </svg>
                 </a>
             </div>
-
-            
-
-            <!-- Editor button (right side) -->
-            @if (IsUploader && !IsOnEditorPage && !IsAdmin)
-            {
-                <div class="ms-auto">
-                    <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
-                    style="max-width: 200px;"
-                    @onclick='(e) => NavigateToEditor("Monday Minute Manager")'>
-                        Resource Hub
-                    </button>
-                </div>
-            }
-            else if (IsAdmin)
-            {
-                <div class="ms-auto">
-                    <NavLink href="/admin" @onclick='(e) => NavigateToAdmin("Admin Dashboard")' class="btn btn-danger" activeClass="active">
-                        
-                        @(isMobile ? "Admin" : "Admin Dashboard")
-                    </NavLink>
-                </div>
-                
-                
-            }
-            else if (!IsOnEditorPage)
-            {
-                    <div class="ms-auto">
-                        <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
-
-                        @(isMobile ? "Dashboards" : "My Dashboard")
-                        </NavLink>
-                    </div>
-            }
-
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <div class="main-content-wrapper d-flex" >
-        <!-- Sidebar -->
-        <div class=@SidebarCssClass id="sidebarMenu" >        
-            <CascadingValue Value="(Action)CloseSidebar">
-                <NavMenu></NavMenu>
-            </CascadingValue>
-        </div>
-
+    <div class="main-content-wrapper d-flex">
         <!-- Content -->
         <div class="main-content flex-grow-1 page-enter" style="background: #E5E5E5;" @ref="mainContentRef">
             @Body
@@ -140,30 +98,7 @@
         }
     }
 
-    private async Task HandleFileUpload(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-
-        if (file is null || !file.Name.EndsWith(".pdf"))
-        {
-            uploadStatus = "Please select a valid PDF file.";
-            return;
-        }
-
-        try
-        {
-            uploadStatus = "Uploading...";
-            await PdfService.UploadPdfAsync("mondayminute", file);
-            uploadStatus = "Upload successful!";
-            await Task.Delay(2000);
-            var currentUri = Navigation.Uri;
-            Navigation.NavigateTo("/", forceLoad: true);
-        }
-        catch (Exception ex)
-        {
-            uploadStatus = $"Upload failed: {ex.Message}";
-        }
-    }
+  
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,12 +113,7 @@
             await Logger.LogActivityAsync(userName, "User logged in");
         }
 
-        // Check if user is in the correct Entra ID group by claim
-        IsUploader = user.Claims.Any(c =>
-            c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
-
-        IsAdmin = user.Claims.Any(c =>
-            c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
+        
 
         //  Subscribe to route change for animation
         currentUri = Navigation.Uri;
@@ -203,7 +133,7 @@
         Navigation.NavigateTo("/mondayminuteeditor");
     }
 
-   
+
 
     private async Task NavigateToAdmin(string linkName)
     {
@@ -234,8 +164,9 @@
         }
     }
 
-    
+
 }
+
 
 
 
