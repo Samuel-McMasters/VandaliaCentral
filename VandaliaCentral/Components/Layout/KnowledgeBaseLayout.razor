@@ -1,0 +1,174 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@namespace VandaliaCentral.Components.Layout
+@using VandaliaCentral.Services
+@inject PdfService PdfService
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Identity.Web
+@inject LoggingService Logger
+@inject NavigationManager Navigation
+@inject LoggingService Logger
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
+
+
+
+<div>
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary ps-4 pe-4" style="height: 80px; overflow: hidden;">
+
+        <div class="d-flex w-100 align-items-center position-relative">
+
+            <!-- Hamburger toggle (left side, mobile only) -->
+            <div class="d-lg-none">
+                <button class="btn btn-light me-2" @onclick="ToggleSidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                         class="bi bi-list" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd"
+                              d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Logo: left-aligned on lg+, centered on <lg -->
+            <div class="mx-lg-0 ps-4 ps-lg-0 d-flex align-items-center">
+                <a class="navbar-brand me-2" href="/">
+                    <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
+                </a>
+
+                <div class="navbar-divider d-none d-lg-block"></div>
+
+                <!-- Home Icon moved here, with underline restored -->
+                <a class="d-none d-lg-block nav-link p-0 icon-button" href="/" tabindex="-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="black" class="bi bi-house"
+                         viewBox="0 0 16 16">
+                        <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5z" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="main-content-wrapper d-flex">
+        <!-- Content -->
+        <div class="main-content flex-grow-1 page-enter" style="background: #E5E5E5;" @ref="mainContentRef">
+            @Body
+        </div>
+    </div>
+</div>
+
+@code {
+    private string SidebarCssClass => showSidebar ? "vandalia-sidebar show d-lg-block" : "vandalia-sidebar d-lg-block";
+
+    private bool showSidebar = false;
+    private string? uploadStatus;
+    private string? statusClass;
+    private bool IsUploader = true;
+    private bool isMobile = false;
+    private bool hasLoggedLogin = false;
+    private bool IsAdmin = false;
+
+    private bool IsOnEditorPage => Navigation.Uri.Contains("/mondayminuteeditor", StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleSidebar()
+    {
+        showSidebar = !showSidebar;
+    }
+
+    private void CloseSidebar()
+    {
+        showSidebar = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
+            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            StateHasChanged();
+        }
+    }
+
+  
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true && !hasLoggedLogin)
+        {
+            hasLoggedLogin = true;
+
+            var userName = user.Identity.Name ?? "unknown";
+            await Logger.LogActivityAsync(userName, "User logged in");
+        }
+
+        
+
+        //  Subscribe to route change for animation
+        currentUri = Navigation.Uri;
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
+    private async Task NavigateToEditor(string linkName)
+    {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
+        Navigation.NavigateTo("/mondayminuteeditor");
+    }
+
+
+
+    private async Task NavigateToAdmin(string linkName)
+    {
+        //Collect user credentials
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+
+        //Log the activity
+        var activity = $"Clicked sidebar link: '{linkName}'";
+        await Logger.LogActivityAsync(userName, activity);
+
+        Navigation.NavigateTo("/admin");
+    }
+
+    // ===  NEW FOR ANIMATION ON PAGE CHANGE ===
+    private ElementReference mainContentRef;
+    private string? currentUri;
+
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (e.Location != currentUri)
+        {
+            currentUri = e.Location;
+
+            await JS.InvokeVoidAsync("removeAnimationClass", mainContentRef, "page-enter");
+            await Task.Delay(50); // slight pause before re-adding class
+            await JS.InvokeVoidAsync("addAnimationClass", mainContentRef, "page-enter");
+        }
+    }
+
+
+}
+
+
+
+
+
+
