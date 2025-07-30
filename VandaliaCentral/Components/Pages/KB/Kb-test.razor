@@ -1,0 +1,110 @@
+﻿@page "/knowledge/Kb-test"
+@layout KnowledgeBaseLayout
+
+<h1>Salesforce Integration – Phase 1</h1>
+
+<p>Vandalia Rentals would like to integrate <strong>Rentalman</strong> into Salesforce CRM. All quotes will be performed in Salesforce and will be pushed into Rentalman and have a reservation created. Vandalia has also requested the following integration/web services be developed: pickup ticket creation.</p>
+
+<p>As part of the integration, data will need to be pulled from Rentalman and sent to Salesforce on a regular basis, but that is outside the scope of this SOW.</p>
+
+<h2>Summary of Tasks</h2>
+
+<h3>Installation & Web Server Configuration</h3>
+<ul>
+    <li>
+        Configure Cent OS web server
+        <ul>
+            <li>ISS will deploy a Cent OS web server for outbound data feeds.</li>
+        </ul>
+    </li>
+    <li>
+        Configure connections to Rentalman environments
+        <ul>
+            <li>Test and production environments</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Inbound API Development</h3>
+
+<ul>
+    <li>
+        <strong>Quotes/Reservations</strong>
+        <ul>
+            <li>
+                Python webservice endpoints accepting JSON payloads:
+                <ul>
+                    <li>Create quote/reservation</li>
+                    <li>Update quote/reservation</li>
+                    <li>Delete quote/reservation</li>
+                </ul>
+            </li>
+            <li><em>Note: Existing OAR logic in Rentalman will be leveraged.</em></li>
+        </ul>
+    </li>
+    <li>
+        <strong>Job Site</strong>
+        <ul>
+            <li>
+                Endpoints for job site maintenance:
+                <ul>
+                    <li>Create a job site</li>
+                    <li>Update a job site</li>
+                </ul>
+            </li>
+            <li><em>Note: Existing OAR logic reused.</em></li>
+        </ul>
+    </li>
+    <li>
+        <strong>Pickup Tickets</strong>
+        <ul>
+            <li>
+                Endpoints for pickup ticket maintenance:
+                <ul>
+                    <li>Create pickup ticket</li>
+                    <li>Update ticket (if applicable)</li>
+                    <li>Delete pickup ticket</li>
+                </ul>
+            </li>
+            <li><em>Note: Existing OAR logic reused.</em></li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Assumptions / Misc Comments</h3>
+<ul>
+    <li>All outbound Salesforce integrations will be developed by Vandalia.</li>
+    <li>Existing RM programs supporting web services will be reused with minimal changes.</li>
+</ul>
+
+<h3>Project Estimate</h3>
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th>Process</th>
+            <th>Hours</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Web Server Configuration</td>
+            <td>40</td>
+        </tr>
+        <tr>
+            <td>Quote/Reservations – Python endpoints</td>
+            <td>40</td>
+        </tr>
+        <tr>
+            <td>Job Site – Python endpoints</td>
+            <td>40</td>
+        </tr>
+        <tr>
+            <td>Pickup Tickets – Python endpoints</td>
+            <td>40</td>
+        </tr>
+        <tr>
+            <th>Total</th>
+            <th>160</th>
+        </tr>
+    </tbody>
+</table>
