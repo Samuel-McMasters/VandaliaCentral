@@ -1,0 +1,183 @@
+﻿@page "/ai-chat"
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.Net.Http.Json
+
+<div class="chat-shell mx-auto">
+    <h3 class="mb-3 ps-2">AI Assistant</h3>
+
+    <div class="chat-wrapper d-flex flex-column" style="height: 80vh; max-height: 80vh;">
+
+        <div class="chat-container flex-grow-1 overflow-auto p-3 mb-2 border rounded">
+            @foreach (var message in Messages)
+            {
+                <div class="chat-bubble @(message.IsUser ? "user" : "ai")">
+                    <strong>@(message.IsUser ? "You" : "AI"):</strong><br />
+                    <span>@message.Content</span>
+                </div>
+            }
+            @if (IsLoading)
+            {
+                <div class="chat-bubble ai">
+                    <strong>AI:</strong><br />
+                    <span class="text-muted">AI is typing...</span>
+                </div>
+            }
+        </div>
+
+        <div class="input-area border-top pt-2">
+            <textarea class="form-control" rows="3" placeholder="Ask something..."
+                      @bind="UserInput" @onkeydown="@HandleKeyDown"></textarea>
+            <button class="btn btn-primary mt-2" @onclick="SendMessage" disabled="@IsLoading">Send</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-shell {
+        max-width: 720px;
+        width: 100%;
+    }
+
+    .chat-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-container {
+        background: #f9f9f9;
+        border-radius: 8px;
+        overflow-y: auto;
+    }
+
+    .chat-bubble {
+        max-width: 80%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        word-wrap: break-word;
+    }
+
+        .chat-bubble.user {
+            background-color: #d1e7dd;
+            align-self: flex-end;
+            text-align: right;
+            margin-left: auto;
+        }
+
+        .chat-bubble.ai {
+            background-color: #e2e3e5;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+
+    .input-area {
+        
+    }
+</style>
+
+@code {
+    private string UserInput = string.Empty;
+    private bool IsLoading = false;
+    private List<Message> Messages = new();
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(UserInput)) return;
+
+        IsLoading = true;
+
+        var userMessage = new Message { Content = UserInput, IsUser = true };
+        Messages.Add(userMessage);
+        UserInput = string.Empty;
+
+        var payload = new
+        {
+            messages = Messages.Select(m => new
+            {
+                role = m.IsUser ? "user" : "assistant",
+                content = m.Content
+            }).ToList()
+        };
+
+        try
+        {
+            var result = await Http.PostAsJsonAsync("http://localhost:8000/chat", payload);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var json = await result.Content.ReadFromJsonAsync<ChatResponse>();
+                Messages.Add(new Message
+                    {
+                        Content = json?.response ?? "[No response]",
+                        IsUser = false
+                    });
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                Messages.Add(new Message
+                    {
+                        Content = $"[Error {result.StatusCode}: {error}]",
+                        IsUser = false
+                    });
+            }
+        }
+        catch (Exception ex)
+        {
+            Messages.Add(new Message
+                {
+                    Content = $"[Exception: {ex.Message}]",
+                    IsUser = false
+                });
+        }
+        finally
+        {
+            IsLoading = false;
+
+            try
+            {
+                await JS.InvokeVoidAsync("scrollToBottom");
+            }
+            catch (Exception jsEx)
+            {
+                Console.WriteLine($"JS Interop error: {jsEx.Message}");
+            }
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            
+            await SendMessage();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && Messages.Count > 0)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("scrollToBottom");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"JS Interop error on render: {ex.Message}");
+            }
+        }
+    }
+
+    public class Message
+    {
+        public string Content { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+
+    public class ChatResponse
+    {
+        public string response { get; set; }
+    }
+}
