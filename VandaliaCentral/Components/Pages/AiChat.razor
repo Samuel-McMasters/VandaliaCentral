@@ -91,6 +91,12 @@
         Messages.Add(userMessage);
         UserInput = string.Empty;
 
+        const int maxMessages = 20;
+        if (Messages.Count > maxMessages)
+        {
+            Messages = Messages.Skip(Messages.Count - maxMessages).ToList();
+        }
+
         var payload = new
         {
             messages = Messages.Select(m => new
