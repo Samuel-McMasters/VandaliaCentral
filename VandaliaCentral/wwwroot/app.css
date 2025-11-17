@@ -170,17 +170,58 @@ main {
 
 /* === Danger Button Styling (Red) === */
 .btn.btn-danger {
+    position: relative; /* host the glow */
+    overflow: hidden; /* hide glow edges */
+    z-index: 0; /* allow ::after behind it */
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+    /* Spinning red glow overlay */
+    .btn.btn-danger::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        bottom: -50%;
+        left: -50%;
+        background: linear-gradient( 45deg, #ffe8e8, /* very light red – almost white */
+        #ff8a8a, /* bright mid red */
+        #ff3333, /* hot red */
+        #ffe8e8, #ff8a8a, #ff3333 );
+        background-size: 300% 300%;
+        z-index: -1;
+        border-radius: 100vmax;
+        filter: blur(8px); /* slightly sharper so the glow shape stands out */
+        opacity: 0;
+        transition: opacity 0.5s;
+        animation: danger-glow-spin 5s linear infinite;
+    }
 
+    /* Show the glow on hover/focus */
+    .btn.btn-danger:hover::after,
+    .btn.btn-danger:focus-visible::after {
+        opacity: 1;
+    }
 
+/* Spin animation */
+@keyframes danger-glow-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-    .btn.btn-danger:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 6px 15px rgba(255, 51, 51, 0.5);
-        border-color: red !important;
-        background-color: darkred;
-    }
+
+.btn.btn-danger:hover,
+.btn.btn-danger:focus-visible {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 15px rgba(255, 51, 51, 0.5);
+    border-color: #b30000 !important;
+    background-color: #c80000; /* still clearly red */
+}
+
 
 .btn.btn-primary,
 .btn.btn-danger {
@@ -303,11 +344,15 @@ main {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     overscroll-behavior: contain;
-    /* NEW styles for centering */
+    /* layout for the inner content */
     display: flex;
     flex-direction: column;
-    align-items: center; /* center horizontally */
+    align-items: stretch; /* make menu rows fill the width */
+    /* KEEP width the same when scrollbar appears */
+    scrollbar-gutter: stable; /* reserves space for the scrollbar */
 }
+
+
 
   
 
@@ -458,10 +503,264 @@ select.form-select {
         background-color: #909090;
     }
 
-.kb-layout .main-content {
-    margin-left: 0; /* eliminate gap */
+/* === Vandalia sidebar dropdown headers (flattened) === */
+
+/* Make the vertical button group stretch full width with tighter gaps */
+.vandalia-sidebar .sidebar .menu.btn-group-vertical {
+    width: 100%;
+    align-items: stretch !important;
+    row-gap: 0.3rem; /* was gap-4 from Bootstrap, much smaller now */
+    padding-bottom: 1rem;
 }
 
+/* Each dropdown container should also stretch full width */
+.vandalia-sidebar .sidebar .menu .dropdown {
+    width: 100%;
+}
+
+    /* Top-level dropdown button (Branch Manager, Rentals, etc.) */
+    .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle {
+        background: transparent !important; /* no gray button background */
+        border: none !important;
+        box-shadow: none !important; /* kill the global .btn shadow */
+        border-radius: 6px !important; /* still a little rounded, but not pill-ish */
+        color: #f8f9fa !important;
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-align: left;
+        width: 100%;
+        padding: 0.55rem 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        /* Hover/active states for the header */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:hover,
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:focus {
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        /* Make the chevron arrow match and animate a bit */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle::after {
+            margin-left: auto;
+            border-top-color: currentColor;
+            transition: transform 0.2s ease;
+        }
+
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle[aria-expanded="true"]::after {
+            transform: rotate(180deg);
+        }
+/* === Vandalia sidebar – in-place dropdown + tighter spacing === */
+
+/* Make the inner sidebar content stretch full width */
+.vandalia-sidebar .sidebar {
+    align-items: stretch !important;
+}
+
+    /* Vertical menu: full width, smaller gaps */
+    .vandalia-sidebar .sidebar .menu.btn-group-vertical {
+        width: 100%;
+        align-items: stretch !important;
+        row-gap: 0.25rem; /* much smaller than Bootstrap's gap-4 */
+        column-gap: 0;
+        padding: 0 0 1rem 0;
+    }
+
+    /* Each dropdown block should also fill the width */
+    .vandalia-sidebar .sidebar .menu .dropdown {
+        width: 100%;
+    }
+
+        /* Top-level dropdown headers (Branch Manager, Rentals, etc.) */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 6px !important;
+            color: #f8f9fa !important;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: left;
+            width: 100%;
+            padding: 0.55rem 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+            /* Hover/active state for headers */
+            .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:hover,
+            .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:focus {
+                background: rgba(255, 255, 255, 0.06) !important;
+                color: #ffffff !important;
+                box-shadow: none !important;
+            }
+
+            /* Little chevron animation */
+            .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle::after {
+                margin-left: auto;
+                border-top-color: currentColor;
+                transition: transform 0.2s ease;
+            }
+
+            .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle[aria-expanded="true"]::after {
+                transform: rotate(180deg);
+            }
+
+    /* Make dropdown menus expand INSIDE the sidebar instead of floating */
+    .vandalia-sidebar .sidebar .menu .dropdown-menu {
+        position: static !important; /* ignore Popper's absolute positioning */
+        inset: auto !important; /* reset any inline offsets */
+        transform: none !important; /* reset inline transforms */
+        float: none;
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        padding: 0.25rem 0 0.35rem 0;
+        background: transparent;
+        width: 100%;
+        display: none; /* hidden until .show is added */
+    }
+
+        /* When Bootstrap toggles .show, just display it */
+        .vandalia-sidebar .sidebar .menu .dropdown-menu.show {
+            display: block;
+        }
+
+        /* Sub-item links */
+        .vandalia-sidebar .sidebar .menu .dropdown-menu .dropdown-item {
+            font-size: 0.9rem;
+            color: #dee2e6;
+            padding: 0.3rem 1.5rem;
+            background: transparent;
+            white-space: normal;
+        }
+
+            /* Hover for sub-items */
+            .vandalia-sidebar .sidebar .menu .dropdown-menu .dropdown-item:hover,
+            .vandalia-sidebar .sidebar .menu .dropdown-menu .dropdown-item:focus {
+                background: rgba(255, 255, 255, 0.06);
+                color: #ffffff;
+            }
+
+    /* Tiny extra tightening between groups */
+    .vandalia-sidebar .sidebar .menu .dropdown + .dropdown {
+        margin-top: 0.1rem;
+    }
 
 
+/* === Vandalia sidebar – dark scrollbar === */
+
+/* Firefox + some modern browsers */
+.vandalia-sidebar .sidebar {
+    scrollbar-width: thin; /* thinner scrollbar */
+    scrollbar-color: #5a5a5d #2e2e2f; /* thumb color | track color */
+}
+
+    /* Chromium / Edge / WebKit */
+    .vandalia-sidebar .sidebar::-webkit-scrollbar {
+        width: 8px; /* scrollbar thickness */
+    }
+
+    .vandalia-sidebar .sidebar::-webkit-scrollbar-track {
+        background: #2e2e2f; /* track (background) */
+    }
+
+    .vandalia-sidebar .sidebar::-webkit-scrollbar-thumb {
+        background-color: #5a5a5d; /* draggable handle */
+        border-radius: 4px;
+        border: 1px solid #2e2e2f; /* blend into track */
+    }
+
+        .vandalia-sidebar .sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: #777777; /* slightly lighter on hover */
+        }
+
+
+    /* === Vandalia sidebar – sliding orange hover on top-level items === */
+
+    /* Base: make sure top-level buttons can host the overlay */
+    .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle {
+        position: relative;
+        overflow: hidden; /* hides the overlay as it slides in */
+        isolation: isolate; /* keeps z-index layering sane */
+        transition: color 0.2s ease;
+    }
+
+        /* Orange overlay that will slide in from the left */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0; /* starts with no width */
+            background: #F79239; /* Vandalia orange */
+            z-index: -1; /* sits behind the text */
+            transition: width 0.22s ease-out;
+        }
+
+        /* Slide orange in only on hover */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:hover::before {
+            width: 100%;
+        }
+
+        /* Text color only on hover (collapsed or expanded) */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:hover {
+            background: transparent !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+
+        /* Make the text/chevron go white over the orange */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:hover,
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle:focus {
+            background: transparent !important; /* kill the gray fill */
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        /* Optionally keep the fill when the section is open */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle[aria-expanded="true"]::before {
+            width: 100%;
+        }
+
+
+    /* === Vandalia sidebar – tighten dropdown stack spacing === */
+
+    /* Kill the gap-4 spacing between items */
+    .vandalia-sidebar .sidebar .menu.btn-group-vertical {
+        gap: 0.9rem !important; /* small, modern gap */
+        row-gap: 0.9rem !important;
+        column-gap: 0 !important;
+    }
+    /* Make each dropdown sit flush in the stack */
+    .vandalia-sidebar .sidebar .menu .dropdown {
+        margin: 0 !important;
+    }
+
+        /* No extra top margin between successive dropdowns */
+        .vandalia-sidebar .sidebar .menu .dropdown + .dropdown {
+            margin-top: 0 !important;
+        }
+
+        /* Slightly tighter vertical padding on the headers */
+        .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle {
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
+        }
+
+    /* No extra margin under each action button by default */
+    .vandalia-sidebar .sidebar .menu > a.btn {
+        margin-bottom: 0; /* keeps Employee & Submit close together */
+    }
+
+        /* Extra space only under the LAST action button (Submit An IT Ticket) */
+        .vandalia-sidebar .sidebar .menu > a.btn:last-of-type {
+            margin-bottom: 0.9rem; /* separates actions from the menu items */
+        }
 
