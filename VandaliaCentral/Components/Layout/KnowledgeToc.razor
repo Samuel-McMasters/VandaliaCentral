@@ -1,0 +1,45 @@
+﻿@* Reusable table of contents component *@
+<div class="knowledge-toc">
+    <h3>Contents</h3>
+    <ul>
+        <li><a href="/knowledge">Overview</a></li>
+        <li><a href="/knowledge/category/it-support">IT Support</a></li>
+        <li><a href="/knowledge/category/hr-policies">HR & Policies</a></li>
+        <li><a href="/knowledge/category/software-tools">Software Tools</a></li>
+        <li><a href="/knowledge/category/forms">Forms & Templates</a></li>
+        <li><a href="/knowledge/search">Search</a></li>
+    </ul>
+</div>
+
+<style>
+    .knowledge-toc-sidebar {
+        width: 250px;
+        padding: 1rem;
+        background-color: #f5f5f5;
+        border-right: 1px solid #ddd;
+        height: calc(100vh - 80px);
+        position: sticky;
+        top: 80px;
+        overflow-y: auto;
+        overflow-x: hidden; /* ⬅️ Prevent horizontal scroll */
+        white-space: normal; /* ⬅️ Ensure content wraps */
+    }
+
+        .knowledge-toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .knowledge-toc li {
+            margin-bottom: 0.75rem;
+        }
+
+        .knowledge-toc a {
+            text-decoration: none;
+            color: #333;
+        }
+
+            .knowledge-toc a:hover {
+                text-decoration: underline;
+            }
+</style>
