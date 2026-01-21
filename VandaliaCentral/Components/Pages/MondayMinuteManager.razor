@@ -103,7 +103,6 @@ else
         if (file is null || !file.Name.EndsWith(".pdf"))
         {
             uploadStatus = "Please select a valid PDF file.";
-
             return;
         }
 
@@ -111,8 +110,6 @@ else
         {
             uploadStatus = "Uploading...";
             await PdfService.UploadPdfAsync("mondayminute", file);
-
-            uploadStatus = "Upload successful!";
 
             // Get current user identity
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -122,16 +119,22 @@ else
             var activity = $"Uploaded File: '{file.Name}'";
             await Logger.LogActivityAsync(userName, activity);
 
-            await Task.Delay(2000);
-            var currentUri = Navigation.Uri;
-            Navigation.NavigateTo("/mondayminuteeditor", forceLoad: true);
+            // refresh the table data (works in /admin AND /mondayminuteeditor)
+            await LoadFilesAsync();
 
+            uploadStatus = "Upload successful!";
+            StateHasChanged();
+
+            await Task.Delay(2000);
+            uploadStatus = null;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             uploadStatus = $"Upload failed: {ex.Message}";
         }
     }
+
 
 
     private class FileItem
