@@ -13,6 +13,8 @@
 @inject NavigationManager Navigation
 @inject ITokenAcquisition TokenAcquisition
 @inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+@inject IPasswordGeneratorService PasswordGenerator
+
 
 <div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4">
     <h3 class="pb-5">Admin Dashboard</h3>
@@ -55,6 +57,12 @@
                     Monday Minute
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
+                    Password Generator
+                </button>
+            </li>
+
 
         </ul>
 
@@ -161,6 +169,37 @@
         {
             <MondayMinuteManager />
         }
+
+        <!-- Password Generator Tab -->
+        @if (activeTab == "passwords")
+        {
+            <div>
+                <h5>Password Generator</h5>
+                <p class="text-muted mb-3">
+                    2 words (≤ 5 chars each) + a number + a special character
+                </p>
+
+                <div class="d-flex align-items-center gap-2" style="max-width: 520px;">
+                    <button class="btn btn-primary" @onclick="GeneratePassword">
+                        Generate
+                    </button>
+
+                    <input class="form-control" value="@generatedPassword" readonly />
+
+                    <button class="btn btn-outline-secondary"
+                            @onclick="CopyPassword"
+                            disabled="@string.IsNullOrWhiteSpace(generatedPassword)">
+                        Copy
+                    </button>
+                </div>
+
+                @if (showCopySuccess)
+                {
+                    <div class="text-success fw-bold mt-2">✓ Copied!</div>
+                }
+            </div>
+        }
+
     }
 </div>
 
@@ -174,6 +213,8 @@
     private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
     private List<CalendarEvent>? calendarEvents;
     private CalendarEvent newEvent = new();
+    private string? generatedPassword;
+    private bool showCopySuccess = false;
 
     private void SetActiveTab(string tab) => activeTab = tab;
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
@@ -272,5 +313,26 @@
         {
             Console.WriteLine("Error saving calendar: " + ex.Message);
         }
+    }
+
+    private void GeneratePassword()
+    {
+        generatedPassword = PasswordGenerator.GeneratePassword();
+        showCopySuccess = false;
+    }
+
+    private async Task CopyPassword()
+    {
+        if (string.IsNullOrWhiteSpace(generatedPassword))
+            return;
+
+        await JS.InvokeVoidAsync("blazorCopyToClipboard", generatedPassword);
+
+        showCopySuccess = true;
+        StateHasChanged();
+
+        await Task.Delay(1500);
+        showCopySuccess = false;
+        StateHasChanged();
     }
 }

@@ -21,6 +21,8 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
+builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
+
 
 // For PDF API controller
 builder.Services.AddControllers();
