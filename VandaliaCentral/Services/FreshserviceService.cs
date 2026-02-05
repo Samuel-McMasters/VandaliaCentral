@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -45,7 +46,7 @@ public sealed class FreshserviceService : IFreshserviceService
         if (_opts.ResponderId <= 0)
             throw new FreshserviceApiException("Freshservice ResponderId is not configured.");
 
-        // input.PriorityLabel is your stable key: LOW/HIGH/CRITICAL (from the Razor dropdown)
+        // input.PriorityLabel is your stable key: LOW/HIGH/CRITICAL (from Razor dropdown)
         var priorityKey = (input.PriorityLabel ?? "").Trim().ToUpperInvariant();
 
         // Freshservice custom dropdown (exact labels Jeff set)
@@ -80,6 +81,8 @@ public sealed class FreshserviceService : IFreshserviceService
 
         if (!resp.IsSuccessStatusCode)
         {
+            var requestId = GetRequestId(resp);
+
             // Parse validation errors: { description, errors: [ { field, message, code } ] }
             FreshserviceErrorResponse? parsed = null;
             try { parsed = JsonSerializer.Deserialize<FreshserviceErrorResponse>(body, JsonOpts); } catch { /* ignore */ }
@@ -104,7 +107,11 @@ public sealed class FreshserviceService : IFreshserviceService
                     })
                     .ToList();
 
-                throw new FreshserviceApiException(parsed.Description ?? "Validation failed", enriched);
+                var msg = parsed.Description ?? "Validation failed";
+                if (!string.IsNullOrWhiteSpace(requestId))
+                    msg += $" | x-request-id: {requestId}";
+
+                throw new FreshserviceApiException(msg, enriched);
             }
 
             // Auth hint on 401/403
@@ -193,7 +200,7 @@ public sealed class FreshserviceService : IFreshserviceService
             if (meResp.IsSuccessStatusCode)
                 return "Auth sanity check OK (GET /agents/me succeeded).";
 
-            return $"Auth sanity check failed (GET /agents/me => {(int)meResp.StatusCode}). Body: {meBody}";
+            return $"Auth sanity check failed (GET /agents/me => {(int)meResp.StatusCode}). Body: {TrimForEmail(meBody)}";
         }
         catch
         {
@@ -203,12 +210,23 @@ public sealed class FreshserviceService : IFreshserviceService
 
     private FreshserviceApiException BuildFreshserviceException(HttpResponseMessage resp, string body, string? authHint)
     {
+        var requestId = GetRequestId(resp);
+
         // 1) Validation style errors
         try
         {
             var err = JsonSerializer.Deserialize<FreshserviceErrorResponse>(body, JsonOpts);
             if (err?.Errors?.Count > 0)
-                return new FreshserviceApiException(err.Description ?? "Validation failed", err.Errors);
+            {
+                var msg = err.Description ?? "Validation failed";
+                msg += $" | HTTP {(int)resp.StatusCode}";
+                if (!string.IsNullOrWhiteSpace(requestId))
+                    msg += $" | x-request-id: {requestId}";
+                if (!string.IsNullOrWhiteSpace(authHint))
+                    msg += $" | {authHint}";
+
+                return new FreshserviceApiException(msg, err.Errors);
+            }
         }
         catch { /* ignore */ }
 
@@ -218,7 +236,9 @@ public sealed class FreshserviceService : IFreshserviceService
             var denied = JsonSerializer.Deserialize<FreshserviceAccessDeniedResponse>(body, JsonOpts);
             if (!string.IsNullOrWhiteSpace(denied?.Code) || !string.IsNullOrWhiteSpace(denied?.Message))
             {
-                var msg = $"Freshservice error ({(int)resp.StatusCode}): {denied?.Code}: {denied?.Message}";
+                var msg = $"Freshservice error (HTTP {(int)resp.StatusCode}): {denied?.Code}: {denied?.Message}";
+                if (!string.IsNullOrWhiteSpace(requestId))
+                    msg += $" | x-request-id: {requestId}";
                 if (!string.IsNullOrWhiteSpace(authHint))
                     msg += $" | {authHint}";
                 return new FreshserviceApiException(msg);
@@ -226,10 +246,30 @@ public sealed class FreshserviceService : IFreshserviceService
         }
         catch { /* ignore */ }
 
-        var fallback = $"Freshservice error ({(int)resp.StatusCode}): {body}";
+        // 3) Fallback: raw body
+        var fallback = $"Freshservice error (HTTP {(int)resp.StatusCode})";
+        if (!string.IsNullOrWhiteSpace(requestId))
+            fallback += $" | x-request-id: {requestId}";
         if (!string.IsNullOrWhiteSpace(authHint))
             fallback += $" | {authHint}";
+        fallback += $" | Body: {TrimForEmail(body)}";
+
         return new FreshserviceApiException(fallback);
+    }
+
+    private static string? GetRequestId(HttpResponseMessage resp)
+    {
+        if (resp.Headers.TryGetValues("x-request-id", out var vals))
+            return vals.FirstOrDefault();
+        return null;
+    }
+
+    private static string TrimForEmail(string? s, int max = 3000)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "<empty>";
+        s = s.Trim();
+        if (s.Length <= max) return s;
+        return s.Substring(0, max) + "…<truncated>";
     }
 
     private static string MakeWhitespaceVisible(string s)

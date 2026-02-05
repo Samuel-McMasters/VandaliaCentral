@@ -3,7 +3,7 @@
 @using VandaliaCentral.Services
 @using Microsoft.AspNetCore.Authorization
 @inject LoggingService Logger
-@inject IFreshserviceService Freshservice
+@inject ISupportTicketSubmissionService TicketSubmitter
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
@@ -13,98 +13,105 @@
 
     @if (success)
     {
-        <p class="text-success mt-2">Your support ticket was created in Freshservice!</p>
-        <p class="text-success mt-2">Redirecting to home page...</p>
-    }
-    else if (failure)
-    {
-        <h4 class="text-danger mt-2">There was an error submitting your ticket:</h4>
-
-        @if (apiErrors.Count > 0)
+        @if (sentFallbackEmail)
         {
-            <ul class="mb-0">
-                @foreach (var err in apiErrors)
-                {
-                    <li><strong>@err.Field</strong>: @err.Message</li>
-                }
-            </ul>
+                    <p class="text-success mt-2">
+                        Freshservice was unavailable, but your ticket was emailed to Support.
+                    </p>
         }
         else
         {
-            <p>@(errorMessage ?? "Please refresh the webpage, or contact the intranet administrator for assistance.")</p>
+                    <p class="text-success mt-2">Your support ticket was created in Freshservice!</p>
+        }
+
+            <p class="text-success mt-2">Redirecting to home page...</p>
+    }
+    else if (failure)
+    {
+            <h4 class="text-danger mt-2">There was an error submitting your ticket:</h4>
+
+        @if (apiErrors.Count > 0)
+        {
+                    <ul class="mb-0">
+                @foreach (var err in apiErrors)
+                {
+                                <li><strong>@err.Field</strong>: @err.Message</li>
+                }
+                    </ul>
+        }
+        else
+        {
+                    <p>@(errorMessage ?? "Please refresh the webpage, or contact the intranet administrator for assistance.")</p>
         }
     }
     else
     {
-        <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+            <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Requested By</strong></label>
-                @* Display-only: avoid InputText ValueExpression issues inside EditForm *@
-                <input class="form-control" value="@requesterEmail" disabled />
-                <div class="form-text">This comes from your sign-in.</div>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Requested By</strong></label>
+                    <input class="form-control" value="@requesterEmail" disabled />
+                    <div class="form-text">This comes from your sign-in.</div>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Subject</strong></label>
-                <InputText @bind-Value="formModel.Subject" class="form-control" />
-            </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Subject</strong></label>
+                    <InputText @bind-Value="formModel.Subject" class="form-control" />
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Category</strong></label>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Category</strong></label>
 
-                <InputSelect @bind-Value="formModel.Category" class="form-select">
-                    <option value="">Select Category</option>
+                    <InputSelect @bind-Value="formModel.Category" class="form-select">
+                        <option value="">Select Category</option>
                     @foreach (var cat in CategoryMap.Keys.OrderBy(x => x))
                     {
-                        <option value="@cat">@cat</option>
+                                <option value="@cat">@cat</option>
                     }
-                </InputSelect>
-            </div>
+                    </InputSelect>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Subcategory</strong></label>
-                <InputSelect @bind-Value="formModel.SubCategory"
-                             class="form-select"
-                             disabled="@(!CurrentSubcategories.Any())">
-                    <option value="">@(CurrentSubcategories.Any() ? "Select Subcategory" : "No subcategories")</option>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Subcategory</strong></label>
+                    <InputSelect @bind-Value="formModel.SubCategory"
+                                 class="form-select"
+                                 disabled="@(!CurrentSubcategories.Any())">
+                        <option value="">@(CurrentSubcategories.Any() ? "Select Subcategory" : "No subcategories")</option>
                     @foreach (var sub in CurrentSubcategories)
                     {
-                        <option value="@sub">@sub</option>
+                                <option value="@sub">@sub</option>
                     }
-                </InputSelect>
+                    </InputSelect>
 
                 @if (!CurrentSubcategories.Any() && !string.IsNullOrWhiteSpace(formModel.Category))
                 {
-                    <div class="form-text">This category doesn’t have subcategories.</div>
+                            <div class="form-text">This category doesn’t have subcategories.</div>
                 }
-            </div>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Priority</strong></label>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Priority</strong></label>
 
-                @* Bind to stable keys (LOW/HIGH/CRITICAL).
-                   FreshserviceService maps these keys to the exact dropdown strings. *@
-                <InputSelect @bind-Value="formModel.PriorityKey" class="form-select">
-                    <option value="">Select Priority</option>
+                    <InputSelect @bind-Value="formModel.PriorityKey" class="form-select">
+                        <option value="">Select Priority</option>
                     @foreach (var p in PriorityOptions)
                     {
-                        <option value="@p.Value">@p.Text</option>
+                                <option value="@p.Value">@p.Text</option>
                     }
-                </InputSelect>
-            </div>
+                    </InputSelect>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label"><strong>Details</strong></label>
-                <InputTextArea @bind-Value="formModel.Description" class="form-control" rows="6" />
-            </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Details</strong></label>
+                    <InputTextArea @bind-Value="formModel.Description" class="form-control" rows="6" />
+                </div>
 
-            <button type="submit" class="btn btn-primary mt-2" disabled="@isSubmitting">
+                <button type="submit" class="btn btn-primary mt-2" disabled="@isSubmitting">
                 @(isSubmitting ? "Submitting..." : "Submit")
-            </button>
-        </EditForm>
+                </button>
+            </EditForm>
     }
 </div>
 
@@ -113,13 +120,13 @@
     private bool success = false;
     private bool failure = false;
     private bool isSubmitting = false;
+    private bool sentFallbackEmail = false;
 
     private string requesterEmail = "unknown";
     private string? errorMessage;
     private List<FreshserviceFieldError> apiErrors = new();
 
-    // UI text is what the user sees.
-    // Value is what we send to the service (stable key).
+    // Stable keys (FreshserviceService maps these to exact labels)
     private static readonly (string Value, string Text)[] PriorityOptions =
     {
         ("LOW", "Low-No due date"),
@@ -240,24 +247,30 @@
         isSubmitting = true;
         failure = false;
         success = false;
+        sentFallbackEmail = false;
         errorMessage = null;
         apiErrors.Clear();
 
         try
         {
-            var result = await Freshservice.CreateTicketAsync(new FreshserviceCreateTicketInput
+            var input = new FreshserviceCreateTicketInput
                 {
                     RequesterEmail = requesterEmail,
                     Subject = formModel.Subject,
                     Description = formModel.Description,
                     Category = formModel.Category,
                     SubCategory = string.IsNullOrWhiteSpace(formModel.SubCategory) ? null : formModel.SubCategory,
+                    PriorityLabel = formModel.PriorityKey
+                };
 
-                // IMPORTANT: send stable key LOW/HIGH/CRITICAL
-                    PriorityLabel = formModel.PriorityKey,
-                });
+            var result = await TicketSubmitter.SubmitAsync(input);
 
-            var activity = $"Submitted Freshservice ticket #{result.TicketId} with subject: '{formModel.Subject}'";
+            sentFallbackEmail = result.SentFallbackEmail;
+
+            var activity = result.CreatedInFreshservice
+                ? $"Submitted Freshservice ticket #{result.FreshserviceTicketId ?? 0} with subject: '{formModel.Subject}'"
+                : $"Freshservice failed; emailed fallback ticket to Support with subject: '{formModel.Subject}'";
+
             await Logger.LogActivityAsync(requesterEmail, activity);
 
             success = true;
@@ -265,17 +278,11 @@
             await Task.Delay(2500);
             Navigation.NavigateTo("/");
         }
-        catch (FreshserviceApiException ex)
-        {
-            failure = true;
-            errorMessage = ex.Message;
-            if (ex.FieldErrors is not null)
-                apiErrors = ex.FieldErrors;
-        }
         catch (Exception ex)
         {
+            // If we get here, Freshservice failed AND fallback email failed (or another unexpected crash)
             failure = true;
-            errorMessage = $"Unexpected error: {ex.Message}";
+            errorMessage = ex.Message;
         }
         finally
         {

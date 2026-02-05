@@ -27,6 +27,8 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
+builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
+
 
 // Bind Freshservice options (maps Freshservice__ApiKey, Freshservice__Domain, etc.)
 // Validate at startup so you instantly know if Azure settings are missing/misnamed
