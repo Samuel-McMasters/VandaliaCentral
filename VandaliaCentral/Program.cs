@@ -12,38 +12,45 @@ using Blazorise;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Blazorise.Charts;
-
+using System.Net.Http.Headers;
 
 var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
+// Make sure environment variables are included (Azure App Service App settings)
+// WebApplicationBuilder already includes this by default, but keeping it explicit helps prevent surprises.
+builder.Configuration.AddEnvironmentVariables();
+
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
-builder.Services.Configure<FreshserviceOptions>(builder.Configuration.GetSection("Freshservice"));
-builder.Services.AddHttpClient("FreshserviceRaw", client =>
-{
-    // No BaseAddress needed, you're using full URLs in the service
-    client.DefaultRequestHeaders.Accept.Clear();
-    client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-})
-.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    UseCookies = false
-});
 
-builder.Services.AddScoped<IFreshserviceService>(sp =>
-{
-    var factory = sp.GetRequiredService<IHttpClientFactory>();
-    var http = factory.CreateClient("FreshserviceRaw");
-    var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FreshserviceOptions>>();
-    return new FreshserviceService(http, opts);
-});
+// Bind Freshservice options (maps Freshservice__ApiKey, Freshservice__Domain, etc.)
+// Validate at startup so you instantly know if Azure settings are missing/misnamed
+builder.Services
+    .AddOptions<FreshserviceOptions>()
+    .Bind(builder.Configuration.GetSection("Freshservice"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.Domain), "Freshservice:Domain is required (Freshservice__Domain).")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "Freshservice:ApiKey is required (Freshservice__ApiKey).")
+    .Validate(o => o.DepartmentId > 0, "Freshservice:DepartmentId is required (Freshservice__DepartmentId).")
+    .Validate(o => o.ResponderId > 0, "Freshservice:ResponderId is required (Freshservice__ResponderId).")
+    .ValidateOnStart();
 
-
-
+// Typed HttpClient for Freshservice
+builder.Services
+    .AddHttpClient<IFreshserviceService, FreshserviceService>(client =>
+    {
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/json"));
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        UseCookies = false
+    });
 
 // For PDF API controller
 builder.Services.AddControllers();
@@ -78,10 +85,7 @@ builder.Services.AddServerSideBlazor()
 
 builder.Services.AddRazorPages();
 builder.Services.AddControllersWithViews()
-    .AddMicrosoftIdentityUI(); // <- this is the correct usage // Needed for MicrosoftIdentity UI pages
-
-
-
+    .AddMicrosoftIdentityUI();
 
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {
@@ -108,7 +112,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-
 // Middleware
 app.UseHttpsRedirection();
 app.UseRouting();
@@ -118,7 +121,7 @@ app.UseAuthorization();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapRazorPages(); // <-- ADD THIS
+app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
