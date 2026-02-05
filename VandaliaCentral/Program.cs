@@ -22,6 +22,27 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
+builder.Services.Configure<FreshserviceOptions>(builder.Configuration.GetSection("Freshservice"));
+builder.Services.AddHttpClient("FreshserviceRaw", client =>
+{
+    // No BaseAddress needed, you're using full URLs in the service
+    client.DefaultRequestHeaders.Accept.Clear();
+    client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    UseCookies = false
+});
+
+builder.Services.AddScoped<IFreshserviceService>(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    var http = factory.CreateClient("FreshserviceRaw");
+    var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FreshserviceOptions>>();
+    return new FreshserviceService(http, opts);
+});
+
+
 
 
 // For PDF API controller

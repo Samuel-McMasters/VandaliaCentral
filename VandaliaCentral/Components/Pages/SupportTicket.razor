@@ -1,31 +1,38 @@
 ﻿@page "/supportticket"
+@using System.ComponentModel.DataAnnotations
 @using VandaliaCentral.Services
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.Identity.Web
 @inject LoggingService Logger
-@inject GraphEmailService EmailService
+@inject IFreshserviceService Freshservice
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
-@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
-
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Submit a Support Ticket</h3>
 
     @if (success)
     {
-        <p class="text-success mt-2">Your support ticket has been sent!</p>
+        <p class="text-success mt-2">Your support ticket was created in Freshservice!</p>
         <p class="text-success mt-2">Redirecting to home page...</p>
     }
     else if (failure)
     {
         <h4 class="text-danger mt-2">There was an error submitting your ticket:</h4>
-        <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
-    }
-    else if (!isAuthorized)
-    {
-        <p>Checking sign-in status...</p>
+
+        @if (apiErrors.Count > 0)
+        {
+            <ul class="mb-0">
+                @foreach (var err in apiErrors)
+                {
+                    <li><strong>@err.Field</strong>: @err.Message</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>@(errorMessage ?? "Please refresh the webpage, or contact the intranet administrator for assistance.")</p>
+        }
     }
     else
     {
@@ -34,90 +41,275 @@
             <ValidationSummary />
 
             <div class="mb-3">
+                <label class="form-label"><strong>Requested By</strong></label>
+                @* Display-only: avoid InputText ValueExpression issues inside EditForm *@
+                <input class="form-control" value="@requesterEmail" disabled />
+                <div class="form-text">This comes from your sign-in.</div>
+            </div>
+
+            <div class="mb-3">
                 <label class="form-label"><strong>Subject</strong></label>
                 <InputText @bind-Value="formModel.Subject" class="form-control" />
             </div>
 
             <div class="mb-3">
+                <label class="form-label"><strong>Category</strong></label>
+
+                <InputSelect @bind-Value="formModel.Category" class="form-select">
+                    <option value="">Select Category</option>
+                    @foreach (var cat in CategoryMap.Keys.OrderBy(x => x))
+                    {
+                        <option value="@cat">@cat</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label"><strong>Subcategory</strong></label>
+                <InputSelect @bind-Value="formModel.SubCategory"
+                             class="form-select"
+                             disabled="@(!CurrentSubcategories.Any())">
+                    <option value="">@(CurrentSubcategories.Any() ? "Select Subcategory" : "No subcategories")</option>
+                    @foreach (var sub in CurrentSubcategories)
+                    {
+                        <option value="@sub">@sub</option>
+                    }
+                </InputSelect>
+
+                @if (!CurrentSubcategories.Any() && !string.IsNullOrWhiteSpace(formModel.Category))
+                {
+                    <div class="form-text">This category doesn’t have subcategories.</div>
+                }
+            </div>
+
+            <div class="mb-3">
                 <label class="form-label"><strong>Priority</strong></label>
-                <InputSelect @bind-Value="formModel.Priority" class="form-select">
+
+                @* Bind to stable keys (LOW/HIGH/CRITICAL).
+                   FreshserviceService maps these keys to the exact dropdown strings. *@
+                <InputSelect @bind-Value="formModel.PriorityKey" class="form-select">
                     <option value="">Select Priority</option>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
+                    @foreach (var p in PriorityOptions)
+                    {
+                        <option value="@p.Value">@p.Text</option>
+                    }
                 </InputSelect>
             </div>
 
             <div class="mb-3">
                 <label class="form-label"><strong>Details</strong></label>
-                <InputTextArea @bind-Value="formModel.Body" class="form-control" rows="5" />
+                <InputTextArea @bind-Value="formModel.Description" class="form-control" rows="6" />
             </div>
 
-            <button type="submit" class="btn btn-primary mt-2">Submit</button>
+            <button type="submit" class="btn btn-primary mt-2" disabled="@isSubmitting">
+                @(isSubmitting ? "Submitting..." : "Submit")
+            </button>
         </EditForm>
     }
 </div>
 
 @code {
-    private SupportTicketModel formModel = new();
+    private SupportTicketFormModel formModel = new();
     private bool success = false;
     private bool failure = false;
-    private bool isAuthorized = false;
+    private bool isSubmitting = false;
 
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
-    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+    private string requesterEmail = "unknown";
+    private string? errorMessage;
+    private List<FreshserviceFieldError> apiErrors = new();
+
+    // UI text is what the user sees.
+    // Value is what we send to the service (stable key).
+    private static readonly (string Value, string Text)[] PriorityOptions =
+    {
+        ("LOW", "Low-No due date"),
+        ("HIGH", "High-I can operate but need help"),
+        ("CRITICAL", "Critical-I am Down")
+    };
+
+    private static readonly Dictionary<string, List<string>> CategoryMap = new()
+        {
+            ["Access Management"] = new()
+        {
+            "Position/Role Change",
+            "New User Setup",
+            "Permissions for Access",
+            "Locked out of Windows",
+            "User Account Termination",
+            "User Account - Password Change Request"
+        },
+            ["Camera System/Security"] = new(),
+            ["Cell Phone"] = new() { "Applications", "Troubleshooting", "Service", "Upgrade Request" },
+            ["Marketing"] = new() { "Business Cards", "Design/Logos", "Emails", "Print Materials" },
+            ["Network/Infrastructure"] = new()
+        {
+            "Microsoft Groups",
+            "Shared Drive Access",
+            "Active Directory",
+            "Network",
+            "Internet",
+            "Wi-Fi",
+            "Firewall",
+            "Security (Phishing/Spam, etc.)",
+            "Other"
+        },
+            ["Paylocity"] = new(),
+            ["Phones"] = new()
+        {
+            "Hardware Issues",
+            "Need New Hardware",
+            "Service",
+            "Extension Changes",
+            "RingCentral App",
+            "Salesforce/RingCentral Integration"
+        },
+            ["Printer"] = new()
+        {
+            "Install Printer on Computer",
+            "Printer Offline",
+            "Printer Issue-Hardware",
+            "Need Toner/Imaging Unit"
+        },
+            ["Quality App"] = new() { "Checklist issue", "Password Issue", "500 error" },
+            ["RentalMan"] = new()
+        {
+            "Password Reset",
+            "Record Lock",
+            "Sales Rep Change",
+            "Pricing",
+            "Printing",
+            "Permissions",
+            "Modification",
+            "Other",
+            "Bug Fix",
+            "Inventory Adjustment",
+            "Equipment Steps"
+        },
+            ["Reporting"] = new() { "Targit", "Rental Man", "MS Access", "Salesforce" },
+            ["Salesforce"] = new()
+        {
+            "Dashboards",
+            "Dodge",
+            "Error",
+            "Maps",
+            "Merge Accounts",
+            "New User",
+            "Password",
+            "Permissions",
+            "Reports",
+            "Service Requests",
+            "Other"
+        },
+            ["Square9"] = new() { "Permissions", "New User Setup" },
+            ["Vizion360"] = new() { "Not Updating" },
+            ["Website"] = new() { "Addition", "Forms", "Missing Items", "Pricing", "Other" },
+            ["Workstation/Laptop"] = new()
+        {
+            "Hardware",
+            "Adobe",
+            "Windows",
+            "Outlook (Email)",
+            "Teams",
+            "Mechanic's Software",
+            "Other Software",
+            "Other"
+        },
+            ["InTempoMX"] = new() { "Password Reset", "Other" },
+            ["MDM"] = new() { "User Creation", "Application", "Device Enrollment" }
+        };
+
+    private IEnumerable<string> CurrentSubcategories =>
+        (!string.IsNullOrWhiteSpace(formModel.Category) && CategoryMap.TryGetValue(formModel.Category, out var subs))
+            ? subs
+            : Enumerable.Empty<string>();
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
-            isAuthorized = true;
-        }
-        catch (Exception ex)
-        {
-            ConsentHandler.HandleException(ex);
-        }
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        requesterEmail =
+            user.FindFirst("preferred_username")?.Value ??
+            user.FindFirst("email")?.Value ??
+            user.Identity?.Name ??
+            "unknown";
     }
 
     private async Task HandleValidSubmit()
     {
+        isSubmitting = true;
+        failure = false;
+        success = false;
+        errorMessage = null;
+        apiErrors.Clear();
+
         try
         {
-            var subjectLine = $"[Support - {formModel.Priority} Priority] {formModel.Subject}";
-            var body = formModel.Body;
+            var result = await Freshservice.CreateTicketAsync(new FreshserviceCreateTicketInput
+                {
+                    RequesterEmail = requesterEmail,
+                    Subject = formModel.Subject,
+                    Description = formModel.Description,
+                    Category = formModel.Category,
+                    SubCategory = string.IsNullOrWhiteSpace(formModel.SubCategory) ? null : formModel.SubCategory,
 
-            await EmailService.SendEmailAsync(
-                toEmail: "sam.mcmasters@vandaliarental.com",
-                subject: subjectLine,
-                bodyText: body
-            );
+                // IMPORTANT: send stable key LOW/HIGH/CRITICAL
+                    PriorityLabel = formModel.PriorityKey,
+                });
 
-            // Get current user identity
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var userName = authState.User?.Identity?.Name ?? "anonymous";
-
-            // Log the activity
-            var activity = $"Submitted IT Support Ticket with subject: '{formModel.Subject}'";
-            await Logger.LogActivityAsync(userName, activity);
+            var activity = $"Submitted Freshservice ticket #{result.TicketId} with subject: '{formModel.Subject}'";
+            await Logger.LogActivityAsync(requesterEmail, activity);
 
             success = true;
             StateHasChanged();
-            await Task.Delay(4000);
+            await Task.Delay(2500);
             Navigation.NavigateTo("/");
+        }
+        catch (FreshserviceApiException ex)
+        {
+            failure = true;
+            errorMessage = ex.Message;
+            if (ex.FieldErrors is not null)
+                apiErrors = ex.FieldErrors;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Support ticket error: {ex.Message}");
             failure = true;
+            errorMessage = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 
-    public class SupportTicketModel
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    public class SupportTicketFormModel
     {
-        public string Subject { get; set; } = string.Empty;
-        public string Body { get; set; } = string.Empty;
-        public string Priority { get; set; } = string.Empty;
+        [Required] public string Subject { get; set; } = string.Empty;
+
+        private string _category = string.Empty;
+
+        [Required]
+        public string Category
+        {
+            get => _category;
+            set
+            {
+                if (!string.Equals(_category, value, StringComparison.Ordinal))
+                {
+                    _category = value ?? string.Empty;
+                    SubCategory = string.Empty;
+                }
+            }
+        }
+
+        public string SubCategory { get; set; } = string.Empty;
+
+        // Stable keys: LOW / HIGH / CRITICAL
+        [Required] public string PriorityKey { get; set; } = string.Empty;
+
+        [Required] public string Description { get; set; } = string.Empty;
     }
 }
