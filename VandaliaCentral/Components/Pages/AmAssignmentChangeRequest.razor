@@ -183,10 +183,7 @@
     private string? _successMessage;
     private string? _errorMessage;
 
-    // protected override async Task OnInitializedAsync()
-    // {
-    //     await GraphEmailService.EnsureMailSendAccessAsync();
-    // }
+    
     protected override void OnInitialized()
     {
         _editContext = new EditContext(Model);
