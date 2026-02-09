@@ -9,6 +9,8 @@
 @inject VandaliaCentral.Services.GraphEmailService GraphEmailService
 @inject VandaliaCentral.Services.IAmAssignmentChangeRequestSubmissionService SubmissionService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
 
 <h3 class="mb-3">AM Assignment Change Request</h3>
 
@@ -182,6 +184,7 @@
     private bool _isSubmitting;
     private string? _successMessage;
     private string? _errorMessage;
+    private bool _redirectScheduled;
 
     
     protected override void OnInitialized()
@@ -239,6 +242,11 @@
             await SubmissionService.SubmitAsync(Model, fromEmail);
 
             _successMessage = "Submitted successfully.";
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await InvokeAsync(() => Nav.NavigateTo("/"));
+            });
         }
         catch (Exception ex)
         {
@@ -286,4 +294,5 @@
         _editContext.NotifyValidationStateChanged();
         return baseValid && linesValid;
     }
+    
 }
