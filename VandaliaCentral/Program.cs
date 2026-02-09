@@ -29,6 +29,19 @@ builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
+// ===============================
+// AM Assignment Change Request
+// ===============================
+
+// Binds appsettings section "AmAssignmentChangeRequestEmail"
+// NOTE: Leaving blank while testing is fine; do NOT ValidateOnStart here yet.
+// TODO: Fill emails in when going live.
+builder.Services
+    .AddOptions<AmAssignmentChangeRequestEmailOptions>()
+    .Bind(builder.Configuration.GetSection("AmAssignmentChangeRequestEmail"));
+
+builder.Services.AddScoped<IAmAssignmentChangeRequestSubmissionService, AmAssignmentChangeRequestSubmissionService>();
+
 
 // Bind Freshservice options (maps Freshservice__ApiKey, Freshservice__Domain, etc.)
 // Validate at startup so you instantly know if Azure settings are missing/misnamed

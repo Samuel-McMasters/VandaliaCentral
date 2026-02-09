@@ -1,0 +1,292 @@
+﻿@page "/am-assignment-change-request"
+
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using VandaliaCentral.Models
+
+@inject VandaliaCentral.Services.GraphEmailService GraphEmailService
+@inject VandaliaCentral.Services.IAmAssignmentChangeRequestSubmissionService SubmissionService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="mb-3">AM Assignment Change Request</h3>
+
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert alert-success">@_successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+<EditForm EditContext="_editContext">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h5 class="mb-3">Executive / DM / DSM</h5>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="Model.ExecutiveName" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.ExecutiveName)" />
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <label class="form-label">Location</label>
+                    <InputText class="form-control" @bind-Value="Model.Location" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.Location)" />
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <label class="form-label">Salesperson Type</label>
+                    <InputSelect class="form-select" @bind-Value="Model.SalespersonType" disabled="@_isSubmitting">
+                        <option value="">-- Select --</option>
+                        <option value="General Rental">General Rental</option>
+                        <option value="SOS">SOS</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => Model.SalespersonType)" />
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-3">Current Assigned AM</h5>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-8">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="Model.CurrentAmName" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.CurrentAmName)" />
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <label class="form-label">Sales Rep #</label>
+                    <InputText class="form-control" @bind-Value="Model.CurrentAmSalesRepNumber" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.CurrentAmSalesRepNumber)" />
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-3">New Assigned AM</h5>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-8">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="Model.NewAmName" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.NewAmName)" />
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <label class="form-label">Sales Rep #</label>
+                    <InputText class="form-control" @bind-Value="Model.NewAmSalesRepNumber" disabled="@_isSubmitting" />
+                    <ValidationMessage For="@(() => Model.NewAmSalesRepNumber)" />
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-2">Customer Details</h5>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width:220px;">Acct#</th>
+                            <th>Company Name</th>
+                            <th style="width:240px;">Assign Open Contracts</th>
+                            <th style="width:120px;"></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @for (var i = 0; i < Model.Accounts.Count; i++)
+                        {
+                            var index = i;                 // IMPORTANT: capture per-row index
+                            var line = Model.Accounts[i];  // bind/validate against the object, not Model.Accounts[i]
+
+                            <tr @key="line">
+                                <td>
+                                    <InputText class="form-control"
+                                               @bind-Value="line.AccountNumber"
+                                               disabled="@_isSubmitting" />
+                                    <ValidationMessage For="@(() => line.AccountNumber)" />
+                                </td>
+
+                                <td>
+                                    <InputText class="form-control"
+                                               @bind-Value="line.CompanyName"
+                                               disabled="@_isSubmitting" />
+                                    <ValidationMessage For="@(() => line.CompanyName)" />
+                                </td>
+
+                                <td>
+                                    <div class="form-check">
+                                        <InputCheckbox class="form-check-input"
+                                                       @bind-Value="line.AssignOpenContracts"
+                                                       disabled="@_isSubmitting" />
+                                        <label class="form-check-label">Assign Open Contracts</label>
+                                    </div>
+                                </td>
+
+                                <td class="text-end">
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            disabled="@(_isSubmitting || Model.Accounts.Count == 1)"
+                                            @onclick="() => RemoveAccount(index)">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button"
+                    class="btn btn-outline-primary"
+                    disabled="@_isSubmitting"
+                    @onclick="AddAccount">
+                Add account
+            </button>
+
+            <div class="mt-4 d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Note: Forms are only approved if submitted directly from Executive/DM/DSM email.
+                </small>
+
+                <button type="button"
+                        class="btn btn-warning"
+                        disabled="@_isSubmitting"
+                        @onclick="SubmitAsync">
+                    @(_isSubmitting ? "Submitting..." : "Submit Email")
+                </button>
+            </div>
+
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private readonly AmAssignmentChangeRequestModel Model = new();
+
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _messages = default!;
+
+    private bool _isSubmitting;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await GraphEmailService.EnsureMailSendAccessAsync();
+    // }
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(Model);
+        _messages = new ValidationMessageStore(_editContext);
+
+        _editContext.OnFieldChanged += (_, e) =>
+        {
+            _messages.Clear(e.FieldIdentifier);
+            _editContext.NotifyValidationStateChanged();
+        };
+    }
+    
+
+
+    private void AddAccount()
+    {
+        Model.Accounts.Add(new AmAssignmentCustomerLine());
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    private void RemoveAccount(int index)
+    {
+        if (Model.Accounts.Count <= 1) return;
+        if (index < 0 || index >= Model.Accounts.Count) return;
+
+        Model.Accounts.RemoveAt(index);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _successMessage = null;
+        _errorMessage = null;
+
+        if (!ValidateAllFields())
+            return;
+
+        _isSubmitting = true;
+
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+
+            var fromEmail =
+                user.FindFirstValue(ClaimTypes.Upn) ??
+                user.FindFirstValue("preferred_username") ??
+                user.FindFirstValue(ClaimTypes.Email);
+
+            if (string.IsNullOrWhiteSpace(fromEmail))
+                throw new InvalidOperationException("Could not determine signed-in user's email/UPN.");
+
+            await SubmissionService.SubmitAsync(Model, fromEmail);
+
+            _successMessage = "Submitted successfully.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private bool ValidateAllFields()
+    {
+        _messages.Clear();
+
+        // Validate [Required] etc on the top-level model
+        var baseValid = _editContext.Validate();
+
+        // Validate dynamic account lines (Acct# + Company required)
+        var linesValid = true;
+
+        if (Model.Accounts.Count == 0)
+        {
+            linesValid = false;
+            _messages.Add(new FieldIdentifier(Model, nameof(Model.Accounts)), "At least one account line is required.");
+        }
+        else
+        {
+            foreach (var line in Model.Accounts)
+            {
+                if (string.IsNullOrWhiteSpace(line.AccountNumber))
+                {
+                    linesValid = false;
+                    _messages.Add(new FieldIdentifier(line, nameof(line.AccountNumber)), "Acct# is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(line.CompanyName))
+                {
+                    linesValid = false;
+                    _messages.Add(new FieldIdentifier(line, nameof(line.CompanyName)), "Company Name is required.");
+                }
+            }
+        }
+
+        _editContext.NotifyValidationStateChanged();
+        return baseValid && linesValid;
+    }
+}

@@ -114,5 +114,66 @@ namespace VandaliaCentral.Services
                 return Task.CompletedTask;
             }));
         }
+
+        public async Task SendEmailHtmlAsync(string toEmail, string subject, string bodyHtml, string? ccEmail = null)
+        {
+            try
+            {
+                var graphClient = await GetGraphClientAsync();
+
+                var message = new Message
+                {
+                    Subject = subject,
+                    Body = new ItemBody
+                    {
+                        ContentType = BodyType.Html,
+                        Content = bodyHtml
+                    },
+                    ToRecipients = new List<Recipient>
+            {
+                new Recipient
+                {
+                    EmailAddress = new EmailAddress { Address = toEmail }
+                }
+            }
+                };
+
+                if (!string.IsNullOrWhiteSpace(ccEmail))
+                {
+                    message.CcRecipients = new List<Recipient>
+            {
+                new Recipient
+                {
+                    EmailAddress = new EmailAddress { Address = ccEmail }
+                }
+            };
+                }
+
+                await graphClient.Me.SendMail(message, true)
+                    .Request()
+                    .PostAsync();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+            }
+        }
+
+
+        public async Task EnsureMailSendAccessAsync()
+        {
+            try
+            {
+                // Just acquiring the token is enough to trigger consent/CA challenge early.
+                _ = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+            }
+        }
+
+
+
     }
 }
