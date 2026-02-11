@@ -31,18 +31,27 @@ builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorServic
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
 // ===============================
-// AM Assignment Change Request
+// Form Email Options
 // ===============================
 
-// Binds appsettings section "AmAssignmentChangeRequestEmail"
-// NOTE: Leaving blank while testing is fine; do NOT ValidateOnStart here yet.
-
+// AM Assignment Change Request
 builder.Services
     .AddOptions<AmAssignmentChangeRequestEmailOptions>()
     .Bind(builder.Configuration.GetSection("AmAssignmentChangeRequestEmail"));
+// NOTE: Leaving blank while testing is fine; do NOT ValidateOnStart here yet.
+
+// Employee Change Form
+builder.Services
+    .AddOptions<EmployeeChangeEmailOptions>()
+    .Bind(builder.Configuration.GetSection("EmployeeChangeEmail"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeChangeEmail:To is required.")
+    .ValidateOnStart();
+
+// ===============================
+// Form Submission Services
+// ===============================
 
 builder.Services.AddScoped<IAmAssignmentChangeRequestSubmissionService, AmAssignmentChangeRequestSubmissionService>();
-
 
 // Bind Freshservice options (maps Freshservice__ApiKey, Freshservice__Domain, etc.)
 // Validate at startup so you instantly know if Azure settings are missing/misnamed
@@ -67,12 +76,6 @@ builder.Services
     {
         UseCookies = false
     });
-
-builder.Services
-    .AddOptions<EmployeeChangeEmailOptions>()
-    .Bind(builder.Configuration.GetSection("EmployeeChangeEmail"))
-    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeChangeEmail:To is required.")
-    .ValidateOnStart();
 
 // For PDF API controller
 builder.Services.AddControllers();
