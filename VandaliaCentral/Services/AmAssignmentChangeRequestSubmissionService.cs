@@ -12,6 +12,8 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
     private readonly GraphEmailService _email;
     private readonly AmAssignmentChangeRequestEmailOptions _opts;
 
+    private const string SubjectLine = "AM Assignment Change Request";
+
     public AmAssignmentChangeRequestSubmissionService(
         GraphEmailService email,
         IOptions<AmAssignmentChangeRequestEmailOptions> opts)
@@ -46,7 +48,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
 
         if (openLines.Count > 0)
         {
-            var subject = $"[AM-ACR {submissionId}] AM Assignment Change Request (Open Contracts) - {model.NewAmName}";
+            var subject = SubjectLine;
             var body = BuildHtmlBody(model, openLines,
                 groupTitle: "Accounts WITH Assign Open Contracts checked",
                 submittedBy: fromUserEmail,
@@ -57,7 +59,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
 
         if (standardLines.Count > 0)
         {
-            var subject = $"[AM-ACR {submissionId}] AM Assignment Change Request - {model.NewAmName}";
+            var subject = SubjectLine;
             var body = BuildHtmlBody(model, standardLines,
                 groupTitle: "Accounts WITHOUT Assign Open Contracts checked",
                 submittedBy: fromUserEmail,
