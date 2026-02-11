@@ -172,6 +172,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Minimal fix: default Effective Date to "today" so the date picker doesn't start at 01/01/0001
+        formModel.EffectiveDate = DateTime.Today;
+
         try
         {
             _ = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
