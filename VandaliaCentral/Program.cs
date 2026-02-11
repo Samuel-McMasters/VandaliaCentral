@@ -13,6 +13,7 @@ using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
 using Blazorise.Charts;
 using System.Net.Http.Headers;
+using VandaliaCentral.Models;
 
 var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
@@ -35,7 +36,7 @@ builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmiss
 
 // Binds appsettings section "AmAssignmentChangeRequestEmail"
 // NOTE: Leaving blank while testing is fine; do NOT ValidateOnStart here yet.
-// TODO: Fill emails in when going live.
+
 builder.Services
     .AddOptions<AmAssignmentChangeRequestEmailOptions>()
     .Bind(builder.Configuration.GetSection("AmAssignmentChangeRequestEmail"));
@@ -66,6 +67,12 @@ builder.Services
     {
         UseCookies = false
     });
+
+builder.Services
+    .AddOptions<EmployeeChangeEmailOptions>()
+    .Bind(builder.Configuration.GetSection("EmployeeChangeEmail"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeChangeEmail:To is required.")
+    .ValidateOnStart();
 
 // For PDF API controller
 builder.Services.AddControllers();

@@ -1,17 +1,28 @@
 ﻿@page "/employeechange"
+
+@using System.Net
+@using System.Text
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Options
+
 @inject GraphEmailService EmailService
 @inject LoggingService Logger
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ITokenAcquisition TokenAcquisition
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+@inject IOptions<EmployeeChangeEmailOptions> EmailOptions
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Employee Change Form</h3>
+
     @if (success)
     {
         <p class="text-success mt-2">Form submission was successful!</p>
@@ -21,6 +32,13 @@
     {
         <h4 class="text-danger mt-2">There was an error submitting your employee change form:</h4>
         <p>Please refresh the webpage, or contact the intranet administrator for assistance.</p>
+
+        @if (!string.IsNullOrWhiteSpace(errorDetails))
+        {
+            <div class="alert alert-danger mt-3">
+                <strong>Error:</strong> @errorDetails
+            </div>
+        }
     }
     else if (!isAuthorized)
     {
@@ -137,7 +155,9 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary mt-2">Submit</button>
+            <button type="submit" class="btn btn-primary mt-2" disabled="@isSubmitting">
+                @(isSubmitting ? "Submitting..." : "Submit")
+            </button>
         </EditForm>
     }
 </div>
@@ -147,16 +167,14 @@
     private bool success = false;
     private bool failure = false;
     private bool isAuthorized = false;
-
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
-    [Inject] private MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler { get; set; } = default!;
+    private bool isSubmitting = false;
+    private string? errorDetails;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
+            _ = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
             isAuthorized = true;
         }
         catch (Exception ex)
@@ -167,29 +185,34 @@
 
     private async Task HandleValidSubmit()
     {
+        success = false;
+        failure = false;
+        errorDetails = null;
+        isSubmitting = true;
+
         var fullName = $"{formModel.FirstName} {formModel.LastName}";
+        var userName = "anonymous";
 
         try
         {
-            var pdfBytes = PDFTemplateFiller.FillChange(formModel);
-
-            await EmailService.SendEmailWithAttachmentAsync(
-                toEmail: "sam.mcmasters@vandaliarental.com", // TODO: change this email
-                subject: $"Employee Change Form: {fullName}",
-                bodyText: $"Attached is the Employee Change form for {fullName}.",
-                pdfBytes: pdfBytes,
-                pdfFileName: $"{fullName}_change.pdf"
-            );
-
-            // Get current user identity
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var userName = authState.User?.Identity?.Name ?? "anonymous";
+            userName = authState.User?.Identity?.Name ?? "anonymous";
 
-            // Log the activity
-            var activity = $"Submitted Employee Change Form For: '{fullName}'";
-            await Logger.LogActivityAsync(userName, activity);
+            var opts = EmailOptions.Value;
 
+            // Fail loud until configured (same vibe as AM change form)
+            if (string.IsNullOrWhiteSpace(opts.To))
+                throw new InvalidOperationException("TODO: Configure EmployeeChangeEmail:To in appsettings / Azure App Settings.");
 
+            var htmlBody = BuildEmailHtml(formModel, submittedBy: userName);
+
+            await EmailService.SendEmailHtmlAsyncStrict(
+                toEmail: opts.To,
+                subject: $"Employee Change Form: {fullName}",
+                bodyHtml: htmlBody,
+                ccEmail: string.IsNullOrWhiteSpace(opts.Cc) ? null : opts.Cc);
+
+            await Logger.LogActivityAsync(userName, $"Submitted Employee Change Form For: '{fullName}'");
 
             success = true;
             StateHasChanged();
@@ -198,12 +221,66 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"PDF or Email Error: {ex.Message}");
-
-            if (ex.InnerException != null)
-                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-
+            errorDetails = ex.Message;
             failure = true;
+
+            // Log full exception text
+            try
+            {
+                await Logger.LogActivityAsync(userName, $"Employee Change Form FAILED for '{fullName}'. Exception: {ex}");
+            }
+            catch { }
         }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static string BuildEmailHtml(ChangeFormModel m, string submittedBy)
+    {
+        static string E(string? s) => WebUtility.HtmlEncode(s ?? "");
+        static string YesNo(bool v) => v ? "Yes" : "No";
+
+        // Encode notes first, then convert line breaks to <br/>
+        var notesEncoded = WebUtility.HtmlEncode(m.AdditionalNotes ?? string.Empty)
+            .Replace("\r\n", "<br/>")
+            .Replace("\n", "<br/>");
+
+        var sb = new StringBuilder();
+        sb.AppendLine("<div style='font-family:Segoe UI, Arial, sans-serif; font-size:14px;'>");
+        sb.AppendLine("<h2 style='margin:0 0 12px 0;'>Employee Change Form</h2>");
+        sb.AppendLine($"<div style='margin-bottom:14px; color:#666;'><b>Submitted By:</b> {E(submittedBy)}</div>");
+
+        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Employee Information</h3>");
+        sb.AppendLine($"<div><b>First Name:</b> {E(m.FirstName)}</div>");
+        sb.AppendLine($"<div><b>Last Name:</b> {E(m.LastName)}</div>");
+        sb.AppendLine($"<div><b>Previous Job Title:</b> {E(m.PreviousJobTitle)}</div>");
+        sb.AppendLine($"<div><b>Branch #:</b> {E(m.BranchNumber)}</div>");
+        sb.AppendLine($"<div><b>Branch Name:</b> {E(m.BranchName)}</div>");
+        sb.AppendLine($"<div><b>Manager Name:</b> {E(m.ManagerName)}</div>");
+
+        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Change Employee Position To</h3>");
+        sb.AppendLine($"<div><b>Effective Date:</b> {E(m.EffectiveDate.ToString("MM/dd/yyyy"))}</div>");
+        sb.AppendLine($"<div><b>New Position:</b> {E(m.NewPosition)}</div>");
+        sb.AppendLine($"<div><b>Job Title:</b> {E(m.JobTitle)}</div>");
+
+        sb.AppendLine("<div style='margin-top:10px;'><b>Employment Type</b></div>");
+        sb.AppendLine("<ul style='margin:6px 0 0 18px;'>");
+        sb.AppendLine($"<li>Full Time: {YesNo(m.FullTime)}</li>");
+        sb.AppendLine($"<li>Part Time: {YesNo(m.PartTime)}</li>");
+        sb.AppendLine($"<li>Hourly: {YesNo(m.Hourly)}</li>");
+        sb.AppendLine($"<li>Salary: {YesNo(m.Salary)}</li>");
+        sb.AppendLine("</ul>");
+
+        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Change Employee Branch Location To</h3>");
+        sb.AppendLine("<div style='color:#666; margin-bottom:6px;'>(If No Branch Change DO NOT Complete)</div>");
+        sb.AppendLine($"<div><b>Branch Number:</b> {E(m.NewLocBranchNumber)}</div>");
+        sb.AppendLine($"<div><b>Branch Name:</b> {E(m.NewLocBranchName)}</div>");
+        sb.AppendLine($"<div><b>Manager Name:</b> {E(m.NewLocManagerName)}</div>");
+        sb.AppendLine($"<div style='margin-top:10px;'><b>Additional Notes:</b><br/>{notesEncoded}</div>");
+
+        sb.AppendLine("</div>");
+        return sb.ToString();
     }
 }
