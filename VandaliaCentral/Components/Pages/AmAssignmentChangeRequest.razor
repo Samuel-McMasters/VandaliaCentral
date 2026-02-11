@@ -1,18 +1,19 @@
 ﻿@page "/am-assignment-change-request"
 
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send" })]
+
 @using System.Security.Claims
-@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 
-@inject VandaliaCentral.Services.GraphEmailService GraphEmailService
-@inject VandaliaCentral.Services.IAmAssignmentChangeRequestSubmissionService SubmissionService
+@inject GraphEmailService GraphEmailService
+@inject IAmAssignmentChangeRequestSubmissionService SubmissionService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 @inject LoggingService Logger
-
 
 <h3 class="mb-3">AM Assignment Change Request</h3>
 
@@ -112,38 +113,38 @@
                     <tbody>
                         @for (var i = 0; i < Model.Accounts.Count; i++)
                         {
-                            var index = i;                 // IMPORTANT: capture per-row index
-                            var line = Model.Accounts[i];  // bind/validate against the object, not Model.Accounts[i]
+                            var index = i;                // capture per-row index
+                            var line = Model.Accounts[i]; // bind/validate against object
 
                             <tr @key="line">
                                 <td>
                                     <InputText class="form-control"
-                                    @bind-Value="line.AccountNumber"
-                                    disabled="@_isSubmitting" />
+                                               @bind-Value="line.AccountNumber"
+                                               disabled="@_isSubmitting" />
                                     <ValidationMessage For="@(() => line.AccountNumber)" />
                                 </td>
 
                                 <td>
                                     <InputText class="form-control"
-                                    @bind-Value="line.CompanyName"
-                                    disabled="@_isSubmitting" />
+                                               @bind-Value="line.CompanyName"
+                                               disabled="@_isSubmitting" />
                                     <ValidationMessage For="@(() => line.CompanyName)" />
                                 </td>
 
                                 <td>
                                     <div class="form-check">
                                         <InputCheckbox class="form-check-input"
-                                        @bind-Value="line.AssignOpenContracts"
-                                        disabled="@_isSubmitting" />
+                                                       @bind-Value="line.AssignOpenContracts"
+                                                       disabled="@_isSubmitting" />
                                         <label class="form-check-label">Assign Open Contracts</label>
                                     </div>
                                 </td>
 
                                 <td class="text-end">
                                     <button type="button"
-                                    class="btn btn-outline-danger"
-                                    disabled="@(_isSubmitting || Model.Accounts.Count == 1)"
-                                    @onclick="() => RemoveAccount(index)">
+                                            class="btn btn-outline-danger"
+                                            disabled="@(_isSubmitting || Model.Accounts.Count == 1)"
+                                            @onclick="() => RemoveAccount(index)">
                                         Remove
                                     </button>
                                 </td>
@@ -154,9 +155,9 @@
             </div>
 
             <button type="button"
-            class="btn btn-outline-primary"
-            disabled="@_isSubmitting"
-            @onclick="AddAccount">
+                    class="btn btn-outline-primary"
+                    disabled="@_isSubmitting"
+                    @onclick="AddAccount">
                 Add account
             </button>
 
@@ -166,9 +167,9 @@
                 </small>
 
                 <button type="button"
-                class="btn btn-warning"
-                disabled="@_isSubmitting"
-                @onclick="SubmitAsync">
+                        class="btn btn-warning"
+                        disabled="@_isSubmitting"
+                        @onclick="SubmitAsync">
                     @(_isSubmitting ? "Submitting..." : "Submit Email")
                 </button>
             </div>
@@ -186,8 +187,8 @@
     private bool _isSubmitting;
     private string? _successMessage;
     private string? _errorMessage;
-    private bool _redirectScheduled;
 
+    private bool _redirectScheduled;
 
     protected override void OnInitialized()
     {
@@ -201,7 +202,11 @@
         };
     }
 
-
+    protected override async Task OnInitializedAsync()
+    {
+        // Optional but helpful: triggers consent/CA flow early rather than on Submit click
+        await GraphEmailService.EnsureMailSendAccessAsync();
+    }
 
     private void AddAccount()
     {
@@ -228,12 +233,17 @@
 
         _isSubmitting = true;
 
+        string userNameForLog = "anonymous";
+        string? fromEmail = null;
+
         try
         {
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = auth.User;
 
-            var fromEmail =
+            userNameForLog = user?.Identity?.Name ?? "anonymous";
+
+            fromEmail =
                 user.FindFirstValue(ClaimTypes.Upn) ??
                 user.FindFirstValue("preferred_username") ??
                 user.FindFirstValue(ClaimTypes.Email);
@@ -241,20 +251,27 @@
             if (string.IsNullOrWhiteSpace(fromEmail))
                 throw new InvalidOperationException("Could not determine signed-in user's email/UPN.");
 
+            // Log attempt (click)
+            await SafeLogAsync(userNameForLog,
+                $"AM Assignment Change Request - submit attempt (New AM: {Model.NewAmName}, Accounts: {Model.Accounts.Count})");
+
+            // This now throws on failure (by design) due to the strict GraphEmailService method your submission service uses
             await SubmissionService.SubmitAsync(Model, fromEmail);
 
-            LogSubmitClick();
+            // Log success
+            await SafeLogAsync(userNameForLog,
+                $"AM Assignment Change Request - SUCCESS (New AM: {Model.NewAmName}, Accounts: {Model.Accounts.Count})");
 
-            _successMessage = "Submitted successfully.";
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(3000);
-                await InvokeAsync(() => Nav.NavigateTo("/"));
-            });
+            _successMessage = "Submitted successfully. Redirecting to home...";
+            ScheduleRedirectHome();
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Submission failed: {ex.Message}";
+
+            // Log failure with full exception text
+            await SafeLogAsync(userNameForLog,
+                $"AM Assignment Change Request - FAILED (New AM: {Model.NewAmName}, Accounts: {Model.Accounts.Count}). Exception: {ex}");
         }
         finally
         {
@@ -299,14 +316,27 @@
         return baseValid && linesValid;
     }
 
-    //Logging
-    private async Task LogSubmitClick()
+    private void ScheduleRedirectHome()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var userName = authState.User?.Identity?.Name ?? "anonymous";
+        if (_redirectScheduled) return;
+        _redirectScheduled = true;
 
-        var activity = $"Submitted Employee Change Form";
-        await Logger.LogActivityAsync(userName, activity);
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(4000);
+            await InvokeAsync(() => Nav.NavigateTo("/"));
+        });
     }
-    
+
+    private async Task SafeLogAsync(string userName, string activity)
+    {
+        try
+        {
+            await Logger.LogActivityAsync(userName, activity);
+        }
+        catch
+        {
+            // Never let logging failures block the form
+        }
+    }
 }
