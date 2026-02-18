@@ -1,0 +1,202 @@
+﻿@page "/move-fee-calculator"
+@rendermode InteractiveServer
+@using System.Globalization
+
+<h3 class="mb-3">Move Fee Estimation Calculator</h3>
+
+<div class="alert alert-info">
+    Use Google Maps to identify how many minutes between locations, and use that number below.
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Inputs</div>
+            <div class="card-body">
+                <EditForm Model="_input">
+                    <div class="mb-3">
+                        <label class="form-label">Minutes from closest branch to pick-up location</label>
+                        <InputNumber @bind-Value="_input.MinutesBranchToPickup"
+                                     @bind-Value:event="oninput"
+                                     class="form-control" min="0" step="1" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Load time (minutes)</label>
+                        <InputNumber @bind-Value="_input.LoadMinutes"
+                                     @bind-Value:event="oninput"
+                                     class="form-control" min="0" step="1" />
+                        <div class="form-text">Default is 20 minutes.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Minutes from pick-up to delivery destination</label>
+                        <InputNumber @bind-Value="_input.MinutesPickupToDelivery"
+                                     @bind-Value:event="oninput"
+                                     class="form-control" min="0" step="1" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Unload time (minutes)</label>
+                        <InputNumber @bind-Value="_input.UnloadMinutes"
+                                     @bind-Value:event="oninput"
+                                     class="form-control" min="0" step="1" />
+                        <div class="form-text">Default is 20 minutes.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Minutes back to originating location</label>
+                        <InputNumber @bind-Value="_input.MinutesReturnToOrigin"
+                                     @bind-Value:event="oninput"
+                                     class="form-control" min="0" step="1" />
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="form-check m-0">
+                            <InputCheckbox @bind-Value="_input.IsExpedited"
+                                           class="form-check-input"
+                                           id="expedited" />
+                            <label class="form-check-label" for="expedited">Expedited move</label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" @onclick="Calculate">
+                                Calculate
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearInputs">
+                                Clear inputs
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Results</div>
+            <div class="card-body">
+
+                <div class="mb-2">
+                    <span class="text-muted">Total estimated time:</span>
+                    <span class="fw-semibold">@DisplayMinutesInt(_totalMinutes)</span> minutes
+                </div>
+
+                <div class="mb-3">
+                    <span class="text-muted">With unanticipated delays (x1.2):</span>
+                    <span class="fw-semibold">@DisplayMinutesDecimal(_bufferedMinutes)</span> minutes
+                </div>
+
+                <hr />
+
+                <div class="mb-2">
+                    <div class="text-muted">Quoted move fee to customer (@(_input.IsExpedited ? "Expedited" : "Standard"))</div>
+                    <div class="fs-4 fw-bold">@DisplayCurrency(_standardOrExpeditedQuote)</div>
+                    <div class="form-text">
+                        Rate per minute: @DisplayRate(_rateStandardOrExpedited)
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="text-muted">Quote for Heavy Haul (@(_input.IsExpedited ? "Expedited" : "Standard"))</div>
+                    <div class="fs-4 fw-bold">@DisplayCurrency(_heavyHaulQuote)</div>
+                    <div class="form-text">
+                        Rate per minute: @DisplayRate(_rateHeavy)
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="text-muted small">
+                    Rates shown are from the workbook (as of 01/2025).
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static class Rates
+    {
+        public const decimal Standard = 2.75m;
+        public const decimal Expedited = 3.25m;
+        public const decimal HeavyHaul = 4.15m;
+        public const decimal ExpeditedHeavyHaul = 4.85m;
+    }
+
+    private MoveFeeInput _input = new();
+
+    // Stored results (only change when Calculate is clicked)
+    private bool _hasCalculated = false;
+    private int _totalMinutes = 0;
+    private decimal _bufferedMinutes = 0m;
+    private decimal _standardOrExpeditedQuote = 0m;
+    private decimal _heavyHaulQuote = 0m;
+    private decimal _rateStandardOrExpedited = 0m;
+    private decimal _rateHeavy = 0m;
+
+    private void Calculate()
+    {
+        // Prevent weird negative numbers
+        var branchToPickup = ClampNonNeg(_input.MinutesBranchToPickup);
+        var load = ClampNonNeg(_input.LoadMinutes);
+        var pickupToDelivery = ClampNonNeg(_input.MinutesPickupToDelivery);
+        var unload = ClampNonNeg(_input.UnloadMinutes);
+        var returnToOrigin = ClampNonNeg(_input.MinutesReturnToOrigin);
+
+        _totalMinutes = branchToPickup + load + pickupToDelivery + unload + returnToOrigin;
+
+        // Excel behavior: total * 1.2 (no rounding)
+        _bufferedMinutes = _totalMinutes * 1.2m;
+
+        _rateStandardOrExpedited = _input.IsExpedited ? Rates.Expedited : Rates.Standard;
+        _rateHeavy = _input.IsExpedited ? Rates.ExpeditedHeavyHaul : Rates.HeavyHaul;
+
+        _standardOrExpeditedQuote = _bufferedMinutes * _rateStandardOrExpedited;
+        _heavyHaulQuote = _bufferedMinutes * _rateHeavy;
+
+        _hasCalculated = true;
+    }
+
+    private void ClearInputs()
+    {
+        // Reset back to defaults
+        _input = new MoveFeeInput();
+
+        // Clear any previous calc
+        _hasCalculated = false;
+        _totalMinutes = 0;
+        _bufferedMinutes = 0m;
+        _standardOrExpeditedQuote = 0m;
+        _heavyHaulQuote = 0m;
+        _rateStandardOrExpedited = 0m;
+        _rateHeavy = 0m;
+    }
+
+    private static int ClampNonNeg(int value) => value < 0 ? 0 : value;
+
+    private static string FormatCurrency(decimal amount) =>
+        amount.ToString("C", CultureInfo.GetCultureInfo("en-US"));
+
+    private static string FormatMinutes(decimal minutes) =>
+        minutes.ToString("0.##", CultureInfo.InvariantCulture);
+
+    // Display helpers: show zeros until calculated
+    private string DisplayMinutesInt(int val) => _hasCalculated ? val.ToString("N0") : "0";
+    private string DisplayMinutesDecimal(decimal val) => _hasCalculated ? FormatMinutes(val) : "0";
+    private string DisplayCurrency(decimal val) => _hasCalculated ? FormatCurrency(val) : FormatCurrency(0m);
+    private string DisplayRate(decimal val)
+        => _hasCalculated ? val.ToString("0.00", CultureInfo.InvariantCulture) : "0.00";
+
+    private sealed class MoveFeeInput
+    {
+        public int MinutesBranchToPickup { get; set; } = 0;
+        public int LoadMinutes { get; set; } = 20;
+        public int MinutesPickupToDelivery { get; set; } = 0;
+        public int UnloadMinutes { get; set; } = 20;
+        public int MinutesReturnToOrigin { get; set; } = 0;
+        public bool IsExpedited { get; set; } = false;
+    }
+}
