@@ -17,14 +17,12 @@
                     <div class="mb-3">
                         <label class="form-label">Minutes from closest branch to pick-up location</label>
                         <InputNumber @bind-Value="_input.MinutesBranchToPickup"
-                                     @bind-Value:event="oninput"
                                      class="form-control" min="0" step="1" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Load time (minutes)</label>
                         <InputNumber @bind-Value="_input.LoadMinutes"
-                                     @bind-Value:event="oninput"
                                      class="form-control" min="0" step="1" />
                         <div class="form-text">Default is 20 minutes.</div>
                     </div>
@@ -32,14 +30,12 @@
                     <div class="mb-3">
                         <label class="form-label">Minutes from pick-up to delivery destination</label>
                         <InputNumber @bind-Value="_input.MinutesPickupToDelivery"
-                                     @bind-Value:event="oninput"
                                      class="form-control" min="0" step="1" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Unload time (minutes)</label>
                         <InputNumber @bind-Value="_input.UnloadMinutes"
-                                     @bind-Value:event="oninput"
                                      class="form-control" min="0" step="1" />
                         <div class="form-text">Default is 20 minutes.</div>
                     </div>
@@ -47,7 +43,6 @@
                     <div class="mb-3">
                         <label class="form-label">Minutes back to originating location</label>
                         <InputNumber @bind-Value="_input.MinutesReturnToOrigin"
-                                     @bind-Value:event="oninput"
                                      class="form-control" min="0" step="1" />
                     </div>
 
