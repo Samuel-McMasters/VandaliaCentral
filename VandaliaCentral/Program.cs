@@ -48,6 +48,16 @@ builder.Services
     .ValidateOnStart();
 
 // ===============================
+// Hard-coded locations list
+// ===============================
+
+builder.Services
+    .AddOptions<BranchLocationsOptions>()
+    .Bind(builder.Configuration.GetSection("BranchLocations"))
+    .Validate(o => o.Items != null && o.Items.Count > 0, "BranchLocations:Items must have at least one entry.")
+    .ValidateOnStart();
+
+// ===============================
 // Form Submission Services
 // ===============================
 

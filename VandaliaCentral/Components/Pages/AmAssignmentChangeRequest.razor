@@ -6,6 +6,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 
@@ -14,6 +15,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 @inject LoggingService Logger
+@inject IOptions<BranchLocationsOptions> BranchLocations
 
 <h3 class="mb-3">AM Assignment Change Request</h3>
 
@@ -44,7 +46,14 @@
 
                 <div class="col-12 col-lg-3">
                     <label class="form-label">Location</label>
-                    <InputText class="form-control" @bind-Value="Model.Location" disabled="@_isSubmitting" />
+                    <InputSelect class="form-select" @bind-Value="Model.Location" disabled="@_isSubmitting">
+                        <option value="">-- Select --</option>
+                        @foreach (var loc in BranchLocations.Value.Items)
+                        {
+                            var display = $"{loc.Code} - {loc.Name}";
+                            <option value="@display">@display</option>
+                        }
+                    </InputSelect>
                     <ValidationMessage For="@(() => Model.Location)" />
                 </div>
 
