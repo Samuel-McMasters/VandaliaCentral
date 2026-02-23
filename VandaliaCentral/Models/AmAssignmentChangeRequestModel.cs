@@ -27,4 +27,6 @@ public sealed class AmAssignmentCustomerLine
 
     // NEW
     public bool AssignOpenContracts { get; set; }
+    public bool ReferralAccount { get; set; }
+
 }

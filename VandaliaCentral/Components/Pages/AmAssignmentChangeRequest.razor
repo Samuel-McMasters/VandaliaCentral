@@ -105,7 +105,7 @@
                         <tr>
                             <th style="width:220px;">Acct#</th>
                             <th>Company Name</th>
-                            <th style="width:240px;">Assign Open Contracts</th>
+                            <th style="width:360px;">Flags</th>
                             <th style="width:120px;"></th>
                         </tr>
                     </thead>
@@ -132,11 +132,20 @@
                                 </td>
 
                                 <td>
-                                    <div class="form-check">
-                                        <InputCheckbox class="form-check-input"
-                                                       @bind-Value="line.AssignOpenContracts"
-                                                       disabled="@_isSubmitting" />
-                                        <label class="form-check-label">Assign Open Contracts</label>
+                                    <div class="d-flex flex-wrap gap-4">
+                                        <div class="form-check">
+                                            <InputCheckbox class="form-check-input"
+                                                           @bind-Value="line.AssignOpenContracts"
+                                                           disabled="@_isSubmitting" />
+                                            <label class="form-check-label">Assign Open Contracts</label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <InputCheckbox class="form-check-input"
+                                                           @bind-Value="line.ReferralAccount"
+                                                           disabled="@_isSubmitting" />
+                                            <label class="form-check-label">Referral Account</label>
+                                        </div>
                                     </div>
                                 </td>
 
@@ -255,7 +264,7 @@
             await SafeLogAsync(userNameForLog,
                 $"AM Assignment Change Request - submit attempt (New AM: {Model.NewAmName}, Accounts: {Model.Accounts.Count})");
 
-            // This now throws on failure (by design) due to the strict GraphEmailService method your submission service uses
+            // Submission service handles emailing + failure behavior
             await SubmissionService.SubmitAsync(Model, fromEmail);
 
             // Log success

@@ -109,6 +109,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
         sb.AppendLine("<th style='border:1px solid #ddd; padding:8px; text-align:left; width:160px;'>Acct#</th>");
         sb.AppendLine("<th style='border:1px solid #ddd; padding:8px; text-align:left;'>Company Name</th>");
         sb.AppendLine("<th style='border:1px solid #ddd; padding:8px; text-align:left; width:190px;'>Assign Open Contracts</th>");
+        sb.AppendLine("<th style='border:1px solid #ddd; padding:8px; text-align:left; width:160px;'>Referral Account</th>");
         sb.AppendLine("</tr></thead><tbody>");
 
         foreach (var a in lines)
@@ -117,6 +118,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
             sb.AppendLine($"<td style='border:1px solid #ddd; padding:8px;'>{E(a.AccountNumber)}</td>");
             sb.AppendLine($"<td style='border:1px solid #ddd; padding:8px;'>{E(a.CompanyName)}</td>");
             sb.AppendLine($"<td style='border:1px solid #ddd; padding:8px;'>{(a.AssignOpenContracts ? "Yes" : "No")}</td>");
+            sb.AppendLine($"<td style='border:1px solid #ddd; padding:8px;'>{(a.ReferralAccount ? "Yes" : "No")}</td>");
             sb.AppendLine("</tr>");
         }
 
