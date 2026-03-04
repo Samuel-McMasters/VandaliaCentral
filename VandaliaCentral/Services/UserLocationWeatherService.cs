@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace VandaliaCentral.Services
 {
@@ -32,7 +33,8 @@ namespace VandaliaCentral.Services
 
         public async Task<WeatherSnapshot?> GetWeatherSnapshotAsync(string? officeLocation, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(officeLocation) || !OfficeLocations.TryGetValue(officeLocation.Trim(), out var office))
+            var officeCode = NormalizeOfficeCode(officeLocation);
+            if (officeCode is null || !OfficeLocations.TryGetValue(officeCode, out var office))
             {
                 return null;
             }
@@ -60,6 +62,30 @@ namespace VandaliaCentral.Services
                 weatherResponse.Timezone,
                 weatherResponse.Current.Temperature2m,
                 MapWeatherCode(weatherResponse.Current.WeatherCode));
+        }
+
+
+
+        private static string? NormalizeOfficeCode(string? officeLocation)
+        {
+            if (string.IsNullOrWhiteSpace(officeLocation))
+            {
+                return null;
+            }
+
+            var trimmed = officeLocation.Trim();
+            if (OfficeLocations.ContainsKey(trimmed))
+            {
+                return trimmed;
+            }
+
+            var codeMatch = Regex.Match(trimmed, @"\b(\d{4})\b");
+            if (codeMatch.Success && OfficeLocations.ContainsKey(codeMatch.Groups[1].Value))
+            {
+                return codeMatch.Groups[1].Value;
+            }
+
+            return null;
         }
 
         public static bool TryResolveTimeZone(string timezoneId, out TimeZoneInfo timeZone)

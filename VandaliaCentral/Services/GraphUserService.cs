@@ -73,7 +73,7 @@ namespace VandaliaCentral.Services
             {
                 var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
                 {
-                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read" });
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 }));
 

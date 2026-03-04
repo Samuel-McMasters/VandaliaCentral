@@ -51,7 +51,7 @@
                 </a>
             </div>
 
-            <div class="navbar-center-weather d-none d-md-flex" aria-live="polite">
+            <div class="navbar-center-weather d-none d-md-flex" aria-live="polite" style="position:absolute;left:50%;transform:translateX(-50%);">
                 @if (IsWeatherLoading)
                 {
                     <span>Loading local weather...</span>
@@ -156,17 +156,20 @@
         IsAdmin = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
 
-        await InitializeNavbarWeatherAsync();
+        await InitializeNavbarWeatherAsync(user);
 
         currentUri = Navigation.Uri;
         Navigation.LocationChanged += HandleLocationChanged;
     }
 
-    private async Task InitializeNavbarWeatherAsync()
+    private async Task InitializeNavbarWeatherAsync(System.Security.Claims.ClaimsPrincipal user)
     {
         try
         {
-            var officeLocation = await GraphUserService.GetCurrentUserOfficeLocationAsync();
+            var officeLocation = user.FindFirst("office_location")?.Value
+                ?? user.FindFirst("officeLocation")?.Value
+                ?? user.FindFirst("extension_officeLocation")?.Value
+                ?? await GraphUserService.GetCurrentUserOfficeLocationAsync();
 
             var snapshot = await UserLocationWeatherService.GetWeatherSnapshotAsync(officeLocation);
             if (snapshot is null)

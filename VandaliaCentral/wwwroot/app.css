@@ -769,6 +769,10 @@ select.form-select {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    z-index: 1;
+    min-width: 420px;
+    justify-content: center;
+    text-align: center;
     color: #111;
     font-weight: 600;
     font-size: 0.95rem;
