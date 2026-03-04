@@ -166,11 +166,38 @@ window.tanksClient = (() => {
         });
     };
 
-    const ensureHub = async () => {
-        if (state.hub) return true;
-        if (!window.signalR) return false;
+    const reportJoinError = async (message) => {
+        state.joined = false;
+        if (state.dotNetRef) {
+            await state.dotNetRef.invokeMethodAsync("OnJoinError", message);
+        }
+    };
 
-        state.hub = new signalR.HubConnectionBuilder()
+    const ensureHub = async () => {
+        if (window.ensureSignalRClient) {
+            const loaded = await window.ensureSignalRClient();
+            if (!loaded) {
+                await reportJoinError("SignalR client failed to load. Please refresh and try again.");
+                return false;
+            }
+        }
+
+        if (!window.signalR) {
+            await reportJoinError("SignalR client is unavailable in this browser session.");
+            return false;
+        }
+
+        if (state.hub && state.hub.state === signalR.HubConnectionState.Connected) {
+            state.connected = true;
+            return true;
+        }
+
+        if (state.hub && state.hub.state !== signalR.HubConnectionState.Disconnected) {
+            return state.connected;
+        }
+
+        if (!state.hub) {
+            state.hub = new signalR.HubConnectionBuilder()
             .withUrl("/hubs/tanks")
             .withAutomaticReconnect()
             .build();
@@ -187,10 +214,7 @@ window.tanksClient = (() => {
         });
 
         state.hub.on("ReceiveJoinError", async message => {
-            state.joined = false;
-            if (state.dotNetRef) {
-                await state.dotNetRef.invokeMethodAsync("OnJoinError", message);
-            }
+            await reportJoinError(message);
         });
 
         state.hub.on("ReceiveJoined", async connectionId => {
@@ -201,9 +225,22 @@ window.tanksClient = (() => {
             }
         });
 
-        await state.hub.start();
-        state.connected = true;
-        return true;
+            state.hub.onclose(() => {
+                state.connected = false;
+                state.joined = false;
+            });
+        }
+
+        try {
+            await state.hub.start();
+            state.connected = true;
+            return true;
+        } catch (error) {
+            state.connected = false;
+            const message = error?.message || "Unable to connect to /hubs/tanks.";
+            await reportJoinError(message);
+            return false;
+        }
     };
 
     return {
@@ -230,7 +267,9 @@ window.tanksClient = (() => {
             try {
                 await state.hub.invoke("JoinGame", name || "Tank");
                 return true;
-            } catch {
+            } catch (error) {
+                const message = error?.message || "Join failed.";
+                await reportJoinError(message);
                 return false;
             }
         },

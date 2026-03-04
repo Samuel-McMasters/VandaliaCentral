@@ -72,9 +72,9 @@
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             await Logger.LogActivityAsync(auth.User.Identity?.Name ?? "anonymous", "Joined Tanks game");
         }
-        else
+        else if (string.IsNullOrWhiteSpace(statusMessage))
         {
-            statusMessage = "Unable to join game. Lobby may be full.";
+            statusMessage = "Unable to join game. Check the browser console/network tab for the SignalR error details shown above.";
         }
     }
 
