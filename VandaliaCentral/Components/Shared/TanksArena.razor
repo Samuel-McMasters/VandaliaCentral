@@ -1,0 +1,135 @@
+@using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LoggingService Logger
+@implements IAsyncDisposable
+
+<div class="tanks-shell">
+    <div class="tanks-controls">
+        <div class="input-group">
+            <span class="input-group-text">Name</span>
+            <input class="form-control" @bind="playerName" maxlength="24" />
+            <button class="btn btn-primary" @onclick="JoinAsync" disabled="@joined">Join</button>
+            <button class="btn btn-outline-secondary" @onclick="LeaveAsync" disabled="@(!joined)">Leave</button>
+        </div>
+        <div class="small text-muted mt-2">W/S move, A/D rotate body, mouse aims turret, left click fires.</div>
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
+        {
+            <div class="text-danger small mt-2">@statusMessage</div>
+        }
+    </div>
+
+    <div class="tanks-main">
+        <canvas id="@CanvasId" width="1000" height="640" class="tanks-canvas"></canvas>
+
+        <div class="tanks-lobby">
+            <h6>Lobby (@lobbyCount/@lobbyMax)</h6>
+            <ul>
+                @foreach (var p in lobbyPlayers)
+                {
+                    <li>@p.Name — K:@p.Kills D:@p.Deaths</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string CanvasId { get; set; } = "tanksCanvas";
+
+    private DotNetObjectReference<TanksArena>? _dotNetRef;
+    private bool joined;
+    private string playerName = "";
+    private string? statusMessage;
+    private int lobbyCount;
+    private int lobbyMax;
+    private List<LobbyEntry> lobbyPlayers = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        playerName = auth.User.Identity?.Name?.Split('@').FirstOrDefault() ?? "Tank";
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("tanksClient.init", CanvasId, _dotNetRef);
+        StateHasChanged();
+    }
+
+    private async Task JoinAsync()
+    {
+        statusMessage = null;
+        var ok = await JS.InvokeAsync<bool>("tanksClient.joinGame", playerName);
+        joined = ok;
+
+        if (ok)
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            await Logger.LogActivityAsync(auth.User.Identity?.Name ?? "anonymous", "Joined Tanks game");
+        }
+        else
+        {
+            statusMessage = "Unable to join game. Lobby may be full.";
+        }
+    }
+
+    private async Task LeaveAsync()
+    {
+        await JS.InvokeVoidAsync("tanksClient.leaveGame");
+        joined = false;
+        statusMessage = null;
+    }
+
+    [JSInvokable]
+    public Task OnJoinError(string message)
+    {
+        joined = false;
+        statusMessage = message;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnJoined()
+    {
+        joined = true;
+        statusMessage = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnLobbyState(int maxPlayers, LobbyEntry[] players)
+    {
+        lobbyMax = maxPlayers;
+        lobbyPlayers = players.OrderByDescending(p => p.Kills).ThenBy(p => p.Deaths).ToList();
+        lobbyCount = lobbyPlayers.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tanksClient.dispose");
+        }
+        catch
+        {
+        }
+
+        _dotNetRef?.Dispose();
+    }
+
+    public sealed class LobbyEntry
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Kills { get; set; }
+        public int Deaths { get; set; }
+    }
+}
