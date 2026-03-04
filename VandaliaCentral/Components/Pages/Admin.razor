@@ -355,7 +355,7 @@
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-            currentUserName = user?.Identity?.Name ?? "anonymous";
+            currentUserName = GetLeaderboardDisplayName(user?.Identity?.Name);
 
             if (user.Identity?.IsAuthenticated == true)
             {
@@ -606,6 +606,24 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         return authState.User?.Identity?.Name ?? "anonymous";
+    }
+
+
+    private static string GetLeaderboardDisplayName(string? identityName)
+    {
+        if (string.IsNullOrWhiteSpace(identityName))
+        {
+            return "anonymous";
+        }
+
+        var emailLocalPart = identityName.Split('@')[0];
+        if (string.IsNullOrWhiteSpace(emailLocalPart))
+        {
+            return "anonymous";
+        }
+
+        var firstName = emailLocalPart.Split('.')[0];
+        return string.IsNullOrWhiteSpace(firstName) ? "anonymous" : firstName.Trim().ToLowerInvariant();
     }
 
     private void GeneratePassword()
