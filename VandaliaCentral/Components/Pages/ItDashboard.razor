@@ -1,0 +1,50 @@
+@page "/it-dashboard"
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+<PageTitle>IT Dashboard</PageTitle>
+
+<div class="container py-4">
+    <div class="p-4 border rounded bg-white shadow-sm mb-4">
+        <h3 class="mb-2">IT Dashboard</h3>
+        <p class="text-muted mb-0">Your one-stop spot for IT updates, support links, and announcements.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-7">
+            <div class="p-4 border rounded bg-white shadow-sm h-100">
+                <h5 class="mb-3">IT News</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item px-0">
+                        <strong>Support Portal Improvements</strong>
+                        <p class="mb-0 text-muted">We are improving ticket workflows to speed up response times and communication.</p>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <strong>Upcoming System Updates</strong>
+                        <p class="mb-0 text-muted">Planned maintenance notices and release details will be posted here.</p>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <strong>IT Tips & Announcements</strong>
+                        <p class="mb-0 text-muted">Watch this section for security reminders, feature rollouts, and training resources.</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="p-4 border rounded bg-white shadow-sm h-100 d-flex flex-column">
+                <h5 class="mb-3">Support Actions</h5>
+                <p class="text-muted">Need help? Choose an option below.</p>
+                <div class="d-grid gap-2 mt-2">
+                    <a class="btn btn-primary" href="https://support.vandaliarental.com/support/home" target="_blank" rel="noopener noreferrer">
+                        View Your Support Tickets
+                    </a>
+                    <a class="btn btn-outline-primary" href="/supportticket">
+                        Submit A Ticket
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
