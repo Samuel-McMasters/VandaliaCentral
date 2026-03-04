@@ -3,8 +3,6 @@ window.tanksClient = (() => {
         canvas: null,
         ctx: null,
         dotNetRef: null,
-        hub: null,
-        connected: false,
         joined: false,
         connectionId: null,
         latestSnapshot: null,
@@ -15,6 +13,7 @@ window.tanksClient = (() => {
         mouseDown: false,
         rafId: 0,
         inputTimer: 0,
+        handlersBound: false,
     };
 
     const worldToCanvas = (x, y) => {
@@ -109,7 +108,7 @@ window.tanksClient = (() => {
     };
 
     const sendInput = async () => {
-        if (!state.hub || !state.connected || !state.joined) return;
+        if (!state.dotNetRef || !state.joined) return;
 
         const worldMouse = canvasToWorld(state.mouseX, state.mouseY);
         const payload = {
@@ -125,13 +124,17 @@ window.tanksClient = (() => {
         state.firePressed = false;
 
         try {
-            await state.hub.invoke("SendInput", payload);
+            await state.dotNetRef.invokeMethodAsync("OnInputFrame", payload);
         } catch {
             // no-op
         }
     };
 
     const bindInput = () => {
+        if (state.handlersBound || !state.canvas) {
+            return;
+        }
+
         window.addEventListener("keydown", e => {
             if (e.key === "w" || e.key === "W") state.keys.w = true;
             if (e.key === "a" || e.key === "A") state.keys.a = true;
@@ -164,93 +167,21 @@ window.tanksClient = (() => {
                 state.mouseDown = false;
             }
         });
-    };
 
-    const reportJoinError = async (message) => {
-        state.joined = false;
-        if (state.dotNetRef) {
-            await state.dotNetRef.invokeMethodAsync("OnJoinError", message);
-        }
-    };
-
-    const ensureHub = async () => {
-        if (window.ensureSignalRClient) {
-            const loaded = await window.ensureSignalRClient();
-            if (!loaded) {
-                await reportJoinError("SignalR client failed to load. Please refresh and try again.");
-                return false;
-            }
-        }
-
-        if (!window.signalR) {
-            await reportJoinError("SignalR client is unavailable in this browser session.");
-            return false;
-        }
-
-        if (state.hub && state.hub.state === signalR.HubConnectionState.Connected) {
-            state.connected = true;
-            return true;
-        }
-
-        if (state.hub && state.hub.state !== signalR.HubConnectionState.Disconnected) {
-            return state.connected;
-        }
-
-        if (!state.hub) {
-            state.hub = new signalR.HubConnectionBuilder()
-            .withUrl("/hubs/tanks")
-            .withAutomaticReconnect()
-            .build();
-
-        state.hub.on("ReceiveSnapshot", snapshot => {
-            state.latestSnapshot = snapshot;
-        });
-
-        state.hub.on("ReceiveLobbyState", async lobby => {
-            if (state.dotNetRef) {
-                const players = (lobby.players || []).map(p => ({ name: p.name, kills: p.kills, deaths: p.deaths }));
-                await state.dotNetRef.invokeMethodAsync("OnLobbyState", lobby.maxPlayers, players);
-            }
-        });
-
-        state.hub.on("ReceiveJoinError", async message => {
-            await reportJoinError(message);
-        });
-
-        state.hub.on("ReceiveJoined", async connectionId => {
-            state.connectionId = connectionId;
-            state.joined = true;
-            if (state.dotNetRef) {
-                await state.dotNetRef.invokeMethodAsync("OnJoined");
-            }
-        });
-
-            state.hub.onclose(() => {
-                state.connected = false;
-                state.joined = false;
-            });
-        }
-
-        try {
-            await state.hub.start();
-            state.connected = true;
-            return true;
-        } catch (error) {
-            state.connected = false;
-            const message = error?.message || "Unable to connect to /hubs/tanks.";
-            await reportJoinError(message);
-            return false;
-        }
+        state.handlersBound = true;
     };
 
     return {
         init: async (canvasId, dotNetRef) => {
             state.canvas = document.getElementById(canvasId);
             if (!state.canvas) return false;
+
             state.ctx = state.canvas.getContext("2d");
             state.dotNetRef = dotNetRef;
+            state.joined = false;
+            state.connectionId = null;
             bindInput();
-            await ensureHub();
+
             cancelAnimationFrame(state.rafId);
             state.rafId = requestAnimationFrame(renderLoop);
             clearInterval(state.inputTimer);
@@ -258,39 +189,26 @@ window.tanksClient = (() => {
             return true;
         },
 
-        joinGame: async (name) => {
-            const ready = await ensureHub();
-            if (!ready) {
-                return false;
-            }
-
-            try {
-                await state.hub.invoke("JoinGame", name || "Tank");
-                return true;
-            } catch (error) {
-                const message = error?.message || "Join failed.";
-                await reportJoinError(message);
-                return false;
-            }
+        setJoined: (joined, connectionId) => {
+            state.joined = !!joined;
+            state.connectionId = connectionId || null;
         },
 
-        leaveGame: async () => {
-            if (!state.hub) return;
+        setSnapshot: (snapshot) => {
+            state.latestSnapshot = snapshot;
+        },
+
+        leaveGame: () => {
             state.joined = false;
-            await state.hub.invoke("LeaveGame");
+            state.connectionId = null;
         },
 
         dispose: async () => {
             cancelAnimationFrame(state.rafId);
             clearInterval(state.inputTimer);
-            if (state.hub) {
-                try {
-                    await state.hub.stop();
-                } catch {}
-            }
-            state.hub = null;
-            state.connected = false;
             state.joined = false;
+            state.connectionId = null;
+            state.dotNetRef = null;
         }
     };
 })();

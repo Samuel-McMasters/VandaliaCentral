@@ -1,6 +1,9 @@
-@using VandaliaCentral.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using VandaliaCentral.Models.Tanks
+@using VandaliaCentral.Services
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LoggingService Logger
 @implements IAsyncDisposable
@@ -39,12 +42,14 @@
     [Parameter] public string CanvasId { get; set; } = "tanksCanvas";
 
     private DotNetObjectReference<TanksArena>? _dotNetRef;
+    private HubConnection? _hub;
+    private string? _connectionId;
     private bool joined;
-    private string playerName = "";
+    private string playerName = string.Empty;
     private string? statusMessage;
     private int lobbyCount;
     private int lobbyMax;
-    private List<LobbyEntry> lobbyPlayers = new();
+    private List<LobbyPlayerDto> lobbyPlayers = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -58,59 +63,138 @@
 
         _dotNetRef = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("tanksClient.init", CanvasId, _dotNetRef);
+        await EnsureHubConnectedAsync();
         StateHasChanged();
+    }
+
+    private async Task<bool> EnsureHubConnectedAsync()
+    {
+        if (_hub is not null && _hub.State == HubConnectionState.Connected)
+        {
+            return true;
+        }
+
+        if (_hub is null)
+        {
+            _hub = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/tanks"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hub.On<string>("ReceiveJoined", async connectionId =>
+            {
+                _connectionId = connectionId;
+                joined = true;
+                statusMessage = null;
+                await JS.InvokeVoidAsync("tanksClient.setJoined", true, _connectionId);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.On<string>("ReceiveJoinError", async message =>
+            {
+                joined = false;
+                statusMessage = message;
+                await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.On<SnapshotDto>("ReceiveSnapshot", async snapshot =>
+            {
+                await JS.InvokeVoidAsync("tanksClient.setSnapshot", snapshot);
+            });
+
+            _hub.On<LobbyStateDto>("ReceiveLobbyState", async lobby =>
+            {
+                lobbyMax = lobby.MaxPlayers;
+                lobbyPlayers = lobby.Players
+                    .OrderByDescending(p => p.Kills)
+                    .ThenBy(p => p.Deaths)
+                    .ToList();
+                lobbyCount = lobbyPlayers.Count;
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.Closed += async _ =>
+            {
+                joined = false;
+                statusMessage = "Disconnected from Tanks hub. Rejoin to continue.";
+                await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+                await InvokeAsync(StateHasChanged);
+            };
+        }
+
+        try
+        {
+            await _hub.StartAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Unable to connect to /hubs/tanks: {ex.Message}";
+            return false;
+        }
     }
 
     private async Task JoinAsync()
     {
         statusMessage = null;
-        var ok = await JS.InvokeAsync<bool>("tanksClient.joinGame", playerName);
-        joined = ok;
 
-        if (ok)
+        if (!await EnsureHubConnectedAsync() || _hub is null)
         {
+            return;
+        }
+
+        try
+        {
+            await _hub.InvokeAsync("JoinGame", playerName);
+
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             await Logger.LogActivityAsync(auth.User.Identity?.Name ?? "anonymous", "Joined Tanks game");
         }
-        else if (string.IsNullOrWhiteSpace(statusMessage))
+        catch (Exception ex)
         {
-            statusMessage = "Unable to join game. Check the browser console/network tab for the SignalR error details shown above.";
+            joined = false;
+            statusMessage = ex.Message;
+            await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
         }
     }
 
     private async Task LeaveAsync()
     {
+        try
+        {
+            if (_hub is not null && _hub.State == HubConnectionState.Connected)
+            {
+                await _hub.InvokeAsync("LeaveGame");
+            }
+        }
+        catch
+        {
+            // no-op
+        }
+
+        joined = false;
+        _connectionId = null;
+        statusMessage = null;
         await JS.InvokeVoidAsync("tanksClient.leaveGame");
-        joined = false;
-        statusMessage = null;
     }
 
     [JSInvokable]
-    public Task OnJoinError(string message)
+    public async Task OnInputFrame(InputDto input)
     {
-        joined = false;
-        statusMessage = message;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
+        if (!joined || _hub is null || _hub.State != HubConnectionState.Connected)
+        {
+            return;
+        }
 
-    [JSInvokable]
-    public Task OnJoined()
-    {
-        joined = true;
-        statusMessage = null;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    [JSInvokable]
-    public Task OnLobbyState(int maxPlayers, LobbyEntry[] players)
-    {
-        lobbyMax = maxPlayers;
-        lobbyPlayers = players.OrderByDescending(p => p.Kills).ThenBy(p => p.Deaths).ToList();
-        lobbyCount = lobbyPlayers.Count;
-        StateHasChanged();
-        return Task.CompletedTask;
+        try
+        {
+            await _hub.InvokeAsync("SendInput", input);
+        }
+        catch
+        {
+            // no-op
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -121,15 +205,21 @@
         }
         catch
         {
+            // ignore JS dispose errors
+        }
+
+        if (_hub is not null)
+        {
+            try
+            {
+                await _hub.DisposeAsync();
+            }
+            catch
+            {
+                // ignore hub dispose errors
+            }
         }
 
         _dotNetRef?.Dispose();
-    }
-
-    public sealed class LobbyEntry
-    {
-        public string Name { get; set; } = string.Empty;
-        public int Kills { get; set; }
-        public int Deaths { get; set; }
     }
 }
