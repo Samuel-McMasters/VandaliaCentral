@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Identity.Client
 @using Microsoft.Identity.Web
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject CalendarService CalendarService
 @inject ItNewsService ItNewsService
@@ -15,6 +16,8 @@
 @inject ITokenAcquisition TokenAcquisition
 @inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 @inject IPasswordGeneratorService PasswordGenerator
+@inject FlappyLeaderboardService FlappyLeaderboardService
+@implements IAsyncDisposable
 
 
 <div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4">
@@ -59,6 +62,11 @@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
                     Password Generator
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("flappybird"))' @onclick='() => SetActiveTab("flappybird")' type='button'>
+                    Flappy Bird
                 </button>
             </li>
 
@@ -249,6 +257,66 @@
             </div>
         }
 
+        @if (activeTab == "flappybird")
+        {
+            <div>
+                <h5>Flappy Bird Challenge</h5>
+                <p class="text-muted mb-3">
+                    Press <strong>Space</strong> to flap and fly through the pipe gaps. Tight gaps, one hit ends the run.
+                </p>
+
+                <div class="d-flex flex-wrap gap-4 align-items-start">
+                    <div>
+                        <canvas id="adminFlappyCanvas" width="520" height="600" class="border rounded bg-light"></canvas>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-primary" @onclick="StartFlappyGame">Start / Restart</button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(flappyStatusMessage))
+                        {
+                            <div class="mt-2 text-danger small">@flappyStatusMessage</div>
+                        }
+                        <div class="mt-2 small text-muted">
+                            Signed in as: <strong>@currentUserName</strong>
+                        </div>
+                        @if (lastFlappyScore > 0)
+                        {
+                            <div class="mt-2 fw-semibold">Last score: @lastFlappyScore</div>
+                        }
+                    </div>
+
+                    <div class="border rounded p-3" style="min-width: 280px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Top 5 Leaderboard</h6>
+                            @if (canClearFlappyLeaderboard)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard">Clear</button>
+                            }
+                        </div>
+
+                        @if (flappyTopScores == null)
+                        {
+                            <p class="text-muted mb-0">Loading scores...</p>
+                        }
+                        else if (!flappyTopScores.Any())
+                        {
+                            <p class="text-muted mb-0">No scores yet. Be the first!</p>
+                        }
+                        else
+                        {
+                            <ol class="mb-0 ps-3">
+                                @foreach (var score in flappyTopScores)
+                                {
+                                    <li class="mb-1">
+                                        <span class="fw-semibold">@score.UserName</span> — @score.Score
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
     }
 </div>
 
@@ -271,8 +339,27 @@
     private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
+    private List<FlappyScore>? flappyTopScores;
+    private string currentUserName = "anonymous";
+    private int lastFlappyScore = 0;
+    private DotNetObjectReference<Admin>? flappyDotNetRef;
+    private bool flappyInitialized = false;
+    private string? flappyStatusMessage;
+    private string signedInUserLogin = "anonymous";
+    private bool canClearFlappyLeaderboard = false;
+    private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
 
-    private void SetActiveTab(string tab) => activeTab = tab;
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+
+        if (tab == "flappybird")
+        {
+            flappyInitialized = false;
+            flappyStatusMessage = null;
+        }
+    }
+
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
 
     protected override async Task OnInitializedAsync()
@@ -283,6 +370,9 @@
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
+            signedInUserLogin = user?.Identity?.Name ?? "anonymous";
+            canClearFlappyLeaderboard = string.Equals(signedInUserLogin, FlappyLeaderboardAdminLogin, StringComparison.OrdinalIgnoreCase);
+            currentUserName = GetLeaderboardDisplayName(signedInUserLogin);
 
             if (user.Identity?.IsAuthenticated == true)
             {
@@ -299,6 +389,7 @@
                 logFiles = await Logger.GetLogFileNamesAsync();
                 calendarEvents = await CalendarService.LoadCalendarAsync();
                 itNewsItems = await ItNewsService.LoadNewsAsync();
+                flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
             }
         }
         catch (MsalUiRequiredException ex)
@@ -319,6 +410,99 @@
             isMobile = width < 768;
             StateHasChanged();
         }
+
+        if (activeTab == "flappybird" && !flappyInitialized)
+        {
+            await InitializeFlappyGameAsync();
+        }
+
+        if (activeTab != "flappybird" && flappyInitialized)
+        {
+            await JS.InvokeVoidAsync("adminFlappyBird.dispose");
+            flappyInitialized = false;
+        }
+    }
+
+    private async Task<bool> InitializeFlappyGameAsync(bool force = false)
+    {
+        if (flappyInitialized && !force)
+        {
+            return true;
+        }
+
+        flappyDotNetRef?.Dispose();
+        flappyDotNetRef = DotNetObjectReference.Create(this);
+        flappyInitialized = await JS.InvokeAsync<bool>("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
+        return flappyInitialized;
+    }
+
+    private async Task StartFlappyGame()
+    {
+        flappyStatusMessage = null;
+
+        try
+        {
+            var initialized = await InitializeFlappyGameAsync();
+            if (!initialized)
+            {
+                await Task.Delay(50);
+                initialized = await InitializeFlappyGameAsync(force: true);
+            }
+
+            if (!initialized)
+            {
+                flappyStatusMessage = "Game canvas was not ready. Please try again.";
+                return;
+            }
+
+            var started = await JS.InvokeAsync<bool>("adminFlappyBird.start");
+            if (!started)
+            {
+                flappyInitialized = false;
+                flappyStatusMessage = "Unable to start game. Please click Start again.";
+            }
+        }
+        catch
+        {
+            flappyInitialized = false;
+            flappyStatusMessage = "Unable to start game due to a script error. Please refresh and try again.";
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnFlappyGameOver(int score)
+    {
+        lastFlappyScore = score;
+
+        if (score > 0)
+        {
+            var currentTopScore = (await FlappyLeaderboardService.GetTopScoresAsync(1)).FirstOrDefault()?.Score ?? 0;
+            var isNewHighScore = score > currentTopScore;
+
+            await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
+            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+
+            if (isNewHighScore)
+            {
+                var fullUserName = await GetCurrentUserNameAsync();
+                await Logger.LogActivityAsync(fullUserName, $"Set new Flappy Bird high score: {score}");
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearFlappyLeaderboard()
+    {
+        if (!canClearFlappyLeaderboard)
+        {
+            return;
+        }
+
+        await FlappyLeaderboardService.ClearScoresAsync();
+        flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+        await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnLogSelected(ChangeEventArgs e)
@@ -469,6 +653,24 @@
         return authState.User?.Identity?.Name ?? "anonymous";
     }
 
+
+    private static string GetLeaderboardDisplayName(string? identityName)
+    {
+        if (string.IsNullOrWhiteSpace(identityName))
+        {
+            return "anonymous";
+        }
+
+        var emailLocalPart = identityName.Split('@')[0];
+        if (string.IsNullOrWhiteSpace(emailLocalPart))
+        {
+            return "anonymous";
+        }
+
+        var firstName = emailLocalPart.Split('.')[0];
+        return string.IsNullOrWhiteSpace(firstName) ? "anonymous" : firstName.Trim().ToLowerInvariant();
+    }
+
     private void GeneratePassword()
     {
         generatedPassword = PasswordGenerator.GeneratePassword();
@@ -488,5 +690,19 @@
         await Task.Delay(1500);
         showCopySuccess = false;
         StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("adminFlappyBird.dispose");
+        }
+        catch
+        {
+            // ignore dispose JS errors during shutdown
+        }
+
+        flappyDotNetRef?.Dispose();
     }
 }
