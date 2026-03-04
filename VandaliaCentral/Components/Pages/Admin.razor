@@ -289,7 +289,7 @@
                             <h6 class="mb-0">Top 5 Leaderboard</h6>
                             @if (canClearFlappyLeaderboard)
                             {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard">Clear</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard" disabled="@isClearingFlappyLeaderboard">Clear</button>
                             }
                         </div>
 
@@ -348,6 +348,7 @@
     private string signedInUserLogin = "anonymous";
     private bool canClearFlappyLeaderboard = false;
     private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
+    private bool isClearingFlappyLeaderboard = false;
 
     private void SetActiveTab(string tab)
     {
@@ -494,15 +495,30 @@
 
     private async Task ClearFlappyLeaderboard()
     {
-        if (!canClearFlappyLeaderboard)
+        if (!canClearFlappyLeaderboard || isClearingFlappyLeaderboard)
         {
             return;
         }
 
-        await FlappyLeaderboardService.ClearScoresAsync();
-        flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
-        await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
-        await InvokeAsync(StateHasChanged);
+        isClearingFlappyLeaderboard = true;
+        flappyStatusMessage = null;
+
+        try
+        {
+            await FlappyLeaderboardService.ClearScoresAsync();
+            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+            await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
+        }
+        catch (Exception ex)
+        {
+            flappyStatusMessage = "Unable to clear leaderboard right now. Please try again.";
+            Console.WriteLine($"Error clearing Flappy leaderboard: {ex.Message}");
+        }
+        finally
+        {
+            isClearingFlappyLeaderboard = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task OnLogSelected(ChangeEventArgs e)
