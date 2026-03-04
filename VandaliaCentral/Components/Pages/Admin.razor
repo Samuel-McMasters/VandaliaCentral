@@ -428,6 +428,38 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task InitializeFlappyGameAsync()
+    {
+        if (flappyInitialized)
+        {
+            return;
+        }
+
+        flappyDotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
+        flappyInitialized = true;
+    }
+
+    private async Task StartFlappyGame()
+    {
+        await InitializeFlappyGameAsync();
+        await JS.InvokeVoidAsync("adminFlappyBird.start");
+    }
+
+    [JSInvokable]
+    public async Task OnFlappyGameOver(int score)
+    {
+        lastFlappyScore = score;
+
+        if (score > 0)
+        {
+            await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
+            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task OnLogSelected(ChangeEventArgs e)
     {
         var selectedFile = e.Value?.ToString();
