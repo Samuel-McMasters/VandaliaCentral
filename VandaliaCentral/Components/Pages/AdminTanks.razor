@@ -1,0 +1,50 @@
+@page "/admin/tanks"
+@using Microsoft.Identity.Client
+@using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Identity.Web
+@inject GraphUserService GraphUserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ITokenAcquisition TokenAcquisition
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+
+<div class="container-fluid border rounded bg-white shadow-sm py-4">
+    <h3 class="mb-4">Admin Tanks Arena</h3>
+
+    @if (!isAuthorized)
+    {
+        <p class="text-danger">Refresh the page, or please wait while we check your authorizations...</p>
+    }
+    else
+    {
+        <TanksArena CanvasId="adminTanksCanvas" />
+    }
+</div>
+
+@code {
+    private bool isAuthorized;
+    private const string AdminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _ = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    isAuthorized = await GraphUserService.IsUserInGroupAsync(userId, AdminGroupId);
+                }
+            }
+        }
+        catch (MsalUiRequiredException ex)
+        {
+            ConsentHandler.HandleException(ex);
+        }
+    }
+}

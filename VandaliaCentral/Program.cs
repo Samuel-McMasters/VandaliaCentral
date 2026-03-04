@@ -14,6 +14,8 @@ using Blazorise.Icons.FontAwesome;
 using Blazorise.Charts;
 using System.Net.Http.Headers;
 using VandaliaCentral.Models;
+using VandaliaCentral.Game.Tanks;
+using VandaliaCentral.Hubs;
 
 var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
@@ -23,12 +25,15 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<ItNewsService>();
 builder.Services.AddSingleton<FlappyLeaderboardService>();
+builder.Services.AddSingleton<TanksGameEngine>();
+builder.Services.AddHostedService<TanksGameLoopService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
@@ -160,6 +165,7 @@ app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapRazorPages();
+app.MapHub<TanksHub>("/hubs/tanks");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

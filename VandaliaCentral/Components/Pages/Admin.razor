@@ -69,6 +69,11 @@
                     Flappy Bird
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("tanks"))' @onclick='() => SetActiveTab("tanks")' type='button'>
+                    Tanks
+                </button>
+            </li>
 
 
         </ul>
@@ -316,6 +321,15 @@
                 </div>
             </div>
         }
+
+        @if (activeTab == "tanks")
+        {
+            <div>
+                <h5>Tanks Arena</h5>
+                <TanksArena CanvasId="adminTanksTabCanvas" />
+            </div>
+        }
+
 
     }
 </div>
