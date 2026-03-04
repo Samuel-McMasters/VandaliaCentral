@@ -267,7 +267,7 @@
 
                 <div class="d-flex flex-wrap gap-4 align-items-start">
                     <div>
-                        <canvas id="adminFlappyCanvas" width="420" height="600" class="border rounded bg-light"></canvas>
+                        <canvas id="adminFlappyCanvas" width="520" height="600" class="border rounded bg-light"></canvas>
                         <div class="d-flex gap-2 mt-3">
                             <button class="btn btn-primary" @onclick="StartFlappyGame">Start / Restart</button>
                         </div>
@@ -335,14 +335,10 @@
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
 
-    private async Task SetActiveTab(string tab)
+    private Task SetActiveTab(string tab)
     {
         activeTab = tab;
-
-        if (tab == "flappybird")
-        {
-            await InitializeFlappyGameAsync();
-        }
+        return Task.CompletedTask;
     }
 
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
@@ -393,6 +389,43 @@
             isMobile = width < 768;
             StateHasChanged();
         }
+
+        if (activeTab == "flappybird" && !flappyInitialized)
+        {
+            await InitializeFlappyGameAsync();
+        }
+    }
+
+    private async Task InitializeFlappyGameAsync()
+    {
+        if (flappyInitialized)
+        {
+            return;
+        }
+
+        flappyDotNetRef?.Dispose();
+        flappyDotNetRef = DotNetObjectReference.Create(this);
+        flappyInitialized = await JS.InvokeAsync<bool>("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
+    }
+
+    private async Task StartFlappyGame()
+    {
+        await InitializeFlappyGameAsync();
+        await JS.InvokeVoidAsync("adminFlappyBird.start");
+    }
+
+    [JSInvokable]
+    public async Task OnFlappyGameOver(int score)
+    {
+        lastFlappyScore = score;
+
+        if (score > 0)
+        {
+            await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
+            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task InitializeFlappyGameAsync()

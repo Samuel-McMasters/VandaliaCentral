@@ -189,7 +189,7 @@ window.adminFlappyBird = (() => {
     const init = (canvasId, dotNetObjectRef) => {
         canvas = document.getElementById(canvasId);
         if (!canvas) {
-            return;
+            return false;
         }
 
         ctx = canvas.getContext("2d");
@@ -211,6 +211,7 @@ window.adminFlappyBird = (() => {
         pipes = [];
         birdY = canvas.height / 2;
         draw();
+        return true;
     };
 
     const start = () => {
