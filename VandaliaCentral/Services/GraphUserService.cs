@@ -66,6 +66,31 @@ namespace VandaliaCentral.Services
             }
         }
 
+
+        public async Task<string?> GetCurrentUserOfficeLocationAsync()
+        {
+            try
+            {
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                var user = await graphClient.Me
+                    .Request()
+                    .Select("officeLocation")
+                    .GetAsync();
+
+                return user?.OfficeLocation;
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return null;
+            }
+        }
+
         public async Task<bool> IsUserInGroupAsync(string userId, string groupId)
         {
             try

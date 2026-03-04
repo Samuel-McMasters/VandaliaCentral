@@ -94,6 +94,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GraphUserService>();
 builder.Services.AddScoped<GraphEmailService>();
+builder.Services.AddScoped<UserLocationWeatherService>();
 
 // Microsoft Identity Web + Graph
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
