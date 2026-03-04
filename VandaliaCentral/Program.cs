@@ -27,6 +27,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
+builder.Services.AddSingleton<ItNewsService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
