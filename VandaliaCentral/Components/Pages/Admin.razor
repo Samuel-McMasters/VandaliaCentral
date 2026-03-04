@@ -7,6 +7,7 @@
 @using Microsoft.Identity.Web
 @inject IJSRuntime JS
 @inject CalendarService CalendarService
+@inject ItNewsService ItNewsService
 @inject LoggingService Logger
 @inject GraphUserService GraphUserService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -40,16 +41,14 @@
                     Logs
                 </button>
             </li>
-            @* <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("usage"))'
-                        @onclick='() => SetActiveTab("usage")'
-                        type='button'>
-                    Usage Stats
-                </button>
-            </li> *@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
                     Company Calendar
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("itnews"))' @onclick='() => SetActiveTab("itnews")' type='button'>
+                    IT News
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -66,7 +65,6 @@
 
         </ul>
 
-        <!-- Logs Tab -->
         @if (activeTab == "logs")
         {
             <div>
@@ -96,22 +94,6 @@
             </div>
         }
 
-        <!-- Usage Stats Tab -->
-        @*  @if (activeTab == "usage")
-{
-            <h5>Monthly Sidebar Link Clicks</h5>
-
-            @if (usageData == null)
-            {
-                <p>Loading usage data...</p>
-            }
-            else
-            {
-                <LineChart Data="@chartData" Options="@chartOptions" />
-            }
-        } *@
-
-        <!-- Calendar Tab -->
         @if (activeTab == "calendar")
         {
             <div>
@@ -164,13 +146,80 @@
             </div>
         }
 
-        <!-- Monday Minute Editor Tab -->
+        @if (activeTab == "itnews")
+        {
+            <div>
+                <h5>IT News Manager</h5>
+
+                <div class="border rounded p-3 mb-4" style="max-width: 700px;">
+                    <h6>Add IT News Item</h6>
+                    <label class="mt-2">Title:</label>
+                    <InputText @bind-Value="newItNewsTitle" class="form-control" />
+
+                    <label class="mt-2">News Content:</label>
+                    <InputTextArea @bind-Value="newItNewsContent" rows="4" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddNewsItem">Add News Item</button>
+                </div>
+
+                @if (itNewsItems == null)
+                {
+                    <p>Loading IT news...</p>
+                }
+                else if (!itNewsItems.Any())
+                {
+                    <p class="text-muted">No IT news items yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var item in itNewsItems)
+                        {
+                            <li class="list-group-item">
+                                @if (editingItNewsId == item.Id)
+                                {
+                                    <label>Title:</label>
+                                    <InputText @bind-Value="editItNewsTitle" class="form-control mb-2" />
+
+                                    <label>News Content:</label>
+                                    <InputTextArea @bind-Value="editItNewsContent" rows="4" class="form-control" />
+
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedNewsItem">Save</button>
+                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditNewsItem">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <strong>@item.Title</strong>
+                                            <div class="text-muted small">@item.PostedOn.ToLocalTime().ToString("MMM d, yyyy")</div>
+                                            <div style="white-space: pre-wrap;">@item.Content</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditNewsItem(item)">Edit</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteNewsItem(item)">Delete</button>
+                                        </div>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (showNewsSaveSuccess)
+                {
+                    <div class="text-success fw-bold mt-3">✓ IT news saved!</div>
+                }
+            </div>
+        }
+
         @if (activeTab == "mondayminute")
         {
             <MondayMinuteManager />
         }
 
-        <!-- Password Generator Tab -->
         @if (activeTab == "passwords")
         {
             <div>
@@ -204,7 +253,6 @@
 </div>
 
 @code {
-    //changes to save commit before PW gen merge
     private List<string>? logFiles;
     private string? logContent;
     private bool isAuthorized = false;
@@ -214,6 +262,13 @@
     private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
     private List<CalendarEvent>? calendarEvents;
     private CalendarEvent newEvent = new();
+    private List<ItNewsItem>? itNewsItems;
+    private string newItNewsTitle = string.Empty;
+    private string newItNewsContent = string.Empty;
+    private Guid? editingItNewsId;
+    private string editItNewsTitle = string.Empty;
+    private string editItNewsContent = string.Empty;
+    private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
 
@@ -224,7 +279,6 @@
     {
         try
         {
-            // Check token and redirect if needed
             var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -244,6 +298,7 @@
             {
                 logFiles = await Logger.GetLogFileNamesAsync();
                 calendarEvents = await CalendarService.LoadCalendarAsync();
+                itNewsItems = await ItNewsService.LoadNewsAsync();
             }
         }
         catch (MsalUiRequiredException ex)
@@ -261,7 +316,7 @@
         if (firstRender)
         {
             var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
-            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            isMobile = width < 768;
             StateHasChanged();
         }
     }
@@ -287,7 +342,7 @@
                 Type = newEvent.Type
             });
 
-        newEvent = new CalendarEvent(); // clear form
+        newEvent = new CalendarEvent();
     }
 
     private void DeleteEvent(CalendarEvent ev)
@@ -314,6 +369,104 @@
         {
             Console.WriteLine("Error saving calendar: " + ex.Message);
         }
+    }
+
+    private async Task AddNewsItem()
+    {
+        if (itNewsItems == null || string.IsNullOrWhiteSpace(newItNewsTitle) || string.IsNullOrWhiteSpace(newItNewsContent))
+            return;
+
+        var itemTitle = newItNewsTitle.Trim();
+
+        itNewsItems.Add(new ItNewsItem
+        {
+            Id = Guid.NewGuid(),
+            Title = itemTitle,
+            Content = newItNewsContent.Trim(),
+            PostedOn = DateTime.UtcNow
+        });
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Added IT News Item {itemTitle}");
+
+        newItNewsTitle = string.Empty;
+        newItNewsContent = string.Empty;
+        await SaveNewsAndShowStatus();
+    }
+
+    private void StartEditNewsItem(ItNewsItem item)
+    {
+        editingItNewsId = item.Id;
+        editItNewsTitle = item.Title;
+        editItNewsContent = item.Content;
+    }
+
+    private void CancelEditNewsItem()
+    {
+        editingItNewsId = null;
+        editItNewsTitle = string.Empty;
+        editItNewsContent = string.Empty;
+    }
+
+    private async Task SaveEditedNewsItem()
+    {
+        if (itNewsItems == null || editingItNewsId == null || string.IsNullOrWhiteSpace(editItNewsTitle) || string.IsNullOrWhiteSpace(editItNewsContent))
+            return;
+
+        var item = itNewsItems.FirstOrDefault(x => x.Id == editingItNewsId.Value);
+        if (item == null)
+            return;
+
+        item.Title = editItNewsTitle.Trim();
+        item.Content = editItNewsContent.Trim();
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Edited IT News Item {item.Title}");
+
+        await SaveNewsAndShowStatus();
+        CancelEditNewsItem();
+    }
+
+    private async Task DeleteNewsItem(ItNewsItem item)
+    {
+        if (itNewsItems == null)
+            return;
+
+        var itemTitle = item.Title;
+
+        itNewsItems.Remove(item);
+        if (editingItNewsId == item.Id)
+        {
+            CancelEditNewsItem();
+        }
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted IT News Item {itemTitle}");
+
+        await SaveNewsAndShowStatus();
+    }
+
+    private async Task SaveNewsAndShowStatus()
+    {
+        if (itNewsItems == null)
+            return;
+
+        await ItNewsService.SaveNewsAsync(itNewsItems);
+        itNewsItems = await ItNewsService.LoadNewsAsync();
+
+        showNewsSaveSuccess = true;
+        StateHasChanged();
+
+        await Task.Delay(2500);
+        showNewsSaveSuccess = false;
+        StateHasChanged();
+    }
+
+
+    private async Task<string> GetCurrentUserNameAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        return authState.User?.Identity?.Name ?? "anonymous";
     }
 
     private void GeneratePassword()
