@@ -335,10 +335,9 @@
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
 
-    private Task SetActiveTab(string tab)
+    private void SetActiveTab(string tab)
     {
         activeTab = tab;
-        return Task.CompletedTask;
     }
 
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
@@ -406,38 +405,6 @@
         flappyDotNetRef?.Dispose();
         flappyDotNetRef = DotNetObjectReference.Create(this);
         flappyInitialized = await JS.InvokeAsync<bool>("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
-    }
-
-    private async Task StartFlappyGame()
-    {
-        await InitializeFlappyGameAsync();
-        await JS.InvokeVoidAsync("adminFlappyBird.start");
-    }
-
-    [JSInvokable]
-    public async Task OnFlappyGameOver(int score)
-    {
-        lastFlappyScore = score;
-
-        if (score > 0)
-        {
-            await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
-            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task InitializeFlappyGameAsync()
-    {
-        if (flappyInitialized)
-        {
-            return;
-        }
-
-        flappyDotNetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
-        flappyInitialized = true;
     }
 
     private async Task StartFlappyGame()
