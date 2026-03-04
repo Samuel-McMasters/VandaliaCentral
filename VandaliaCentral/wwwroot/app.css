@@ -183,7 +183,7 @@ main {
         right: -50%;
         bottom: -50%;
         left: -50%;
-        background: linear-gradient( 45deg, #ffe8e8, /* very light red – almost white */
+        background: linear-gradient( 45deg, #ffe8e8, /* very light red â€“ almost white */
         #ff8a8a, /* bright mid red */
         #ff3333, /* hot red */
         #ffe8e8, #ff8a8a, #ff3333 );
@@ -553,7 +553,7 @@ select.form-select {
         .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle[aria-expanded="true"]::after {
             transform: rotate(180deg);
         }
-/* === Vandalia sidebar – in-place dropdown + tighter spacing === */
+/* === Vandalia sidebar â€“ in-place dropdown + tighter spacing === */
 
 /* Make the inner sidebar content stretch full width */
 .vandalia-sidebar .sidebar {
@@ -652,7 +652,7 @@ select.form-select {
     }
 
 
-/* === Vandalia sidebar – dark scrollbar === */
+/* === Vandalia sidebar â€“ dark scrollbar === */
 
 /* Firefox + some modern browsers */
 .vandalia-sidebar .sidebar {
@@ -680,7 +680,7 @@ select.form-select {
         }
 
 
-    /* === Vandalia sidebar – sliding orange hover on top-level items === */
+    /* === Vandalia sidebar â€“ sliding orange hover on top-level items === */
 
     /* Base: make sure top-level buttons can host the overlay */
     .vandalia-sidebar .sidebar .menu .dropdown > .btn.dropdown-toggle {
@@ -730,7 +730,7 @@ select.form-select {
         }
 
 
-    /* === Vandalia sidebar – tighten dropdown stack spacing === */
+    /* === Vandalia sidebar â€“ tighten dropdown stack spacing === */
 
     /* Kill the gap-4 spacing between items */
     .vandalia-sidebar .sidebar .menu.btn-group-vertical {
@@ -764,3 +764,23 @@ select.form-select {
             margin-bottom: 0.9rem; /* separates actions from the menu items */
         }
 
+
+.navbar-center-weather {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    min-width: 420px;
+    justify-content: center;
+    text-align: center;
+    color: #000 !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.navbar-center-weather,
+.navbar-center-weather * {
+    color: #000 !important;
+}
