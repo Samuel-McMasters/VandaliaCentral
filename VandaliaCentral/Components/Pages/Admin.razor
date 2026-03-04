@@ -453,8 +453,17 @@
 
         if (score > 0)
         {
+            var currentTopScore = (await FlappyLeaderboardService.GetTopScoresAsync(1)).FirstOrDefault()?.Score ?? 0;
+            var isNewHighScore = score > currentTopScore;
+
             await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
             flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+
+            if (isNewHighScore)
+            {
+                var fullUserName = await GetCurrentUserNameAsync();
+                await Logger.LogActivityAsync(fullUserName, $"Set new Flappy Bird high score: {score}");
+            }
         }
 
         await InvokeAsync(StateHasChanged);
