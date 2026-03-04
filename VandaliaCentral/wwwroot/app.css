@@ -784,3 +784,43 @@ select.form-select {
 .navbar-center-weather * {
     color: #000 !important;
 }
+
+.tanks-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tanks-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 12px;
+}
+
+.tanks-canvas {
+    width: 100%;
+    max-width: 1000px;
+    border: 1px solid #adb5bd;
+    border-radius: 8px;
+    background: #e8f4e8;
+}
+
+.tanks-lobby {
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff;
+    max-height: 640px;
+    overflow-y: auto;
+}
+
+.tanks-lobby ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
+@media (max-width: 1100px) {
+    .tanks-main {
+        grid-template-columns: 1fr;
+    }
+}

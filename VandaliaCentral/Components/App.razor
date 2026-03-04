@@ -33,6 +33,53 @@
     </script>
 </body>
 <script src="js/site.js"></script>
+<script>
+    window.ensureSignalRClient = (() => {
+        let loadPromise;
+        const candidates = [
+            "_content/Microsoft.AspNetCore.SignalR.Client/signalr.min.js",
+            "_content/Microsoft.AspNetCore.SignalR.Client/signalr.js",
+            "_content/Microsoft.AspNetCore.SignalR.Client.JS/signalr.min.js",
+            "_content/Microsoft.AspNetCore.SignalR.Client.JS/dist/browser/signalr.min.js",
+            "lib/microsoft/signalr/dist/browser/signalr.min.js",
+            "js/vendor/signalr.min.js"
+        ];
+
+        const tryLoad = (src) => new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve(!!window.signalR);
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+
+        return () => {
+            if (window.signalR) {
+                return Promise.resolve(true);
+            }
+
+            if (loadPromise) {
+                return loadPromise;
+            }
+
+            loadPromise = (async () => {
+                for (const src of candidates) {
+                    const loaded = await tryLoad(src);
+                    if (loaded) {
+                        return true;
+                    }
+                }
+
+                console.error("Unable to load SignalR browser client from configured local paths.");
+                return false;
+            })();
+
+            return loadPromise;
+        };
+    })();
+</script>
+<script src="js/tanksClient.js"></script>
 
 <script>
     window.blazorGetWindowWidth = () => {
