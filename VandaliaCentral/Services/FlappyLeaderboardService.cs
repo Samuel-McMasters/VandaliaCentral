@@ -28,6 +28,13 @@ namespace VandaliaCentral.Services
                 .ToList();
         }
 
+
+        public async Task ClearScoresAsync()
+        {
+            var blobClient = _containerClient.GetBlobClient(BlobName);
+            await blobClient.DeleteIfExistsAsync();
+        }
+
         public async Task AddScoreAsync(string userName, int score)
         {
             if (score <= 0)

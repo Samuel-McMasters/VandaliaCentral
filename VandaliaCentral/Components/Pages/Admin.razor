@@ -285,7 +285,13 @@
                     </div>
 
                     <div class="border rounded p-3" style="min-width: 280px;">
-                        <h6>Top 5 Leaderboard</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Top 5 Leaderboard</h6>
+                            @if (canClearFlappyLeaderboard)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard">Clear</button>
+                            }
+                        </div>
 
                         @if (flappyTopScores == null)
                         {
@@ -339,6 +345,9 @@
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
     private string? flappyStatusMessage;
+    private string signedInUserLogin = "anonymous";
+    private bool canClearFlappyLeaderboard = false;
+    private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
 
     private void SetActiveTab(string tab)
     {
@@ -361,7 +370,9 @@
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-            currentUserName = GetLeaderboardDisplayName(user?.Identity?.Name);
+            signedInUserLogin = user?.Identity?.Name ?? "anonymous";
+            canClearFlappyLeaderboard = string.Equals(signedInUserLogin, FlappyLeaderboardAdminLogin, StringComparison.OrdinalIgnoreCase);
+            currentUserName = GetLeaderboardDisplayName(signedInUserLogin);
 
             if (user.Identity?.IsAuthenticated == true)
             {
@@ -478,6 +489,19 @@
             }
         }
 
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearFlappyLeaderboard()
+    {
+        if (!canClearFlappyLeaderboard)
+        {
+            return;
+        }
+
+        await FlappyLeaderboardService.ClearScoresAsync();
+        flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+        await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
         await InvokeAsync(StateHasChanged);
     }
 
