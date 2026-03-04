@@ -11,14 +11,12 @@
 @using Microsoft.Identity.Web
 @inject LoggingService Logger
 @inject NavigationManager Navigation
-@inject LoggingService Logger
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject UserLocationWeatherService UserLocationWeatherService
+@inject GraphUserService GraphUserService
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
-
-
+@implements IDisposable
 
 <div>
     <!-- Top Navbar -->
@@ -45,7 +43,6 @@
 
                 <div class="navbar-divider d-none d-lg-block"></div>
 
-                <!-- Home Icon moved here, with underline restored -->
                 <a class="d-none d-lg-block nav-link p-0 icon-button" href="/" tabindex="-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="black" class="bi bi-house"
                          viewBox="0 0 16 16">
@@ -54,15 +51,24 @@
                 </a>
             </div>
 
-            
+            <div class="navbar-center-weather d-none d-md-flex" aria-live="polite">
+                @if (IsWeatherLoading)
+                {
+                    <span>Loading local weather...</span>
+                }
+                else if (!string.IsNullOrWhiteSpace(NavbarWeatherText))
+                {
+                    <span>@NavbarWeatherText</span>
+                }
+            </div>
 
             <!-- Editor button (right side) -->
             @if (IsUploader && !IsOnEditorPage && !IsAdmin)
             {
                 <div class="ms-auto">
                     <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
-                    style="max-width: 200px;"
-                    @onclick='(e) => NavigateToEditor("Monday Minute Manager")'>
+                            style="max-width: 200px;"
+                            @onclick='(e) => NavigateToEditor("Monday Minute Manager")'>
                         Resource Hub
                     </button>
                 </div>
@@ -71,36 +77,30 @@
             {
                 <div class="ms-auto">
                     <NavLink href="/admin" @onclick='(e) => NavigateToAdmin("Admin Dashboard")' class="btn btn-danger" activeClass="active">
-                        
                         @(isMobile ? "Admin" : "Admin Dashboard")
                     </NavLink>
                 </div>
-                
-                
             }
             else if (!IsOnEditorPage)
             {
-                    <div class="ms-auto">
-                        <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
-
+                <div class="ms-auto">
+                    <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
                         @(isMobile ? "Dashboards" : "My Dashboard")
-                        </NavLink>
-                    </div>
+                    </NavLink>
+                </div>
             }
 
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <div class="main-content-wrapper d-flex" >
-        <!-- Sidebar -->
-        <div class=@SidebarCssClass id="sidebarMenu" >        
+    <div class="main-content-wrapper d-flex">
+        <div class=@SidebarCssClass id="sidebarMenu">
             <CascadingValue Value="(Action)CloseSidebar">
                 <NavMenu></NavMenu>
             </CascadingValue>
         </div>
 
-        <!-- Content -->
         <div class="main-content flex-grow-1 page-enter" style="background: #E5E5E5;" @ref="mainContentRef">
             @Body
         </div>
@@ -111,57 +111,30 @@
     private string SidebarCssClass => showSidebar ? "vandalia-sidebar show d-lg-block" : "vandalia-sidebar d-lg-block";
 
     private bool showSidebar = false;
-    private string? uploadStatus;
-    private string? statusClass;
     private bool IsUploader = true;
     private bool isMobile = false;
     private bool hasLoggedLogin = false;
     private bool IsAdmin = false;
+    private string? NavbarWeatherText;
+    private bool IsWeatherLoading = true;
+    private PeriodicTimer? _timeTimer;
+    private TimeZoneInfo? _userTimeZone;
+    private string? _weatherDetails;
+    private string? _weatherLocationName;
 
     private bool IsOnEditorPage => Navigation.Uri.Contains("/mondayminuteeditor", StringComparison.OrdinalIgnoreCase);
 
-    private void ToggleSidebar()
-    {
-        showSidebar = !showSidebar;
-    }
+    private void ToggleSidebar() => showSidebar = !showSidebar;
 
-    private void CloseSidebar()
-    {
-        showSidebar = false;
-    }
+    private void CloseSidebar() => showSidebar = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             var width = await JS.InvokeAsync<int>("blazorGetWindowWidth");
-            isMobile = width < 768; // or use 992 if you want "tablet and below"
+            isMobile = width < 768;
             StateHasChanged();
-        }
-    }
-
-    private async Task HandleFileUpload(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-
-        if (file is null || !file.Name.EndsWith(".pdf"))
-        {
-            uploadStatus = "Please select a valid PDF file.";
-            return;
-        }
-
-        try
-        {
-            uploadStatus = "Uploading...";
-            await PdfService.UploadPdfAsync("mondayminute", file);
-            uploadStatus = "Upload successful!";
-            await Task.Delay(2000);
-            var currentUri = Navigation.Uri;
-            Navigation.NavigateTo("/", forceLoad: true);
-        }
-        catch (Exception ex)
-        {
-            uploadStatus = $"Upload failed: {ex.Message}";
         }
     }
 
@@ -173,52 +146,103 @@
         if (user.Identity?.IsAuthenticated == true && !hasLoggedLogin)
         {
             hasLoggedLogin = true;
-
             var userName = user.Identity.Name ?? "unknown";
             await Logger.LogActivityAsync(userName, "User logged in");
         }
 
-        // Check if user is in the correct Entra ID group by claim
         IsUploader = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "b3a0f732-a5f2-4c28-a005-61c901b21096");
 
         IsAdmin = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
 
-        //  Subscribe to route change for animation
+        await InitializeNavbarWeatherAsync();
+
         currentUri = Navigation.Uri;
         Navigation.LocationChanged += HandleLocationChanged;
     }
 
+    private async Task InitializeNavbarWeatherAsync()
+    {
+        try
+        {
+            var officeLocation = await GraphUserService.GetCurrentUserOfficeLocationAsync();
+
+            var snapshot = await UserLocationWeatherService.GetWeatherSnapshotAsync(officeLocation);
+            if (snapshot is null)
+            {
+                NavbarWeatherText = "Local time and weather unavailable";
+                return;
+            }
+
+            _weatherLocationName = snapshot.LocationName;
+            _weatherDetails = $"{Math.Round(snapshot.TemperatureF)}°F • {snapshot.Conditions}";
+
+            if (UserLocationWeatherService.TryResolveTimeZone(snapshot.TimezoneId, out var zone))
+            {
+                _userTimeZone = zone;
+                UpdateNavbarWeatherText();
+                _ = StartClockTickerAsync();
+            }
+            else
+            {
+                NavbarWeatherText = $"{_weatherLocationName} • {_weatherDetails}";
+            }
+        }
+        catch
+        {
+            NavbarWeatherText = "Local time and weather unavailable";
+        }
+        finally
+        {
+            IsWeatherLoading = false;
+        }
+    }
+
+    private async Task StartClockTickerAsync()
+    {
+        _timeTimer?.Dispose();
+        _timeTimer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+
+        while (await _timeTimer.WaitForNextTickAsync())
+        {
+            await InvokeAsync(() =>
+            {
+                UpdateNavbarWeatherText();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private void UpdateNavbarWeatherText()
+    {
+        if (_userTimeZone is null || string.IsNullOrWhiteSpace(_weatherDetails) || string.IsNullOrWhiteSpace(_weatherLocationName))
+        {
+            return;
+        }
+
+        var localTime = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _userTimeZone);
+        NavbarWeatherText = $"{_weatherLocationName} • {localTime:hh:mm tt} • {_weatherDetails}";
+    }
+
     private async Task NavigateToEditor(string linkName)
     {
-        //Collect user credentials
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userName = authState.User?.Identity?.Name ?? "anonymous";
-
-        //Log the activity
         var activity = $"Clicked sidebar link: '{linkName}'";
         await Logger.LogActivityAsync(userName, activity);
-
         Navigation.NavigateTo("/mondayminuteeditor");
     }
 
-   
-
     private async Task NavigateToAdmin(string linkName)
     {
-        //Collect user credentials
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userName = authState.User?.Identity?.Name ?? "anonymous";
-
-        //Log the activity
         var activity = $"Clicked sidebar link: '{linkName}'";
         await Logger.LogActivityAsync(userName, activity);
-
         Navigation.NavigateTo("/admin");
     }
 
-    // ===  NEW FOR ANIMATION ON PAGE CHANGE ===
     private ElementReference mainContentRef;
     private string? currentUri;
 
@@ -227,17 +251,15 @@
         if (e.Location != currentUri)
         {
             currentUri = e.Location;
-
             await JS.InvokeVoidAsync("removeAnimationClass", mainContentRef, "page-enter");
-            await Task.Delay(50); // slight pause before re-adding class
+            await Task.Delay(50);
             await JS.InvokeVoidAsync("addAnimationClass", mainContentRef, "page-enter");
         }
     }
 
-    
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleLocationChanged;
+        _timeTimer?.Dispose();
+    }
 }
-
-
-
-
-
