@@ -85,6 +85,13 @@ namespace VandaliaCentral.Services
                 return codeMatch.Groups[1].Value;
             }
 
+            if (trimmed.Contains("Vandalia", StringComparison.OrdinalIgnoreCase)) return "0000";
+            if (trimmed.Contains("Franklin", StringComparison.OrdinalIgnoreCase)) return "0003";
+            if (trimmed.Contains("Florence", StringComparison.OrdinalIgnoreCase)) return "0006";
+            if (trimmed.Contains("Lima", StringComparison.OrdinalIgnoreCase)) return "0007";
+            if (trimmed.Contains("Cincinnati", StringComparison.OrdinalIgnoreCase)) return "0004";
+            if (trimmed.Contains("Columbus", StringComparison.OrdinalIgnoreCase)) return "0005";
+
             return null;
         }
 
@@ -132,7 +139,10 @@ namespace VandaliaCentral.Services
 
         private sealed class OpenMeteoResponse
         {
+            [JsonPropertyName("timezone")]
             public string? Timezone { get; set; }
+
+            [JsonPropertyName("current")]
             public OpenMeteoCurrent? Current { get; set; }
         }
 
