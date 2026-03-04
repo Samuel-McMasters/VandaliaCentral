@@ -343,6 +343,12 @@
     private void SetActiveTab(string tab)
     {
         activeTab = tab;
+
+        if (tab == "flappybird")
+        {
+            flappyInitialized = false;
+            flappyStatusMessage = null;
+        }
     }
 
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
@@ -397,6 +403,12 @@
         if (activeTab == "flappybird" && !flappyInitialized)
         {
             await InitializeFlappyGameAsync();
+        }
+
+        if (activeTab != "flappybird" && flappyInitialized)
+        {
+            await JS.InvokeVoidAsync("adminFlappyBird.dispose");
+            flappyInitialized = false;
         }
     }
 
