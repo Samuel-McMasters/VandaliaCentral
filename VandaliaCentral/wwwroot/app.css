@@ -773,9 +773,14 @@ select.form-select {
     min-width: 420px;
     justify-content: center;
     text-align: center;
-    color: #111;
+    color: #000 !important;
     font-weight: 600;
     font-size: 0.95rem;
     white-space: nowrap;
     pointer-events: none;
+}
+
+.navbar-center-weather,
+.navbar-center-weather * {
+    color: #000 !important;
 }
