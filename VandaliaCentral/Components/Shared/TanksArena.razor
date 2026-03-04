@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Authorization
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
 @using VandaliaCentral.Game.Tanks
 @using VandaliaCentral.Models.Tanks
 @using VandaliaCentral.Services
@@ -6,6 +7,15 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LoggingService Logger
 @inject TanksGameEngine TanksEngine
+=======
+@using Microsoft.AspNetCore.SignalR.Client
+@using VandaliaCentral.Models.Tanks
+@using VandaliaCentral.Services
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LoggingService Logger
+>>>>>>> games
 @implements IAsyncDisposable
 
 <div class="tanks-shell">
@@ -41,10 +51,16 @@
 @code {
     [Parameter] public string CanvasId { get; set; } = "tanksCanvas";
 
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
     private readonly string _playerId = Guid.NewGuid().ToString("N");
     private DotNetObjectReference<TanksArena>? _dotNetRef;
     private CancellationTokenSource? _loopCts;
     private Task? _snapshotLoopTask;
+=======
+    private DotNetObjectReference<TanksArena>? _dotNetRef;
+    private HubConnection? _hub;
+    private string? _connectionId;
+>>>>>>> games
     private bool joined;
     private string playerName = string.Empty;
     private string? statusMessage;
@@ -64,6 +80,7 @@
 
         _dotNetRef = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("tanksClient.init", CanvasId, _dotNetRef);
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
 
         _loopCts = new CancellationTokenSource();
         _snapshotLoopTask = RunSnapshotLoopAsync(_loopCts.Token);
@@ -80,12 +97,57 @@
                 var snapshot = TanksEngine.CreateSnapshot();
                 var lobby = TanksEngine.CreateLobbyState();
 
+=======
+        await EnsureHubConnectedAsync();
+        StateHasChanged();
+    }
+
+    private async Task<bool> EnsureHubConnectedAsync()
+    {
+        if (_hub is not null && _hub.State == HubConnectionState.Connected)
+        {
+            return true;
+        }
+
+        if (_hub is null)
+        {
+            _hub = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/tanks"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hub.On<string>("ReceiveJoined", async connectionId =>
+            {
+                _connectionId = connectionId;
+                joined = true;
+                statusMessage = null;
+                await JS.InvokeVoidAsync("tanksClient.setJoined", true, _connectionId);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.On<string>("ReceiveJoinError", async message =>
+            {
+                joined = false;
+                statusMessage = message;
+                await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.On<SnapshotDto>("ReceiveSnapshot", async snapshot =>
+            {
+                await JS.InvokeVoidAsync("tanksClient.setSnapshot", snapshot);
+            });
+
+            _hub.On<LobbyStateDto>("ReceiveLobbyState", async lobby =>
+            {
+>>>>>>> games
                 lobbyMax = lobby.MaxPlayers;
                 lobbyPlayers = lobby.Players
                     .OrderByDescending(p => p.Kills)
                     .ThenBy(p => p.Deaths)
                     .ToList();
                 lobbyCount = lobbyPlayers.Count;
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
 
                 await JS.InvokeVoidAsync("tanksClient.setSnapshot", cancellationToken, snapshot);
                 await InvokeAsync(StateHasChanged);
@@ -100,6 +162,29 @@
             {
                 await Task.Delay(250, cancellationToken);
             }
+=======
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hub.Closed += async _ =>
+            {
+                joined = false;
+                statusMessage = "Disconnected from Tanks hub. Rejoin to continue.";
+                await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+                await InvokeAsync(StateHasChanged);
+            };
+        }
+
+        try
+        {
+            await _hub.StartAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Unable to connect to /hubs/tanks: {ex.Message}";
+            return false;
+>>>>>>> games
         }
     }
 
@@ -107,6 +192,7 @@
     {
         statusMessage = null;
 
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
         if (TanksEngine.JoinGame(_playerId, playerName, out var error))
         {
             joined = true;
@@ -120,17 +206,55 @@
         joined = false;
         statusMessage = error ?? "Unable to join game.";
         await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+=======
+        if (!await EnsureHubConnectedAsync() || _hub is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _hub.InvokeAsync("JoinGame", playerName);
+
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            await Logger.LogActivityAsync(auth.User.Identity?.Name ?? "anonymous", "Joined Tanks game");
+        }
+        catch (Exception ex)
+        {
+            joined = false;
+            statusMessage = ex.Message;
+            await JS.InvokeVoidAsync("tanksClient.setJoined", false, null);
+        }
+>>>>>>> games
     }
 
     private async Task LeaveAsync()
     {
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
         TanksEngine.LeaveGame(_playerId);
         joined = false;
+=======
+        try
+        {
+            if (_hub is not null && _hub.State == HubConnectionState.Connected)
+            {
+                await _hub.InvokeAsync("LeaveGame");
+            }
+        }
+        catch
+        {
+            // no-op
+        }
+
+        joined = false;
+        _connectionId = null;
+>>>>>>> games
         statusMessage = null;
         await JS.InvokeVoidAsync("tanksClient.leaveGame");
     }
 
     [JSInvokable]
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
     public Task OnInputFrame(InputDto input)
     {
         if (!joined)
@@ -140,10 +264,28 @@
 
         TanksEngine.ApplyInput(_playerId, input);
         return Task.CompletedTask;
+=======
+    public async Task OnInputFrame(InputDto input)
+    {
+        if (!joined || _hub is null || _hub.State != HubConnectionState.Connected)
+        {
+            return;
+        }
+
+        try
+        {
+            await _hub.InvokeAsync("SendInput", input);
+        }
+        catch
+        {
+            // no-op
+        }
+>>>>>>> games
     }
 
     public async ValueTask DisposeAsync()
     {
+<<<<<<< codex/implement-multiplayer-tank-game-in-blazor-zcp53v
         TanksEngine.LeaveGame(_playerId);
 
         if (_loopCts is not null)
@@ -173,6 +315,29 @@
         }
 
         _loopCts?.Dispose();
+=======
+        try
+        {
+            await JS.InvokeVoidAsync("tanksClient.dispose");
+        }
+        catch
+        {
+            // ignore JS dispose errors
+        }
+
+        if (_hub is not null)
+        {
+            try
+            {
+                await _hub.DisposeAsync();
+            }
+            catch
+            {
+                // ignore hub dispose errors
+            }
+        }
+
+>>>>>>> games
         _dotNetRef?.Dispose();
     }
 }
