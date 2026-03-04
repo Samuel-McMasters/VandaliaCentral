@@ -376,13 +376,18 @@
         if (itNewsItems == null || string.IsNullOrWhiteSpace(newItNewsTitle) || string.IsNullOrWhiteSpace(newItNewsContent))
             return;
 
+        var itemTitle = newItNewsTitle.Trim();
+
         itNewsItems.Add(new ItNewsItem
         {
             Id = Guid.NewGuid(),
-            Title = newItNewsTitle.Trim(),
+            Title = itemTitle,
             Content = newItNewsContent.Trim(),
             PostedOn = DateTime.UtcNow
         });
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Added IT News Item {itemTitle}");
 
         newItNewsTitle = string.Empty;
         newItNewsContent = string.Empty;
@@ -414,6 +419,10 @@
 
         item.Title = editItNewsTitle.Trim();
         item.Content = editItNewsContent.Trim();
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Edited IT News Item {item.Title}");
+
         await SaveNewsAndShowStatus();
         CancelEditNewsItem();
     }
@@ -423,11 +432,16 @@
         if (itNewsItems == null)
             return;
 
+        var itemTitle = item.Title;
+
         itNewsItems.Remove(item);
         if (editingItNewsId == item.Id)
         {
             CancelEditNewsItem();
         }
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted IT News Item {itemTitle}");
 
         await SaveNewsAndShowStatus();
     }
@@ -446,6 +460,13 @@
         await Task.Delay(2500);
         showNewsSaveSuccess = false;
         StateHasChanged();
+    }
+
+
+    private async Task<string> GetCurrentUserNameAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        return authState.User?.Identity?.Name ?? "anonymous";
     }
 
     private void GeneratePassword()
