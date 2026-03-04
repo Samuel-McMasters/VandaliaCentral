@@ -23,6 +23,7 @@ window.adminFlappyBird = (() => {
     let dotNetRef = null;
     let animationId = null;
     let keyHandler = null;
+    let canvasElementId = null;
 
     const gravity = 0.45;
     const flapStrength = -7.5;
@@ -187,6 +188,7 @@ window.adminFlappyBird = (() => {
     };
 
     const init = (canvasId, dotNetObjectRef) => {
+        canvasElementId = canvasId;
         canvas = document.getElementById(canvasId);
         if (!canvas) {
             return false;
@@ -215,8 +217,28 @@ window.adminFlappyBird = (() => {
     };
 
     const start = () => {
+        if (!canvasElementId) {
+            canvasElementId = "adminFlappyCanvas";
+        }
+
         if (!canvas || !ctx) {
-            return;
+            canvas = document.getElementById(canvasElementId);
+            ctx = canvas ? canvas.getContext("2d") : null;
+        }
+
+        if (!canvas || !ctx) {
+            return false;
+        }
+
+        if (!keyHandler) {
+            keyHandler = (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    flap();
+                }
+            };
+
+            window.addEventListener("keydown", keyHandler);
         }
 
         if (animationId) {
@@ -227,6 +249,7 @@ window.adminFlappyBird = (() => {
         resetState();
         draw();
         animationId = window.requestAnimationFrame(tick);
+        return true;
     };
 
     const dispose = () => {
@@ -246,6 +269,7 @@ window.adminFlappyBird = (() => {
         gameStarted = false;
         gameOver = false;
         pipes = [];
+        canvasElementId = null;
     };
 
     return {

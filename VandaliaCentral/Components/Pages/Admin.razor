@@ -271,6 +271,10 @@
                         <div class="d-flex gap-2 mt-3">
                             <button class="btn btn-primary" @onclick="StartFlappyGame">Start / Restart</button>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(flappyStatusMessage))
+                        {
+                            <div class="mt-2 text-danger small">@flappyStatusMessage</div>
+                        }
                         <div class="mt-2 small text-muted">
                             Signed in as: <strong>@currentUserName</strong>
                         </div>
@@ -334,6 +338,7 @@
     private int lastFlappyScore = 0;
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
+    private string? flappyStatusMessage;
 
     private void SetActiveTab(string tab)
     {
@@ -395,22 +400,50 @@
         }
     }
 
-    private async Task InitializeFlappyGameAsync()
+    private async Task<bool> InitializeFlappyGameAsync(bool force = false)
     {
-        if (flappyInitialized)
+        if (flappyInitialized && !force)
         {
-            return;
+            return true;
         }
 
         flappyDotNetRef?.Dispose();
         flappyDotNetRef = DotNetObjectReference.Create(this);
         flappyInitialized = await JS.InvokeAsync<bool>("adminFlappyBird.init", "adminFlappyCanvas", flappyDotNetRef);
+        return flappyInitialized;
     }
 
     private async Task StartFlappyGame()
     {
-        await InitializeFlappyGameAsync();
-        await JS.InvokeVoidAsync("adminFlappyBird.start");
+        flappyStatusMessage = null;
+
+        try
+        {
+            var initialized = await InitializeFlappyGameAsync();
+            if (!initialized)
+            {
+                await Task.Delay(50);
+                initialized = await InitializeFlappyGameAsync(force: true);
+            }
+
+            if (!initialized)
+            {
+                flappyStatusMessage = "Game canvas was not ready. Please try again.";
+                return;
+            }
+
+            var started = await JS.InvokeAsync<bool>("adminFlappyBird.start");
+            if (!started)
+            {
+                flappyInitialized = false;
+                flappyStatusMessage = "Unable to start game. Please click Start again.";
+            }
+        }
+        catch
+        {
+            flappyInitialized = false;
+            flappyStatusMessage = "Unable to start game due to a script error. Please refresh and try again.";
+        }
     }
 
     [JSInvokable]
