@@ -1,0 +1,259 @@
+@page "/training-school"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using VandaliaCentral.Services
+@layout VandaliaCentral.Components.Layout.TopBarLayout
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject TrainingDocumentService TrainingDocumentService
+@inject LoggingService Logger
+
+@attribute [Authorize]
+
+<PageTitle>Training School</PageTitle>
+
+<div class="container-fluid px-3 px-md-4 px-xl-5 py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xxl-11">
+            <div class="bg-white border rounded shadow-sm p-4 p-md-5">
+                <h3 class="text-center mb-4">Training School</h3>
+
+                <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "all-courses" ? "active" : "")" @onclick='() => SetActiveTab("all-courses")'>All Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Course History</button>
+                    </li>
+                    @if (IsTrainer)
+                    {
+                        <li class="nav-item">
+                            <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
+                        </li>
+                    }
+                </ul>
+
+                <div class="border rounded p-4 bg-light-subtle">
+                    @if (activeTab == "my-courses")
+                    {
+                        <p class="mb-0">My Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "all-courses")
+                    {
+                        <p class="mb-0">All Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "course-history")
+                    {
+                        <p class="mb-0">Course History content is coming soon.</p>
+                    }
+                    else if (activeTab == "trainer-tools" && IsTrainer)
+                    {
+                        <h5 class="mb-3">Trainer Tools</h5>
+
+                        <ul class="nav nav-tabs mb-4">
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "upload-documents" ? "active" : "")' @onclick='() => SetTrainerToolTab("upload-documents")'>Upload Documents</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "training-documents" ? "active" : "")' @onclick='() => SetTrainerToolTab("training-documents")'>Training Documents</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "create-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("create-course")'>Create Course</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "edit-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("edit-course")'>Edit Course</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "assign-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("assign-course")'>Assign Course</button>
+                            </li>
+                        </ul>
+
+                        @if (trainerToolTab == "upload-documents")
+                        {
+                            <div class="d-flex flex-wrap gap-3 align-items-center">
+                                <label class="btn btn-primary text-nowrap">
+                                    Upload Document or Video
+                                    <InputFile OnChange="HandleTrainingFileUpload" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.mp4,.mov,.avi,.wmv,.m4v,.webm" class="d-none" />
+                                </label>
+                                @if (!string.IsNullOrWhiteSpace(uploadStatus))
+                                {
+                                    <span class="badge bg-secondary fs-6">@uploadStatus</span>
+                                }
+                            </div>
+                            <p class="text-muted mt-3 mb-0">Supported file types: common docs and videos. Uploading an existing filename will overwrite it.</p>
+                        }
+                        else if (trainerToolTab == "training-documents")
+                        {
+                            <div class="mb-3" style="max-width: 460px;">
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search training documents..."
+                                       @bind="trainingDocumentSearchTerm"
+                                       @bind:event="oninput" />
+                            </div>
+
+                            @if (trainingDocuments == null)
+                            {
+                                <p>Loading training documents...</p>
+                            }
+                            else if (!FilteredTrainingDocuments.Any())
+                            {
+                                if (!string.IsNullOrWhiteSpace(trainingDocumentSearchTerm))
+                                {
+                                    <p class="text-muted mb-0">No training documents matched your search.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No training documents or videos uploaded yet.</p>
+                                }
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var doc in FilteredTrainingDocuments)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                            <div>
+                                                <div class="fw-semibold text-break">@doc.FileName</div>
+                                                <div class="text-muted small">@FormatFileSize(doc.SizeInBytes) • @(doc.LastModified?.LocalDateTime.ToString("g") ?? "Unknown")</div>
+                                            </div>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                                <a class="btn btn-sm btn-primary" href="@($"/api/training-documents/download?fileName={Uri.EscapeDataString(doc.FileName)}")">Download</a>
+                                                <button class="btn btn-sm btn-danger" @onclick='() => DeleteTrainingDocument(doc.FileName)'>Delete</button>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        else if (trainerToolTab == "create-course")
+                        {
+                            <p class="mb-0">Create Course is coming soon.</p>
+                        }
+                        else if (trainerToolTab == "edit-course")
+                        {
+                            <p class="mb-0">Edit Course is coming soon.</p>
+                        }
+                        else if (trainerToolTab == "assign-course")
+                        {
+                            <p class="mb-0">Assign Course is coming soon.</p>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
+    private bool IsTrainer;
+    private string activeTab = "my-courses";
+    private string trainerToolTab = "upload-documents";
+    private string? uploadStatus;
+    private List<TrainingDocumentInfo>? trainingDocuments;
+    private string trainingDocumentSearchTerm = string.Empty;
+    private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
+        trainingDocuments?
+            .Where(doc => string.IsNullOrWhiteSpace(trainingDocumentSearchTerm)
+                || doc.FileName.Contains(trainingDocumentSearchTerm, StringComparison.OrdinalIgnoreCase))
+            ?? Enumerable.Empty<TrainingDocumentInfo>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsTrainer = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == TrainerGroupId);
+
+        if (IsTrainer)
+        {
+            await LoadTrainingDocumentsAsync();
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        if (tab == "trainer-tools" && !IsTrainer)
+        {
+            return;
+        }
+
+        activeTab = tab;
+    }
+
+    private void SetTrainerToolTab(string tab)
+    {
+        trainerToolTab = tab;
+    }
+
+    private async Task HandleTrainingFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        uploadStatus = "Uploading...";
+
+        try
+        {
+            await TrainingDocumentService.UploadDocumentAsync(file);
+            await LoadTrainingDocumentsAsync();
+            uploadStatus = "Upload successful!";
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+            await Logger.LogActivityAsync(userName, $"Uploaded training file: '{file.Name}'");
+        }
+        catch (Exception ex)
+        {
+            uploadStatus = $"Upload failed: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteTrainingDocument(string fileName)
+    {
+        await TrainingDocumentService.DeleteDocumentAsync(fileName);
+        await LoadTrainingDocumentsAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+        await Logger.LogActivityAsync(userName, $"Deleted training file: '{fileName}'");
+    }
+
+    private async Task LoadTrainingDocumentsAsync()
+    {
+        trainingDocuments = await TrainingDocumentService.ListDocumentsAsync();
+    }
+
+    private static string FormatFileSize(long? sizeInBytes)
+    {
+        if (sizeInBytes is null)
+        {
+            return "Unknown size";
+        }
+
+        var size = sizeInBytes.Value;
+        if (size < 1024)
+        {
+            return $"{size} B";
+        }
+
+        var kb = size / 1024d;
+        if (kb < 1024)
+        {
+            return $"{kb:F1} KB";
+        }
+
+        var mb = kb / 1024d;
+        if (mb < 1024)
+        {
+            return $"{mb:F1} MB";
+        }
+
+        var gb = mb / 1024d;
+        return $"{gb:F1} GB";
+    }
+}
