@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Components.Forms;
@@ -63,6 +64,27 @@ public class SowDocumentService
         await using var stream = file.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024);
         await blobClient.UploadAsync(stream, overwrite: true);
         await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/pdf" });
+    }
+
+    public async Task<BlobDownloadStreamingResult?> DownloadDocumentAsync(string fileName)
+    {
+        var safeFileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeFileName) || !safeFileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var blobClient = _containerClient.GetBlobClient(safeFileName);
+
+        try
+        {
+            var response = await blobClient.DownloadStreamingAsync();
+            return response.Value;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
     }
 
     public async Task DeleteDocumentAsync(string fileName)
