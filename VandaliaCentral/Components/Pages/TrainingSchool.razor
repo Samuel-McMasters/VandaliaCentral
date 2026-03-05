@@ -1,0 +1,92 @@
+@page "/training-school"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@layout VandaliaCentral.Components.Layout.TopBarLayout
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@attribute [Authorize]
+
+<PageTitle>Training School</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            <div class="bg-white border rounded shadow-sm p-4 p-md-5">
+                <h3 class="text-center mb-4">Training School</h3>
+
+                <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "all-courses" ? "active" : "")" @onclick='() => SetActiveTab("all-courses")'>All Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Course History</button>
+                    </li>
+                    <li class="nav-item">
+                        @if (IsTrainer)
+                        {
+                            <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
+                        }
+                        else
+                        {
+                            <button class="nav-link disabled" type="button" disabled>Trainer Tools</button>
+                        }
+                    </li>
+                </ul>
+
+                <div class="border rounded p-4 bg-light-subtle">
+                    @if (activeTab == "my-courses")
+                    {
+                        <p class="mb-0">My Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "all-courses")
+                    {
+                        <p class="mb-0">All Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "course-history")
+                    {
+                        <p class="mb-0">Course History content is coming soon.</p>
+                    }
+                    else if (activeTab == "trainer-tools")
+                    {
+                        @if (IsTrainer)
+                        {
+                            <p class="mb-0">Trainer Tools content is coming soon.</p>
+                        }
+                        else
+                        {
+                            <p class="mb-0 text-danger">You are not authorized to access Trainer Tools.</p>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
+    private bool IsTrainer;
+    private string activeTab = "my-courses";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsTrainer = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == TrainerGroupId);
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        if (tab == "trainer-tools" && !IsTrainer)
+        {
+            return;
+        }
+
+        activeTab = tab;
+    }
+}
