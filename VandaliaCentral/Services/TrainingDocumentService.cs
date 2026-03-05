@@ -2,7 +2,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Components.Forms;
-using System.Text.Json;
+
 using System.Text.Json;
 
 
@@ -53,7 +53,13 @@ public class TrainingDocumentService
     {
         WriteIndented = true
     };
+}
 
+
+public class TrainingDocumentService
+{
+    private const string ContainerName = "training-school";
+    private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -81,7 +87,6 @@ public class TrainingDocumentService
                 continue;
             }
 
-
             documents.Add(new TrainingDocumentInfo
             {
                 FileName = blob.Name,
@@ -96,6 +101,7 @@ public class TrainingDocumentService
             .OrderByDescending(d => d.LastModified ?? DateTimeOffset.MinValue)
             .ToList();
     }
+
 
     public async Task<List<TrainingExamSummary>> ListExamsAsync()
     {
