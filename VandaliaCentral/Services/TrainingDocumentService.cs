@@ -132,6 +132,38 @@ namespace VandaliaCentral.Services
                 .ToList();
         }
 
+        public async Task<TrainingExam?> GetExamAsync(string examId)
+        {
+            var safeExamId = Path.GetFileNameWithoutExtension(examId);
+            if (string.IsNullOrWhiteSpace(safeExamId))
+            {
+                return null;
+            }
+
+            var blobClient = _containerClient.GetBlobClient($"{ExamFolderPrefix}{safeExamId}.json");
+
+            try
+            {
+                var download = await blobClient.DownloadContentAsync();
+                return download.Value.Content.ToObjectFromJson<TrainingExam>();
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
+        }
+
+        public async Task DeleteExamAsync(string examId)
+        {
+            var safeExamId = Path.GetFileNameWithoutExtension(examId);
+            if (string.IsNullOrWhiteSpace(safeExamId))
+            {
+                return;
+            }
+
+            await _containerClient.DeleteBlobIfExistsAsync($"{ExamFolderPrefix}{safeExamId}.json");
+        }
+
         public async Task SaveExamAsync(TrainingExam exam)
         {
             if (string.IsNullOrWhiteSpace(exam.Title))
