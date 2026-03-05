@@ -144,41 +144,53 @@
                         }
                         else if (trainerToolTab == "users")
                         {
-                            <div class="mb-3" style="max-width: 460px;">
-                                <input type="search"
-                                       class="form-control"
-                                       placeholder="Search users..."
-                                       @bind="userSearchTerm"
-                                       @bind:event="oninput" />
-                            </div>
+                            <div class="row g-4 align-items-start">
+                                <div class="col-12 col-xl-8">
+                                    <div class="mb-3" style="max-width: 460px;">
+                                        <input type="search"
+                                               class="form-control"
+                                               placeholder="Search users..."
+                                               @bind="userSearchTerm"
+                                               @bind:event="oninput" />
+                                    </div>
 
-                            @if (entraUsers == null)
-                            {
-                                <p>Loading users...</p>
-                            }
-                            else if (!FilteredEntraUsers.Any())
-                            {
-                                if (!string.IsNullOrWhiteSpace(userSearchTerm))
-                                {
-                                    <p class="text-muted mb-0">No users matched your search.</p>
-                                }
-                                else
-                                {
-                                    <p class="text-muted mb-0">No users were returned from Entra.</p>
-                                }
-                            }
-                            else
-                            {
-                                <ul class="list-group" style="max-width: 1000px;">
-                                    @foreach (var user in FilteredEntraUsers)
+                                    <h6 class="mb-2">All Users</h6>
+                                    @if (entraUsers == null)
                                     {
-                                        <li class="list-group-item">
-                                            <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
-                                            <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
-                                        </li>
+                                        <p>Loading users...</p>
                                     }
-                                </ul>
-                            }
+                                    else if (!FilteredEntraUsers.Any())
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(userSearchTerm))
+                                        {
+                                            <p class="text-muted mb-0">No users matched your search.</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-muted mb-0">No users were returned from Entra.</p>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group" style="max-width: 1000px;">
+                                            @foreach (var user in FilteredEntraUsers)
+                                            {
+                                                <li class="list-group-item">
+                                                    <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
+                                                    <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+
+                                <div class="col-12 col-xl-4">
+                                    <div class="border rounded bg-white p-3">
+                                        <h6 class="mb-2">Active Users</h6>
+                                        <p class="text-muted mb-0">No active users assigned yet.</p>
+                                    </div>
+                                </div>
+                            </div>
                         }
                         else if (trainerToolTab == "exams")
                         {
