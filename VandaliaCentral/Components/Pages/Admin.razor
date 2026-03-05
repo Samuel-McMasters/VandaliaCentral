@@ -17,6 +17,7 @@
 @inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 @inject IPasswordGeneratorService PasswordGenerator
 @inject FlappyLeaderboardService FlappyLeaderboardService
+@inject SowDocumentService SowDocumentService
 @implements IAsyncDisposable
 
 
@@ -52,6 +53,11 @@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("itnews"))' @onclick='() => SetActiveTab("itnews")' type='button'>
                     IT News
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("sowdocs"))' @onclick='() => SetActiveTab("sowdocs")' type='button'>
+                    SOW Documents
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -223,6 +229,52 @@
             </div>
         }
 
+        @if (activeTab == "sowdocs")
+        {
+            <div>
+                <h5>Scope of Work Documents</h5>
+
+                <div class="pt-2 pb-3 d-flex flex-wrap gap-3 align-items-center">
+                    <label class="btn btn-primary text-nowrap">
+                        Upload SOW PDF
+                        <InputFile OnChange="HandleSowFileUpload" accept=".pdf,application/pdf" class="d-none" />
+                    </label>
+
+                    @if (!string.IsNullOrWhiteSpace(sowUploadStatus))
+                    {
+                        <span class="badge bg-secondary fs-6">@sowUploadStatus</span>
+                    }
+                </div>
+
+                @if (sowDocuments == null)
+                {
+                    <p>Loading SOW documents...</p>
+                }
+                else if (!sowDocuments.Any())
+                {
+                    <p class="text-muted">No SOW documents uploaded yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group" style="max-width: 900px;">
+                        @foreach (var document in sowDocuments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                                <div>
+                                    <div class="fw-semibold">@document.Title</div>
+                                    <div class="text-muted small">@document.FileName</div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-primary" href="@document.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteSowDocument(document)">Delete</button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+
         @if (activeTab == "mondayminute")
         {
             <MondayMinuteManager />
@@ -349,6 +401,8 @@
     private bool canClearFlappyLeaderboard = false;
     private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
     private bool isClearingFlappyLeaderboard = false;
+    private List<SowDocumentInfo>? sowDocuments;
+    private string? sowUploadStatus;
 
     private void SetActiveTab(string tab)
     {
@@ -391,6 +445,7 @@
                 calendarEvents = await CalendarService.LoadCalendarAsync();
                 itNewsItems = await ItNewsService.LoadNewsAsync();
                 flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+                sowDocuments = await SowDocumentService.ListDocumentsAsync();
             }
         }
         catch (MsalUiRequiredException ex)
@@ -662,6 +717,52 @@
         StateHasChanged();
     }
 
+
+    private async Task HandleSowFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file is null)
+        {
+            return;
+        }
+
+        if (!file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(file.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            sowUploadStatus = "Only PDF uploads are allowed.";
+            return;
+        }
+
+        try
+        {
+            sowUploadStatus = "Uploading...";
+            await SowDocumentService.UploadDocumentAsync(file);
+
+            var userName = await GetCurrentUserNameAsync();
+            await Logger.LogActivityAsync(userName, $"Uploaded SOW document {file.Name}");
+
+            sowDocuments = await SowDocumentService.ListDocumentsAsync();
+            sowUploadStatus = "Upload successful!";
+
+            await Task.Delay(2000);
+            sowUploadStatus = null;
+        }
+        catch (Exception ex)
+        {
+            sowUploadStatus = $"Upload failed: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteSowDocument(SowDocumentInfo document)
+    {
+        await SowDocumentService.DeleteDocumentAsync(document.FileName);
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted SOW document {document.FileName}");
+
+        sowDocuments = await SowDocumentService.ListDocumentsAsync();
+    }
 
     private async Task<string> GetCurrentUserNameAsync()
     {
