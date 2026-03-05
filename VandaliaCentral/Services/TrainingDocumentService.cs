@@ -3,6 +3,8 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Text.Json;
+using System.Text.Json;
+
 
 namespace VandaliaCentral.Services;
 
@@ -52,6 +54,7 @@ public class TrainingDocumentService
         WriteIndented = true
     };
 
+
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
@@ -77,6 +80,7 @@ public class TrainingDocumentService
             {
                 continue;
             }
+
 
             documents.Add(new TrainingDocumentInfo
             {
@@ -164,6 +168,7 @@ public class TrainingDocumentService
         await blobClient.UploadAsync(stream, overwrite: true);
         await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
     }
+
 
     public async Task UploadDocumentAsync(IBrowserFile file)
     {
