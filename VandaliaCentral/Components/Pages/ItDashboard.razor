@@ -3,6 +3,7 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject ItNewsService ItNewsService
+@inject SowDocumentService SowDocumentService
 
 @attribute [Authorize]
 
@@ -47,6 +48,36 @@
 
         <div class="col-12 col-lg-5">
             <div class="p-4 border rounded bg-white shadow-sm h-100 d-flex flex-column">
+                <h5 class="mb-3">Scope of Work Documents</h5>
+
+                @if (sowDocuments == null)
+                {
+                    <p class="text-muted mb-0">Loading SOW documents...</p>
+                }
+                else if (!sowDocuments.Any())
+                {
+                    <p class="text-muted mb-0">No SOW documents are available right now.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var doc in sowDocuments)
+                        {
+                            <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3">
+                                <div class="text-break">@doc.Title</div>
+                                <div class="d-flex gap-2 flex-shrink-0">
+                                    <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                    <a class="btn btn-sm btn-primary" href="@doc.Url" download="@doc.FileName">Download</a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="p-4 border rounded bg-white shadow-sm h-100 d-flex flex-column">
                 <h5 class="mb-3">Support Actions</h5>
                 <p class="text-muted">Need help? Choose an option below.</p>
                 <div class="d-grid gap-2 mt-2">
@@ -64,9 +95,11 @@
 
 @code {
     private List<ItNewsItem>? itNewsItems;
+    private List<SowDocumentInfo>? sowDocuments;
 
     protected override async Task OnInitializedAsync()
     {
         itNewsItems = await ItNewsService.LoadNewsAsync();
+        sowDocuments = await SowDocumentService.ListDocumentsAsync();
     }
 }
