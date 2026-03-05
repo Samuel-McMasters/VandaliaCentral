@@ -2,10 +2,12 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Graph
 @using VandaliaCentral.Services
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject TrainingDocumentService TrainingDocumentService
+@inject GraphUserService GraphUserService
 @inject LoggingService Logger
 
 @attribute [Authorize]
@@ -62,6 +64,9 @@
                             </li>
                             <li class="nav-item">
                                 <button class='nav-link @(trainerToolTab == "assign-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("assign-course")'>Assign Course</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
                             </li>
                         </ul>
 
@@ -132,6 +137,44 @@
                         {
                             <p class="mb-0">Assign Course is coming soon.</p>
                         }
+                        else if (trainerToolTab == "users")
+                        {
+                            <div class="mb-3" style="max-width: 460px;">
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search users..."
+                                       @bind="userSearchTerm"
+                                       @bind:event="oninput" />
+                            </div>
+
+                            @if (entraUsers == null)
+                            {
+                                <p>Loading users...</p>
+                            }
+                            else if (!FilteredEntraUsers.Any())
+                            {
+                                if (!string.IsNullOrWhiteSpace(userSearchTerm))
+                                {
+                                    <p class="text-muted mb-0">No users matched your search.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No users were returned from Entra.</p>
+                                }
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var user in FilteredEntraUsers)
+                                    {
+                                        <li class="list-group-item">
+                                            <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
+                                            <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
                     }
                 </div>
             </div>
@@ -147,11 +190,22 @@
     private string? uploadStatus;
     private List<TrainingDocumentInfo>? trainingDocuments;
     private string trainingDocumentSearchTerm = string.Empty;
+    private List<User>? entraUsers;
+    private string userSearchTerm = string.Empty;
+
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
         trainingDocuments?
             .Where(doc => string.IsNullOrWhiteSpace(trainingDocumentSearchTerm)
                 || doc.FileName.Contains(trainingDocumentSearchTerm, StringComparison.OrdinalIgnoreCase))
             ?? Enumerable.Empty<TrainingDocumentInfo>();
+
+    private IEnumerable<User> FilteredEntraUsers =>
+        entraUsers?
+            .Where(user => string.IsNullOrWhiteSpace(userSearchTerm)
+                || (user.DisplayName?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (user.Mail?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (user.UserPrincipalName?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+            ?? Enumerable.Empty<User>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -164,6 +218,7 @@
         if (IsTrainer)
         {
             await LoadTrainingDocumentsAsync();
+            await LoadEntraUsersAsync();
         }
     }
 
@@ -216,6 +271,11 @@
     private async Task LoadTrainingDocumentsAsync()
     {
         trainingDocuments = await TrainingDocumentService.ListDocumentsAsync();
+    }
+
+    private async Task LoadEntraUsersAsync()
+    {
+        entraUsers = (await GraphUserService.GetAllUsersAsync()).ToList();
     }
 
     private static string FormatFileSize(long? sizeInBytes)
