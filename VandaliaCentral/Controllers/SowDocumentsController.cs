@@ -25,10 +25,10 @@ public class SowDocumentsController : ControllerBase
             return NotFound();
         }
 
-        var contentType = string.IsNullOrWhiteSpace(download.Value.Details.ContentType)
+        var contentType = string.IsNullOrWhiteSpace(download.Details.ContentType)
             ? "application/pdf"
-            : download.Value.Details.ContentType;
+            : download.Details.ContentType;
 
-        return File(download.Value.Content, contentType, Path.GetFileName(fileName));
+        return File(download.Content, contentType, Path.GetFileName(fileName));
     }
 }
