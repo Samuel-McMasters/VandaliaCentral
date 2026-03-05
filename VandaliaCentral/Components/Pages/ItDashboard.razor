@@ -84,9 +84,9 @@
                         @foreach (var doc in sowDocuments)
                         {
                             <li class="list-group-item px-0 py-3">
-                                <div class="d-flex flex-column gap-2">
+                                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                                     <div class="fw-semibold text-break">@doc.Title</div>
-                                    <div class="d-flex gap-2 flex-wrap">
+                                    <div class="d-flex gap-2 flex-shrink-0">
                                         <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
                                         <a class="btn btn-sm btn-primary" href="@doc.Url" download="@doc.FileName">Download</a>
                                     </div>
@@ -108,6 +108,10 @@
 
     .it-dashboard-page .hero-actions {
         min-width: 240px;
+    }
+
+    .it-dashboard-page .hero-actions .btn {
+        width: 220px;
     }
 
     .it-dashboard-page .empty-state {
