@@ -24,16 +24,12 @@
                     <li class="nav-item">
                         <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Course History</button>
                     </li>
-                    <li class="nav-item">
-                        @if (IsTrainer)
-                        {
+                    @if (IsTrainer)
+                    {
+                        <li class="nav-item">
                             <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
-                        }
-                        else
-                        {
-                            <button class="nav-link disabled" type="button" disabled>Trainer Tools</button>
-                        }
-                    </li>
+                        </li>
+                    }
                 </ul>
 
                 <div class="border rounded p-4 bg-light-subtle">
@@ -49,16 +45,9 @@
                     {
                         <p class="mb-0">Course History content is coming soon.</p>
                     }
-                    else if (activeTab == "trainer-tools")
+                    else if (activeTab == "trainer-tools" && IsTrainer)
                     {
-                        @if (IsTrainer)
-                        {
-                            <p class="mb-0">Trainer Tools content is coming soon.</p>
-                        }
-                        else
-                        {
-                            <p class="mb-0 text-danger">You are not authorized to access Trainer Tools.</p>
-                        }
+                        <p class="mb-0">Trainer Tools content is coming soon.</p>
                     }
                 </div>
             </div>
