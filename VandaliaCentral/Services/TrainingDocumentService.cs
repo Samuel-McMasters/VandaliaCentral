@@ -2,7 +2,10 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Components.Forms;
+<<<<<<< codex/add-training-menu-and-training-school-page
 using System.Text.Json;
+=======
+>>>>>>> training-school
 
 namespace VandaliaCentral.Services;
 
@@ -15,6 +18,7 @@ public class TrainingDocumentInfo
     public DateTimeOffset? LastModified { get; set; }
 }
 
+<<<<<<< codex/add-training-menu-and-training-school-page
 public class TrainingExam
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -52,6 +56,13 @@ public class TrainingDocumentService
         WriteIndented = true
     };
 
+=======
+public class TrainingDocumentService
+{
+    private const string ContainerName = "training-school";
+    private const long MaxFileSizeBytes = 500L * 1024 * 1024;
+
+>>>>>>> training-school
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
@@ -73,11 +84,14 @@ public class TrainingDocumentService
 
         await foreach (var blob in _containerClient.GetBlobsAsync())
         {
+<<<<<<< codex/add-training-menu-and-training-school-page
             if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
+=======
+>>>>>>> training-school
             documents.Add(new TrainingDocumentInfo
             {
                 FileName = blob.Name,
@@ -93,6 +107,7 @@ public class TrainingDocumentService
             .ToList();
     }
 
+<<<<<<< codex/add-training-menu-and-training-school-page
     public async Task<List<TrainingExamSummary>> ListExamsAsync()
     {
         var exams = new List<TrainingExamSummary>();
@@ -165,6 +180,8 @@ public class TrainingDocumentService
         await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
     }
 
+=======
+>>>>>>> training-school
     public async Task UploadDocumentAsync(IBrowserFile file)
     {
         var safeFileName = Path.GetFileName(file.Name);

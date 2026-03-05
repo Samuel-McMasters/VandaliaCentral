@@ -68,9 +68,12 @@
                             <li class="nav-item">
                                 <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
                             </li>
+<<<<<<< codex/add-training-menu-and-training-school-page
                             <li class="nav-item">
                                 <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
                             </li>
+=======
+>>>>>>> training-school
                         </ul>
 
                         @if (trainerToolTab == "documents")
@@ -178,6 +181,7 @@
                                 </ul>
                             }
                         }
+<<<<<<< codex/add-training-menu-and-training-school-page
                         else if (trainerToolTab == "exams")
                         {
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -279,6 +283,8 @@
                                 </ul>
                             }
                         }
+=======
+>>>>>>> training-school
                     }
                 </div>
             </div>
@@ -296,6 +302,7 @@
     private string trainingDocumentSearchTerm = string.Empty;
     private List<User>? entraUsers;
     private string userSearchTerm = string.Empty;
+<<<<<<< codex/add-training-menu-and-training-school-page
     private List<TrainingExamSummary>? exams;
     private bool isCreatingExam;
     private string examTitle = string.Empty;
@@ -306,6 +313,8 @@
     private HashSet<int> correctAnswerIndexes = new();
     private readonly List<TrainingExamQuestion> draftQuestions = new();
     private string? examStatusMessage;
+=======
+>>>>>>> training-school
 
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
         trainingDocuments?
@@ -333,7 +342,10 @@
         {
             await LoadTrainingDocumentsAsync();
             await LoadEntraUsersAsync();
+<<<<<<< codex/add-training-menu-and-training-school-page
             await LoadExamsAsync();
+=======
+>>>>>>> training-school
         }
     }
 
@@ -393,6 +405,7 @@
         entraUsers = (await GraphUserService.GetAllUsersAsync()).ToList();
     }
 
+<<<<<<< codex/add-training-menu-and-training-school-page
     private async Task LoadExamsAsync()
     {
         exams = await TrainingDocumentService.ListExamsAsync();
@@ -545,6 +558,8 @@
         draftQuestions.Clear();
     }
 
+=======
+>>>>>>> training-school
     private static string FormatFileSize(long? sizeInBytes)
     {
         if (sizeInBytes is null)
