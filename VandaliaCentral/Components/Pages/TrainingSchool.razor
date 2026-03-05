@@ -12,9 +12,9 @@
 
 <PageTitle>Training School</PageTitle>
 
-<div class="container py-5">
+<div class="container-fluid px-3 px-md-4 px-xl-5 py-5">
     <div class="row justify-content-center">
-        <div class="col-12 col-xl-10">
+        <div class="col-12 col-xxl-11">
             <div class="bg-white border rounded shadow-sm p-4 p-md-5">
                 <h3 class="text-center mb-4">Training School</h3>
 
@@ -87,18 +87,33 @@
                         }
                         else if (trainerToolTab == "training-documents")
                         {
+                            <div class="mb-3" style="max-width: 460px;">
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search training documents..."
+                                       @bind="trainingDocumentSearchTerm"
+                                       @bind:event="oninput" />
+                            </div>
+
                             @if (trainingDocuments == null)
                             {
                                 <p>Loading training documents...</p>
                             }
-                            else if (!trainingDocuments.Any())
+                            else if (!FilteredTrainingDocuments.Any())
                             {
-                                <p class="text-muted mb-0">No training documents or videos uploaded yet.</p>
+                                if (!string.IsNullOrWhiteSpace(trainingDocumentSearchTerm))
+                                {
+                                    <p class="text-muted mb-0">No training documents matched your search.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No training documents or videos uploaded yet.</p>
+                                }
                             }
                             else
                             {
                                 <ul class="list-group" style="max-width: 1000px;">
-                                    @foreach (var doc in trainingDocuments)
+                                    @foreach (var doc in FilteredTrainingDocuments)
                                     {
                                         <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
                                             <div>
@@ -141,6 +156,12 @@
     private string trainerToolTab = "upload-documents";
     private string? uploadStatus;
     private List<TrainingDocumentInfo>? trainingDocuments;
+    private string trainingDocumentSearchTerm = string.Empty;
+    private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
+        trainingDocuments?
+            .Where(doc => string.IsNullOrWhiteSpace(trainingDocumentSearchTerm)
+                || doc.FileName.Contains(trainingDocumentSearchTerm, StringComparison.OrdinalIgnoreCase))
+            ?? Enumerable.Empty<TrainingDocumentInfo>();
 
     protected override async Task OnInitializedAsync()
     {
