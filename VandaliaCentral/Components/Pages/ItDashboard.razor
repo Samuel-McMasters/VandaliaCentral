@@ -3,21 +3,37 @@
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject ItNewsService ItNewsService
+@inject SowDocumentService SowDocumentService
 
 @attribute [Authorize]
 
 <PageTitle>IT Dashboard</PageTitle>
 
-<div class="container py-4">
-    <div class="p-4 border rounded bg-white shadow-sm mb-4">
-        <h3 class="mb-2">IT Dashboard</h3>
-        <p class="text-muted mb-0">Your one-stop spot for IT updates, support links, and announcements.</p>
-    </div>
+<div class="container py-4 it-dashboard-page">
+    <section class="it-hero border rounded-3 shadow-sm p-4 p-lg-5 mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-4">
+            <div>
+                <h3 class="mb-2">IT Dashboard</h3>
+                <p class="text-muted mb-0">Quick access to support, recent updates, and Scope of Work documents.</p>
+            </div>
 
-    <div class="row g-4">
-        <div class="col-12 col-lg-7">
-            <div class="p-4 border rounded bg-white shadow-sm h-100">
-                <h5 class="mb-3">IT News</h5>
+            <div class="d-grid gap-2 hero-actions">
+                <a class="btn btn-primary" href="https://support.vandaliarental.com/support/home" target="_blank" rel="noopener noreferrer">
+                    View Support Tickets
+                </a>
+                <a class="btn btn-outline-primary" href="/supportticket">
+                    Submit a Ticket
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4 align-items-stretch">
+        <div class="col-12 col-xl-7">
+            <section class="dashboard-card border rounded-3 shadow-sm p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">IT News</h5>
+                </div>
 
                 @if (itNewsItems == null)
                 {
@@ -25,48 +41,95 @@
                 }
                 else if (!itNewsItems.Any())
                 {
-                    <p class="text-muted mb-0">No IT news has been posted yet.</p>
+                    <div class="empty-state">
+                        <p class="text-muted mb-0">No IT news has been posted yet.</p>
+                    </div>
                 }
                 else
                 {
                     <ul class="list-group list-group-flush">
                         @foreach (var item in itNewsItems)
                         {
-                            <li class="list-group-item px-0">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong>@item.Title</strong>
-                                    <span class="text-muted small">@item.PostedOn.ToLocalTime().ToString("MMM d, yyyy")</span>
+                            <li class="list-group-item px-0 py-3">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-1 mb-2">
+                                    <strong class="me-3">@item.Title</strong>
+                                    <span class="text-muted small flex-shrink-0">@item.PostedOn.ToLocalTime().ToString("MMM d, yyyy")</span>
                                 </div>
                                 <p class="mb-0 text-muted" style="white-space: pre-wrap;">@item.Content</p>
                             </li>
                         }
                     </ul>
                 }
-            </div>
+            </section>
         </div>
 
-        <div class="col-12 col-lg-5">
-            <div class="p-4 border rounded bg-white shadow-sm h-100 d-flex flex-column">
-                <h5 class="mb-3">Support Actions</h5>
-                <p class="text-muted">Need help? Choose an option below.</p>
-                <div class="d-grid gap-2 mt-2">
-                    <a class="btn btn-primary w-100" href="https://support.vandaliarental.com/support/home" target="_blank" rel="noopener noreferrer">
-                        View Your Support Tickets
-                    </a>
-                    <a class="btn btn-outline-primary w-100" href="/supportticket">
-                        Submit A Ticket
-                    </a>
-                </div>
-            </div>
+        <div class="col-12 col-xl-5">
+            <section class="dashboard-card border rounded-3 shadow-sm p-4 h-100">
+                <h5 class="mb-2">Scope of Work Documents</h5>
+                <p class="text-muted small mb-3">View documents in your browser or download a copy.</p>
+
+                @if (sowDocuments == null)
+                {
+                    <p class="text-muted mb-0">Loading SOW documents...</p>
+                }
+                else if (!sowDocuments.Any())
+                {
+                    <div class="empty-state">
+                        <p class="text-muted mb-0">No SOW documents are available right now.</p>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush sow-list">
+                        @foreach (var doc in sowDocuments)
+                        {
+                            <li class="list-group-item px-0 py-3">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="fw-semibold text-break">@doc.Title</div>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                        <a class="btn btn-sm btn-primary" href="@doc.Url" download="@doc.FileName">Download</a>
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
         </div>
     </div>
 </div>
 
+<style>
+    .it-dashboard-page .it-hero,
+    .it-dashboard-page .dashboard-card {
+        background: #fff;
+    }
+
+    .it-dashboard-page .hero-actions {
+        min-width: 240px;
+    }
+
+    .it-dashboard-page .empty-state {
+        border: 1px dashed #dee2e6;
+        border-radius: .5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+
+    .it-dashboard-page .sow-list .list-group-item:last-child,
+    .it-dashboard-page .list-group-item:last-child {
+        border-bottom: 0;
+    }
+</style>
+
 @code {
     private List<ItNewsItem>? itNewsItems;
+    private List<SowDocumentInfo>? sowDocuments;
 
     protected override async Task OnInitializedAsync()
     {
         itNewsItems = await ItNewsService.LoadNewsAsync();
+        sowDocuments = await SowDocumentService.ListDocumentsAsync();
     }
 }
