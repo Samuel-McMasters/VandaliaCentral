@@ -224,17 +224,20 @@
                                         <label class="form-label">Possible Answers</label>
                                         @for (var i = 0; i < answerOptions.Count; i++)
                                         {
-                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                            var optionIndex = i;
+                                            <div class="d-flex align-items-center gap-2 mb-2" @key="optionIndex">
                                                 @if (questionType == "multiple-choice")
                                                 {
-                                                    <input class="form-check-input" type="radio" name="correctAnswer" checked="@(correctAnswerIndexes.Contains(i))" @onchange="() => SetSingleCorrectAnswer(i)" />
+                                                    <input class="form-check-input" type="radio" name="correctAnswer" checked="@(correctAnswerIndexes.Contains(optionIndex))" @onchange="() => SetSingleCorrectAnswer(optionIndex)" />
                                                 }
                                                 else
                                                 {
-                                                    <input class="form-check-input" type="checkbox" checked="@(correctAnswerIndexes.Contains(i))" @onchange="() => ToggleCorrectAnswer(i)" />
+                                                    <input class="form-check-input" type="checkbox" checked="@(correctAnswerIndexes.Contains(optionIndex))" @onchange="() => ToggleCorrectAnswer(optionIndex)" />
                                                 }
-                                                <input class="form-control" @bind="answerOptions[i]" />
-                                                <button class="btn btn-outline-danger btn-sm" type="button" @onclick='() => RemoveAnswerOption(i)' disabled="@(answerOptions.Count <= 2)">Remove</button>
+                                                <input class="form-control"
+                                                       value="@GetAnswerOptionValue(optionIndex)"
+                                                       @oninput='(ChangeEventArgs e) => UpdateAnswerOption(optionIndex, e.Value?.ToString() ?? string.Empty)' />
+                                                <button class="btn btn-outline-danger btn-sm" type="button" @onclick='() => RemoveAnswerOption(optionIndex)' disabled="@(answerOptions.Count <= 2)">Remove</button>
                                             </div>
                                         }
 
@@ -426,6 +429,26 @@
     private void AddAnswerOption()
     {
         answerOptions.Add(string.Empty);
+    }
+
+    private string GetAnswerOptionValue(int index)
+    {
+        if (index < 0 || index >= answerOptions.Count)
+        {
+            return string.Empty;
+        }
+
+        return answerOptions[index];
+    }
+
+    private void UpdateAnswerOption(int index, string value)
+    {
+        if (index < 0 || index >= answerOptions.Count)
+        {
+            return;
+        }
+
+        answerOptions[index] = value;
     }
 
     private void RemoveAnswerOption(int index)
