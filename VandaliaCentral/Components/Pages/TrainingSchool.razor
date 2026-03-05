@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Graph
+@using System.Threading
 @using VandaliaCentral.Services
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -11,6 +12,7 @@
 @inject LoggingService Logger
 
 @attribute [Authorize]
+@implements IDisposable
 
 <PageTitle>Training School</PageTitle>
 
@@ -342,6 +344,7 @@
     private string activeTab = "my-courses";
     private string trainerToolTab = "documents";
     private string? uploadStatus;
+    private CancellationTokenSource? uploadStatusCts;
     private List<TrainingDocumentInfo>? trainingDocuments;
     private string trainingDocumentSearchTerm = string.Empty;
     private List<User>? entraUsers;
@@ -361,6 +364,7 @@
     private HashSet<int> correctAnswerIndexes = new();
     private readonly List<TrainingExamQuestion> draftQuestions = new();
     private string? examStatusMessage;
+    private CancellationTokenSource? examStatusCts;
 
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
         trainingDocuments?
@@ -410,13 +414,13 @@
     private async Task HandleTrainingFileUpload(InputFileChangeEventArgs e)
     {
         var file = e.File;
-        uploadStatus = "Uploading...";
+        SetUploadStatus("Uploading...");
 
         try
         {
             await TrainingDocumentService.UploadDocumentAsync(file);
             await LoadTrainingDocumentsAsync();
-            uploadStatus = "Upload successful!";
+            SetUploadStatus("Upload successful!");
 
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userName = authState.User?.Identity?.Name ?? "anonymous";
@@ -424,7 +428,7 @@
         }
         catch (Exception ex)
         {
-            uploadStatus = $"Upload failed: {ex.Message}";
+            SetUploadStatus($"Upload failed: {ex.Message}");
         }
     }
 
@@ -472,7 +476,7 @@
         isEditingExam = false;
         editingExamId = null;
         ResetExamBuilder();
-        examStatusMessage = null;
+        SetExamStatus(null);
     }
 
     private void CancelExamCreation()
@@ -571,7 +575,7 @@
         var validationError = ValidateCurrentQuestion();
         if (validationError != null)
         {
-            examStatusMessage = validationError;
+            SetExamStatus(validationError);
             return;
         }
 
@@ -581,20 +585,20 @@
         answerOptions = new List<string> { string.Empty, string.Empty };
         correctAnswerIndexes.Clear();
         questionType = "multiple-choice";
-        examStatusMessage = $"Question {draftQuestions.Count} added.";
+        SetExamStatus($"Question {draftQuestions.Count} added.");
     }
 
     private async Task SaveExamAsync()
     {
         if (string.IsNullOrWhiteSpace(examTitle))
         {
-            examStatusMessage = "Please enter an exam title.";
+            SetExamStatus("Please enter an exam title.");
             return;
         }
 
         if (passingScorePercent is < 1 or > 100)
         {
-            examStatusMessage = "Passing score must be between 1 and 100.";
+            SetExamStatus("Passing score must be between 1 and 100.");
             return;
         }
 
@@ -605,7 +609,7 @@
             var validationError = ValidateCurrentQuestion();
             if (validationError != null)
             {
-                examStatusMessage = validationError;
+                SetExamStatus(validationError);
                 return;
             }
 
@@ -614,7 +618,7 @@
 
         if (!allQuestions.Any())
         {
-            examStatusMessage = "Add at least one question before saving.";
+            SetExamStatus("Add at least one question before saving.");
             return;
         }
 
@@ -632,12 +636,12 @@
             isCreatingExam = false;
             isEditingExam = false;
             editingExamId = null;
-            examStatusMessage = "Exam saved successfully.";
+            SetExamStatus("Exam saved successfully.");
             ResetExamBuilder();
         }
         catch (Exception ex)
         {
-            examStatusMessage = $"Could not save exam: {ex.Message}";
+            SetExamStatus($"Could not save exam: {ex.Message}");
         }
     }
 
@@ -651,7 +655,7 @@
         var exam = await TrainingDocumentService.GetExamAsync(examId);
         if (exam == null)
         {
-            examStatusMessage = "Could not load exam for editing.";
+            SetExamStatus("Could not load exam for editing.");
             return;
         }
 
@@ -674,7 +678,7 @@
         questionText = string.Empty;
         answerOptions = new List<string> { string.Empty, string.Empty };
         correctAnswerIndexes.Clear();
-        examStatusMessage = $"Editing exam: {exam.Title}";
+        SetExamStatus($"Editing exam: {exam.Title}");
     }
 
     private void PromptDeleteExam(string examId, string examTitleValue)
@@ -707,7 +711,7 @@
             CancelExamCreation();
         }
 
-        examStatusMessage = "Exam deleted.";
+        SetExamStatus("Exam deleted.");
         CancelDeleteExam();
     }
 
@@ -758,6 +762,82 @@
         answerOptions = new List<string> { string.Empty, string.Empty };
         correctAnswerIndexes.Clear();
         draftQuestions.Clear();
+    }
+
+    private void SetUploadStatus(string? message)
+    {
+        uploadStatus = message;
+
+        uploadStatusCts?.Cancel();
+        uploadStatusCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            uploadStatusCts = null;
+            return;
+        }
+
+        uploadStatusCts = new CancellationTokenSource();
+        _ = AutoClearUploadStatusAsync(uploadStatusCts.Token);
+    }
+
+    private async Task AutoClearUploadStatusAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            await InvokeAsync(() =>
+            {
+                uploadStatus = null;
+                StateHasChanged();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore canceled timers.
+        }
+    }
+
+    private void SetExamStatus(string? message)
+    {
+        examStatusMessage = message;
+
+        examStatusCts?.Cancel();
+        examStatusCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            examStatusCts = null;
+            return;
+        }
+
+        examStatusCts = new CancellationTokenSource();
+        _ = AutoClearExamStatusAsync(examStatusCts.Token);
+    }
+
+    private async Task AutoClearExamStatusAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            await InvokeAsync(() =>
+            {
+                examStatusMessage = null;
+                StateHasChanged();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore canceled timers.
+        }
+    }
+
+    public void Dispose()
+    {
+        uploadStatusCts?.Cancel();
+        uploadStatusCts?.Dispose();
+        examStatusCts?.Cancel();
+        examStatusCts?.Dispose();
     }
 
     private static string FormatFileSize(long? sizeInBytes)
