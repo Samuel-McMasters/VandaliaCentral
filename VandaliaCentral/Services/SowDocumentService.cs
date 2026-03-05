@@ -61,7 +61,8 @@ public class SowDocumentService
         var blobClient = _containerClient.GetBlobClient(fileName);
 
         await using var stream = file.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024);
-        await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" }, overwrite: true);
+        await blobClient.UploadAsync(stream, overwrite: true);
+        await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/pdf" });
     }
 
     public async Task DeleteDocumentAsync(string fileName)
