@@ -71,10 +71,6 @@
                             <li class="nav-item">
                                 <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
                             </li>
-                            <li class="nav-item">
-                                <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
-                            </li>
-
                         </ul>
 
                         @if (trainerToolTab == "documents")
@@ -184,9 +180,6 @@
                         }
                         else if (trainerToolTab == "exams")
                         {
-                            @* Exam builder is intentionally inline here for quick trainer workflow access. *@
-                        else if (trainerToolTab == "exams")
-                        {
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                 <h6 class="mb-0">Created Exams</h6>
                                 <button class="btn btn-primary" type="button" @onclick="StartExamCreation">Create Exam</button>
@@ -286,7 +279,6 @@
                                 </ul>
                             }
                         }
-
                     }
                 </div>
             </div>
@@ -316,7 +308,6 @@
     private readonly List<TrainingExamQuestion> draftQuestions = new();
     private string? examStatusMessage;
 
-
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
         trainingDocuments?
             .Where(doc => string.IsNullOrWhiteSpace(trainingDocumentSearchTerm)
@@ -344,8 +335,6 @@
             await LoadTrainingDocumentsAsync();
             await LoadEntraUsersAsync();
             await LoadExamsAsync();
-            await LoadExamsAsync();
-
         }
     }
 
@@ -402,7 +391,20 @@
 
     private async Task LoadEntraUsersAsync()
     {
-        entraUsers = (await GraphUserService.GetAllUsersAsync()).ToList();
+        // Use GetAllUsersAsync when available, but fall back to GetUsersAsync for compatibility.
+        var getAllUsersMethod = GraphUserService.GetType().GetMethod("GetAllUsersAsync");
+
+        if (getAllUsersMethod != null)
+        {
+            var methodTask = (Task<IEnumerable<User>>?)getAllUsersMethod.Invoke(GraphUserService, null);
+            if (methodTask != null)
+            {
+                entraUsers = (await methodTask).ToList();
+                return;
+            }
+        }
+
+        entraUsers = (await GraphUserService.GetUsersAsync()).ToList();
     }
 
     private async Task LoadExamsAsync()
@@ -580,7 +582,6 @@
         correctAnswerIndexes.Clear();
         draftQuestions.Clear();
     }
-
 
     private static string FormatFileSize(long? sizeInBytes)
     {

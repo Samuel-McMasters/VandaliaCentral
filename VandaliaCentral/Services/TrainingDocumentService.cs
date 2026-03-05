@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Components.Forms;
 using System.Text.Json;
 
 
+
+
 namespace VandaliaCentral.Services;
 
 public class TrainingDocumentInfo
@@ -55,11 +57,6 @@ public class TrainingDocumentService
     };
 }
 
-
-public class TrainingDocumentService
-{
-    private const string ContainerName = "training-school";
-    private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -174,7 +171,6 @@ public class TrainingDocumentService
         await blobClient.UploadAsync(stream, overwrite: true);
         await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
     }
-
 
     public async Task UploadDocumentAsync(IBrowserFile file)
     {
