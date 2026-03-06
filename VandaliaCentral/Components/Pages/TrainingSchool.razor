@@ -199,6 +199,11 @@
                                         }
                                         else
                                         {
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                <button class="btn btn-primary btn-sm" type="button" @onclick="AssignLearningToSelectedUser">Assign Learning</button>
+                                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="CloseSelectedUserProfile">Close</button>
+                                            </div>
+
                                             <div class="mb-3">
                                                 <div><strong>Name:</strong> @(selectedUserProfile.DisplayName ?? "Unknown")</div>
                                                 <div><strong>Email:</strong> @(selectedUserProfile.Mail ?? selectedUserProfile.UserPrincipalName ?? "No email")</div>
@@ -585,6 +590,20 @@
         {
             isLoadingSelectedUserProfile = false;
         }
+    }
+
+    private void CloseSelectedUserProfile()
+    {
+        selectedUserId = null;
+        selectedUserProfile = null;
+        selectedUserTrainingProfile = null;
+        isLoadingSelectedUserProfile = false;
+    }
+
+    private Task AssignLearningToSelectedUser()
+    {
+        // Placeholder for future assignment workflow.
+        return Task.CompletedTask;
     }
 
     private async Task<User?> GetGraphUserProfileAsync(User fallbackUser)
