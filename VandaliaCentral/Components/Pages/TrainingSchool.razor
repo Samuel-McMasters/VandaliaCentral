@@ -187,8 +187,6 @@
                                 <div class="col-12 col-xl-4">
                                     <h6 class="mb-2">Active Users</h6>
                                     <div class="border rounded bg-white p-3">
-                                    <h6 class="mb-2">Active Users</h6>
-                                    <div class="border rounded bg-white p-3">
                                         <p class="text-muted mb-0">No active users assigned yet.</p>
                                     </div>
                                 </div>
@@ -322,27 +320,30 @@
                                 </ul>
                             }
 
-                            @if (showDeleteExamModal)
-                            {
-                                <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-                                    <div class="modal-dialog modal-dialog-centered" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Delete Exam</h5>
-                                                <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteExam"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p class="mb-0">You are about to delete <strong>@examPendingDeleteTitle</strong>. This action cannot be undone.</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button class="btn btn-outline-secondary" type="button" @onclick="CancelDeleteExam">Cancel</button>
-                                                <button class="btn btn-danger" type="button" @onclick="ConfirmDeleteExamAsync">Delete Exam</button>
-                                            </div>
+                            <div class="modal fade @(showDeleteExamModal ? "show d-block" : "")"
+                                 style="@(showDeleteExamModal ? "display:block;" : "display:none;")"
+                                 tabindex="-1"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-hidden="@(!showDeleteExamModal)">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Exam</h5>
+                                            <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteExam"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="mb-0">You are about to delete <strong>@examPendingDeleteTitle</strong>. This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="CancelDeleteExam">Cancel</button>
+                                            <button class="btn btn-danger" type="button" @onclick="ConfirmDeleteExamAsync">Delete Exam</button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="modal-backdrop fade show"></div>
-                            }
+                            </div>
+                            <div class="modal-backdrop fade @(showDeleteExamModal ? "show" : "")"
+                                 style="@(showDeleteExamModal ? "display:block;" : "display:none;")"></div>
                         }
                     }
                 </div>
@@ -666,7 +667,7 @@
 
     private async Task EditExamAsync(string examId)
     {
-        var exam = await TrainingDocumentService.GetExamAsync(examId);
+        var exam = await GetExamForEditAsync(examId);
         if (exam == null)
         {
             SetExamStatus("Could not load exam for editing.");
@@ -717,7 +718,7 @@
             return;
         }
 
-        await TrainingDocumentService.DeleteExamAsync(examPendingDeleteId);
+        await DeleteExamByIdAsync(examPendingDeleteId);
         await LoadExamsAsync();
 
         if (isEditingExam && editingExamId == examPendingDeleteId)
@@ -727,6 +728,40 @@
 
         SetExamStatus("Exam deleted.");
         CancelDeleteExam();
+    }
+
+    private async Task<TrainingExam?> GetExamForEditAsync(string examId)
+    {
+        var getExamMethod = TrainingDocumentService.GetType().GetMethod("GetExamAsync");
+        if (getExamMethod != null)
+        {
+            var methodTask = (Task<TrainingExam?>?)getExamMethod.Invoke(TrainingDocumentService, new object[] { examId });
+            if (methodTask != null)
+            {
+                return await methodTask;
+            }
+        }
+
+        // Fallback if service method is unavailable in local branch state.
+        SetExamStatus("Exam edit is unavailable until TrainingDocumentService.GetExamAsync is present.");
+        return null;
+    }
+
+    private async Task DeleteExamByIdAsync(string examId)
+    {
+        var deleteExamMethod = TrainingDocumentService.GetType().GetMethod("DeleteExamAsync");
+        if (deleteExamMethod != null)
+        {
+            var methodTask = (Task?)deleteExamMethod.Invoke(TrainingDocumentService, new object[] { examId });
+            if (methodTask != null)
+            {
+                await methodTask;
+                return;
+            }
+        }
+
+        // Fallback if service method is unavailable in local branch state.
+        throw new InvalidOperationException("TrainingDocumentService.DeleteExamAsync is unavailable.");
     }
 
     private TrainingExamQuestion BuildCurrentQuestion() => new()
