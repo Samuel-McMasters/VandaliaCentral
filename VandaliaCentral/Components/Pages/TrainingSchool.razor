@@ -144,7 +144,6 @@
                         }
                         else if (trainerToolTab == "users")
                         {
-<<<<<<< codex/add-training-menu-and-training-school-page-qcuj1y
                             <div class="mb-3" style="max-width: 460px;">
                                 <input type="search"
                                        class="form-control"
@@ -155,18 +154,6 @@
 
                             <div class="row g-4 align-items-start">
                                 <div class="col-12 col-xl-8">
-=======
-                            <div class="row g-4 align-items-start">
-                                <div class="col-12 col-xl-8">
-                                    <div class="mb-3" style="max-width: 460px;">
-                                        <input type="search"
-                                               class="form-control"
-                                               placeholder="Search users..."
-                                               @bind="userSearchTerm"
-                                               @bind:event="oninput" />
-                                    </div>
-
->>>>>>> training-school
                                     <h6 class="mb-2">All Users</h6>
                                     @if (entraUsers == null)
                                     {
@@ -198,13 +185,10 @@
                                 </div>
 
                                 <div class="col-12 col-xl-4">
-<<<<<<< codex/add-training-menu-and-training-school-page-qcuj1y
                                     <h6 class="mb-2">Active Users</h6>
                                     <div class="border rounded bg-white p-3">
-=======
+                                    <h6 class="mb-2">Active Users</h6>
                                     <div class="border rounded bg-white p-3">
-                                        <h6 class="mb-2">Active Users</h6>
->>>>>>> training-school
                                         <p class="text-muted mb-0">No active users assigned yet.</p>
                                     </div>
                                 </div>
@@ -337,6 +321,28 @@
                                     }
                                 </ul>
                             }
+
+                            @if (showDeleteExamModal)
+                            {
+                                <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Delete Exam</h5>
+                                                <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteExam"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="mb-0">You are about to delete <strong>@examPendingDeleteTitle</strong>. This action cannot be undone.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-outline-secondary" type="button" @onclick="CancelDeleteExam">Cancel</button>
+                                                <button class="btn btn-danger" type="button" @onclick="ConfirmDeleteExamAsync">Delete Exam</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-backdrop fade show"></div>
+                            }
                         }
                     }
                 </div>
@@ -345,28 +351,6 @@
     </div>
 </div>
 
-
-@if (showDeleteExamModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Delete Exam</h5>
-                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteExam"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-0">You are about to delete <strong>@examPendingDeleteTitle</strong>. This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-outline-secondary" type="button" @onclick="CancelDeleteExam">Cancel</button>
-                    <button class="btn btn-danger" type="button" @onclick="ConfirmDeleteExamAsync">Delete Exam</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal-backdrop fade show"></div>
-}
 
 @code {
     private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
