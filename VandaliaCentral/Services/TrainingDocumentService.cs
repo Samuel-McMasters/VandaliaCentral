@@ -42,18 +42,33 @@ namespace VandaliaCentral.Services
         public DateTimeOffset CreatedAtUtc { get; set; }
     }
 
+    public class UserLearningAssignment
+    {
+        public string Title { get; set; } = string.Empty;
+        public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset? CompletedAtUtc { get; set; }
+    }
+
+    public class UserTrainingProfile
+    {
+        public string UserId { get; set; } = string.Empty;
+        public List<UserLearningAssignment> ActiveAssignedLearning { get; set; } = new();
+        public List<UserLearningAssignment> LearningHistory { get; set; } = new();
+    }
+
     public class TrainingDocumentService
     {
         private const string ContainerName = "training-school";
         private const string ExamFolderPrefix = "exams/";
+        private const string UserTrainingProfilePrefix = "user-training-profiles/";
         private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
-        private static readonly JsonSerializerOptions ExamSerializerOptions = new JsonSerializerOptions
+        private static readonly JsonSerializerOptions SerializerOptions = new()
         {
             WriteIndented = true
         };
 
-        private static readonly HashSet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         {
             ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
             ".mp4", ".mov", ".avi", ".wmv", ".m4v", ".webm"
@@ -74,7 +89,8 @@ namespace VandaliaCentral.Services
 
             await foreach (var blob in _containerClient.GetBlobsAsync())
             {
-                if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase))
+                if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -191,7 +207,47 @@ namespace VandaliaCentral.Services
             var blobName = $"{ExamFolderPrefix}{exam.Id}.json";
             var blobClient = _containerClient.GetBlobClient(blobName);
 
-            var json = JsonSerializer.Serialize(exam, ExamSerializerOptions);
+            var json = JsonSerializer.Serialize(exam, SerializerOptions);
+            await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+
+            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
+        }
+
+        public async Task<UserTrainingProfile> GetUserTrainingProfileAsync(string userId)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(userId);
+            if (string.IsNullOrWhiteSpace(safeUserId))
+            {
+                return new UserTrainingProfile();
+            }
+
+            var blobClient = _containerClient.GetBlobClient($"{UserTrainingProfilePrefix}{safeUserId}.json");
+
+            try
+            {
+                var download = await blobClient.DownloadContentAsync();
+                return download.Value.Content.ToObjectFromJson<UserTrainingProfile>()
+                    ?? new UserTrainingProfile { UserId = safeUserId };
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                return new UserTrainingProfile { UserId = safeUserId };
+            }
+        }
+
+        public async Task SaveUserTrainingProfileAsync(UserTrainingProfile profile)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(profile.UserId);
+            if (string.IsNullOrWhiteSpace(safeUserId))
+            {
+                throw new InvalidOperationException("User id is required for training profile save.");
+            }
+
+            profile.UserId = safeUserId;
+
+            var blobClient = _containerClient.GetBlobClient($"{UserTrainingProfilePrefix}{safeUserId}.json");
+            var json = JsonSerializer.Serialize(profile, SerializerOptions);
             await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
             await blobClient.UploadAsync(stream, overwrite: true);

@@ -111,6 +111,33 @@ namespace VandaliaCentral.Services
             }
         }
 
+        public async Task<User?> GetUserProfileAsync(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return null;
+                }
+
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                return await graphClient.Users[userId]
+                    .Request()
+                    .Select("id,displayName,mail,userPrincipalName,officeLocation")
+                    .GetAsync();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return null;
+            }
+        }
+
         public async Task<string?> GetCurrentUserOfficeLocationAsync()
         {
             try

@@ -153,7 +153,7 @@
                             </div>
 
                             <div class="row g-4 align-items-start">
-                                <div class="col-12 col-xl-8">
+                                <div class="col-12 col-xl-7">
                                     <h6 class="mb-2">All Users</h6>
                                     @if (entraUsers == null)
                                     {
@@ -175,7 +175,9 @@
                                         <ul class="list-group" style="max-width: 1000px;">
                                             @foreach (var user in FilteredEntraUsers)
                                             {
-                                                <li class="list-group-item">
+                                                <li class='list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")'
+                                                    style="cursor: pointer;"
+                                                    @onclick='async () => await SelectUserAsync(user)'>
                                                     <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
                                                     <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
                                                 </li>
@@ -184,10 +186,65 @@
                                     }
                                 </div>
 
-                                <div class="col-12 col-xl-4">
-                                    <h6 class="mb-2">Active Users</h6>
+                                <div class="col-12 col-xl-5">
+                                    <h6 class="mb-2">User Training Profile</h6>
                                     <div class="border rounded bg-white p-3">
-                                        <p class="text-muted mb-0">No active users assigned yet.</p>
+                                        @if (isLoadingSelectedUserProfile)
+                                        {
+                                            <p class="text-muted mb-0">Loading user profile...</p>
+                                        }
+                                        else if (selectedUserProfile == null)
+                                        {
+                                            <p class="text-muted mb-0">Select a user from the list to view their training profile.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="mb-3">
+                                                <div><strong>Name:</strong> @(selectedUserProfile.DisplayName ?? "Unknown")</div>
+                                                <div><strong>Email:</strong> @(selectedUserProfile.Mail ?? selectedUserProfile.UserPrincipalName ?? "No email")</div>
+                                                <div><strong>Office Location:</strong> @(selectedUserProfile.OfficeLocation ?? "Not set")</div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <h6 class="mb-2">Active Assigned Learning</h6>
+                                                @if (selectedUserTrainingProfile == null || !selectedUserTrainingProfile.ActiveAssignedLearning.Any())
+                                                {
+                                                    <p class="text-muted mb-0">No active learning assignments.</p>
+                                                }
+                                                else
+                                                {
+                                                    <ul class="list-group">
+                                                        @foreach (var assignment in selectedUserTrainingProfile.ActiveAssignedLearning)
+                                                        {
+                                                            <li class="list-group-item">
+                                                                <div class="fw-semibold text-break">@assignment.Title</div>
+                                                                <div class="small text-muted">Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <h6 class="mb-2">Learning History</h6>
+                                                @if (selectedUserTrainingProfile == null || !selectedUserTrainingProfile.LearningHistory.Any())
+                                                {
+                                                    <p class="text-muted mb-0">No completed learning history.</p>
+                                                }
+                                                else
+                                                {
+                                                    <ul class="list-group">
+                                                        @foreach (var history in selectedUserTrainingProfile.LearningHistory)
+                                                        {
+                                                            <li class="list-group-item">
+                                                                <div class="fw-semibold text-break">@history.Title</div>
+                                                                <div class="small text-muted">Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")</div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -364,6 +421,10 @@
     private string trainingDocumentSearchTerm = string.Empty;
     private List<User>? entraUsers;
     private string userSearchTerm = string.Empty;
+    private string? selectedUserId;
+    private User? selectedUserProfile;
+    private UserTrainingProfile? selectedUserTrainingProfile;
+    private bool isLoadingSelectedUserProfile;
     private List<TrainingExamSummary>? exams;
     private bool isCreatingExam;
     private bool isEditingExam;
@@ -483,6 +544,33 @@
     private async Task LoadExamsAsync()
     {
         exams = await TrainingDocumentService.ListExamsAsync();
+    }
+
+    private async Task SelectUserAsync(User user)
+    {
+        if (string.IsNullOrWhiteSpace(user.Id))
+        {
+            return;
+        }
+
+        selectedUserId = user.Id;
+        isLoadingSelectedUserProfile = true;
+
+        try
+        {
+            selectedUserProfile = await GraphUserService.GetUserProfileAsync(user.Id) ?? user;
+            selectedUserTrainingProfile = await TrainingDocumentService.GetUserTrainingProfileAsync(user.Id);
+        }
+        catch (Exception ex)
+        {
+            selectedUserProfile = user;
+            selectedUserTrainingProfile = new UserTrainingProfile { UserId = user.Id };
+            SetExamStatus($"Could not load full user profile: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingSelectedUserProfile = false;
+        }
     }
 
     private void StartExamCreation()
