@@ -1,0 +1,920 @@
+@page "/training-school"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Graph
+@using System.Threading
+@using VandaliaCentral.Services
+@layout VandaliaCentral.Components.Layout.TopBarLayout
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject TrainingDocumentService TrainingDocumentService
+@inject GraphUserService GraphUserService
+@inject LoggingService Logger
+
+@attribute [Authorize]
+@implements IDisposable
+
+<PageTitle>Training School</PageTitle>
+
+<div class="container-fluid px-3 px-md-4 px-xl-5 py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xxl-11">
+            <div class="bg-white border rounded shadow-sm p-4 p-md-5">
+                <h3 class="text-center mb-4">Training School</h3>
+
+                <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "all-courses" ? "active" : "")" @onclick='() => SetActiveTab("all-courses")'>All Courses</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Course History</button>
+                    </li>
+                    @if (IsTrainer)
+                    {
+                        <li class="nav-item">
+                            <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
+                        </li>
+                    }
+                </ul>
+
+                <div class="border rounded p-4 bg-light-subtle">
+                    @if (activeTab == "my-courses")
+                    {
+                        <p class="mb-0">My Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "all-courses")
+                    {
+                        <p class="mb-0">All Courses content is coming soon.</p>
+                    }
+                    else if (activeTab == "course-history")
+                    {
+                        <p class="mb-0">Course History content is coming soon.</p>
+                    }
+                    else if (activeTab == "trainer-tools" && IsTrainer)
+                    {
+                        <h5 class="mb-3">Trainer Tools</h5>
+
+                        <ul class="nav nav-tabs mb-4">
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "documents" ? "active" : "")' @onclick='() => SetTrainerToolTab("documents")'>Documents</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "courses" ? "active" : "")' @onclick='() => SetTrainerToolTab("courses")'>Courses</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "assign-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("assign-course")'>Assign Course</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
+                            </li>
+                        </ul>
+
+                        @if (trainerToolTab == "documents")
+                        {
+                            <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                                <label class="btn btn-primary text-nowrap mb-0">
+                                    Upload Document or Video
+                                    <InputFile OnChange="HandleTrainingFileUpload" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.mp4,.mov,.avi,.wmv,.m4v,.webm" class="d-none" />
+                                </label>
+                                @if (!string.IsNullOrWhiteSpace(uploadStatus))
+                                {
+                                    <span class="badge bg-secondary fs-6">@uploadStatus</span>
+                                }
+                            </div>
+
+                            <div class="mb-3" style="max-width: 460px;">
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search training documents..."
+                                       @bind="trainingDocumentSearchTerm"
+                                       @bind:event="oninput" />
+                            </div>
+
+                            @if (trainingDocuments == null)
+                            {
+                                <p>Loading training documents...</p>
+                            }
+                            else if (!FilteredTrainingDocuments.Any())
+                            {
+                                if (!string.IsNullOrWhiteSpace(trainingDocumentSearchTerm))
+                                {
+                                    <p class="text-muted mb-0">No training documents matched your search.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No training documents or videos uploaded yet.</p>
+                                }
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var doc in FilteredTrainingDocuments)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                            <div>
+                                                <div class="fw-semibold text-break">@doc.FileName</div>
+                                                <div class="text-muted small">@FormatFileSize(doc.SizeInBytes) • @(doc.LastModified?.LocalDateTime.ToString("g") ?? "Unknown")</div>
+                                            </div>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                                <a class="btn btn-sm btn-primary" href="@($"/api/training-documents/download?fileName={Uri.EscapeDataString(doc.FileName)}")">Download</a>
+                                                <button class="btn btn-sm btn-danger" @onclick='() => DeleteTrainingDocument(doc.FileName)'>Delete</button>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        else if (trainerToolTab == "courses")
+                        {
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                                <button class="btn btn-primary" type="button">Create Course</button>
+                            </div>
+                            <p class="mb-0">Course management tools are coming soon.</p>
+                        }
+                        else if (trainerToolTab == "assign-course")
+                        {
+                            <p class="mb-0">Assign Course is coming soon.</p>
+                        }
+                        else if (trainerToolTab == "users")
+                        {
+                            <div class="mb-3" style="max-width: 460px;">
+                                <input type="search"
+                                       class="form-control"
+                                       placeholder="Search users..."
+                                       @bind="userSearchTerm"
+                                       @bind:event="oninput" />
+                            </div>
+
+                            <div class="row g-4 align-items-start">
+                                <div class="col-12 col-xl-8">
+                                    <h6 class="mb-2">All Users</h6>
+                                    @if (entraUsers == null)
+                                    {
+                                        <p>Loading users...</p>
+                                    }
+                                    else if (!FilteredEntraUsers.Any())
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(userSearchTerm))
+                                        {
+                                            <p class="text-muted mb-0">No users matched your search.</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-muted mb-0">No users were returned from Entra.</p>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group" style="max-width: 1000px;">
+                                            @foreach (var user in FilteredEntraUsers)
+                                            {
+                                                <li class="list-group-item">
+                                                    <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
+                                                    <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+
+                                <div class="col-12 col-xl-4">
+                                    <h6 class="mb-2">Active Users</h6>
+                                    <div class="border rounded bg-white p-3">
+                                        <p class="text-muted mb-0">No active users assigned yet.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (trainerToolTab == "exams")
+                        {
+                            <div class="d-flex justify-content-start mb-2">
+                                <button class="btn btn-primary" type="button" @onclick="StartExamCreation">Create Exam</button>
+                            </div>
+                            <h6 class="mb-3">Created Exams</h6>
+
+                            @if (!string.IsNullOrWhiteSpace(examStatusMessage))
+                            {
+                                <div class="alert alert-info py-2">@examStatusMessage</div>
+                            }
+
+                            @if (isCreatingExam)
+                            {
+                                <div class="border rounded bg-white p-3 mb-4">
+                                    <h6 class="mb-3">@(isEditingExam ? "Edit Exam" : "Exam Creator")</h6>
+
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-12 col-md-8">
+                                            <label class="form-label">Exam Title</label>
+                                            <input class="form-control" @bind="examTitle" />
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Passing Score (%)</label>
+                                            <input class="form-control" type="number" min="1" max="100" @bind="passingScorePercent" />
+                                        </div>
+                                    </div>
+
+                                    <div class="border rounded p-3">
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label">Question Type</label>
+                                                <select class="form-select" @bind="questionType">
+                                                    <option value="multiple-choice">Multiple Choice</option>
+                                                    <option value="multiple-select">Multiple Select</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-md-8">
+                                                <label class="form-label">Question</label>
+                                                <input class="form-control" @bind="questionText" />
+                                            </div>
+                                        </div>
+
+                                        <label class="form-label">Possible Answers</label>
+                                        @for (var i = 0; i < answerOptions.Count; i++)
+                                        {
+                                            var optionIndex = i;
+                                            <div class="d-flex align-items-center gap-2 mb-2" @key="optionIndex">
+                                                @if (questionType == "multiple-choice")
+                                                {
+                                                    <input class="form-check-input" type="radio" name="correctAnswer" checked="@(correctAnswerIndexes.Contains(optionIndex))" @onchange="() => SetSingleCorrectAnswer(optionIndex)" />
+                                                }
+                                                else
+                                                {
+                                                    <input class="form-check-input" type="checkbox" checked="@(correctAnswerIndexes.Contains(optionIndex))" @onchange="() => ToggleCorrectAnswer(optionIndex)" />
+                                                }
+                                                <input class="form-control"
+                                                       value="@GetAnswerOptionValue(optionIndex)"
+                                                       @oninput='(ChangeEventArgs e) => UpdateAnswerOption(optionIndex, e.Value?.ToString() ?? string.Empty)' />
+                                                <button class="btn btn-outline-danger btn-sm" type="button" @onclick='() => RemoveAnswerOption(optionIndex)' disabled="@(answerOptions.Count <= 2)">Remove</button>
+                                            </div>
+                                        }
+
+                                        <button class="btn btn-outline-secondary btn-sm mb-3" type="button" @onclick="AddAnswerOption">Add Possible Answer</button>
+
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button class="btn btn-outline-primary" type="button" @onclick="AddQuestionToDraft">Add Another Question</button>
+                                            <button class="btn btn-success" type="button" @onclick="SaveExamAsync">@(isEditingExam ? "Save Changes" : "Save / Finish")</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="CancelExamCreation">Cancel</button>
+                                        </div>
+                                    </div>
+
+                                    @if (draftQuestions.Any())
+                                    {
+                                        <div class="mt-3">
+                                            <strong>Questions Added:</strong> @draftQuestions.Count
+                                        </div>
+
+                                        <ul class="list-group mt-2">
+                                            @for (var qIndex = 0; qIndex < draftQuestions.Count; qIndex++)
+                                            {
+                                                var question = draftQuestions[qIndex];
+                                                var localIndex = qIndex;
+                                                <li class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap" @key="localIndex">
+                                                    <div class="text-break">
+                                                        <div class="fw-semibold">Question @(localIndex + 1): @question.QuestionText</div>
+                                                        <div class="small text-muted">@question.QuestionType • @question.Options.Count option(s)</div>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm btn-outline-primary" type="button" @onclick="() => BeginEditDraftQuestion(localIndex)">Edit</button>
+                                                        <button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => RemoveDraftQuestion(localIndex)">Delete</button>
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+                            }
+
+                            @if (exams == null)
+                            {
+                                <p>Loading exams...</p>
+                            }
+                            else if (!exams.Any())
+                            {
+                                <p class="text-muted mb-0">No exams created yet.</p>
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var exam in exams)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                            <div>
+                                                <div class="fw-semibold text-break">@exam.Title</div>
+                                                <div class="small text-muted">
+                                                    @exam.QuestionCount question(s) • Passing Score: @exam.PassingScorePercent% • Created @exam.CreatedAtUtc.LocalDateTime.ToString("g")
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-outline-primary" type="button" @onclick='() => EditExamAsync(exam.Id)'>Edit</button>
+                                                <button class="btn btn-sm btn-outline-danger" type="button" @onclick='() => PromptDeleteExam(exam.Id, exam.Title)'>Delete</button>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+
+                            <div class="modal fade @(showDeleteExamModal ? "show d-block" : "")"
+                                 style="@(showDeleteExamModal ? "display:block;" : "display:none;")"
+                                 tabindex="-1"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-hidden="@(!showDeleteExamModal)">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Exam</h5>
+                                            <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteExam"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="mb-0">You are about to delete <strong>@examPendingDeleteTitle</strong>. This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="CancelDeleteExam">Cancel</button>
+                                            <button class="btn btn-danger" type="button" @onclick="ConfirmDeleteExamAsync">Delete Exam</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-backdrop fade @(showDeleteExamModal ? "show" : "")"
+                                 style="@(showDeleteExamModal ? "display:block;" : "display:none;")"></div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
+    private bool IsTrainer;
+    private string activeTab = "my-courses";
+    private string trainerToolTab = "documents";
+    private string? uploadStatus;
+    private CancellationTokenSource? uploadStatusCts;
+    private List<TrainingDocumentInfo>? trainingDocuments;
+    private string trainingDocumentSearchTerm = string.Empty;
+    private List<User>? entraUsers;
+    private string userSearchTerm = string.Empty;
+    private List<TrainingExamSummary>? exams;
+    private bool isCreatingExam;
+    private bool isEditingExam;
+    private string? editingExamId;
+    private bool showDeleteExamModal;
+    private string? examPendingDeleteId;
+    private string examPendingDeleteTitle = string.Empty;
+    private string examTitle = string.Empty;
+    private int passingScorePercent = 80;
+    private string questionType = "multiple-choice";
+    private string questionText = string.Empty;
+    private List<string> answerOptions = new() { string.Empty, string.Empty };
+    private HashSet<int> correctAnswerIndexes = new();
+    private readonly List<TrainingExamQuestion> draftQuestions = new();
+    private string? examStatusMessage;
+    private CancellationTokenSource? examStatusCts;
+
+    private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
+        trainingDocuments?
+            .Where(doc => string.IsNullOrWhiteSpace(trainingDocumentSearchTerm)
+                || doc.FileName.Contains(trainingDocumentSearchTerm, StringComparison.OrdinalIgnoreCase))
+            ?? Enumerable.Empty<TrainingDocumentInfo>();
+
+    private IEnumerable<User> FilteredEntraUsers =>
+        entraUsers?
+            .Where(user => string.IsNullOrWhiteSpace(userSearchTerm)
+                || (user.DisplayName?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (user.Mail?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (user.UserPrincipalName?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+            ?? Enumerable.Empty<User>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsTrainer = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == TrainerGroupId);
+
+        if (IsTrainer)
+        {
+            await LoadTrainingDocumentsAsync();
+            await LoadEntraUsersAsync();
+            await LoadExamsAsync();
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        if (tab == "trainer-tools" && !IsTrainer)
+        {
+            return;
+        }
+
+        activeTab = tab;
+    }
+
+    private void SetTrainerToolTab(string tab)
+    {
+        trainerToolTab = tab;
+    }
+
+    private async Task HandleTrainingFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        SetUploadStatus("Uploading...");
+
+        try
+        {
+            await TrainingDocumentService.UploadDocumentAsync(file);
+            await LoadTrainingDocumentsAsync();
+            SetUploadStatus("Upload successful!");
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User?.Identity?.Name ?? "anonymous";
+            await Logger.LogActivityAsync(userName, $"Uploaded training file: '{file.Name}'");
+        }
+        catch (Exception ex)
+        {
+            SetUploadStatus($"Upload failed: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteTrainingDocument(string fileName)
+    {
+        await TrainingDocumentService.DeleteDocumentAsync(fileName);
+        await LoadTrainingDocumentsAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userName = authState.User?.Identity?.Name ?? "anonymous";
+        await Logger.LogActivityAsync(userName, $"Deleted training file: '{fileName}'");
+    }
+
+    private async Task LoadTrainingDocumentsAsync()
+    {
+        trainingDocuments = await TrainingDocumentService.ListDocumentsAsync();
+    }
+
+    private async Task LoadEntraUsersAsync()
+    {
+        // Use GetAllUsersAsync when available, but fall back to GetUsersAsync for compatibility.
+        var getAllUsersMethod = GraphUserService.GetType().GetMethod("GetAllUsersAsync");
+
+        if (getAllUsersMethod != null)
+        {
+            var methodTask = (Task<IEnumerable<User>>?)getAllUsersMethod.Invoke(GraphUserService, null);
+            if (methodTask != null)
+            {
+                entraUsers = (await methodTask).ToList();
+                return;
+            }
+        }
+
+        entraUsers = (await GraphUserService.GetUsersAsync()).ToList();
+    }
+
+    private async Task LoadExamsAsync()
+    {
+        exams = await TrainingDocumentService.ListExamsAsync();
+    }
+
+    private void StartExamCreation()
+    {
+        isCreatingExam = true;
+        isEditingExam = false;
+        editingExamId = null;
+        ResetExamBuilder();
+        SetExamStatus(null);
+    }
+
+    private void CancelExamCreation()
+    {
+        isCreatingExam = false;
+        isEditingExam = false;
+        editingExamId = null;
+        ResetExamBuilder();
+    }
+
+    private void AddAnswerOption()
+    {
+        answerOptions.Add(string.Empty);
+    }
+
+    private string GetAnswerOptionValue(int index)
+    {
+        if (index < 0 || index >= answerOptions.Count)
+        {
+            return string.Empty;
+        }
+
+        return answerOptions[index];
+    }
+
+    private void UpdateAnswerOption(int index, string value)
+    {
+        if (index < 0 || index >= answerOptions.Count)
+        {
+            return;
+        }
+
+        answerOptions[index] = value;
+    }
+
+    private void RemoveAnswerOption(int index)
+    {
+        if (answerOptions.Count <= 2)
+        {
+            return;
+        }
+
+        answerOptions.RemoveAt(index);
+        correctAnswerIndexes = correctAnswerIndexes
+            .Where(i => i != index)
+            .Select(i => i > index ? i - 1 : i)
+            .ToHashSet();
+    }
+
+    private void SetSingleCorrectAnswer(int index)
+    {
+        correctAnswerIndexes.Clear();
+        correctAnswerIndexes.Add(index);
+    }
+
+    private void ToggleCorrectAnswer(int index)
+    {
+        if (!correctAnswerIndexes.Add(index))
+        {
+            correctAnswerIndexes.Remove(index);
+        }
+    }
+
+    private void BeginEditDraftQuestion(int index)
+    {
+        if (index < 0 || index >= draftQuestions.Count)
+        {
+            return;
+        }
+
+        var question = draftQuestions[index];
+        questionType = question.QuestionType;
+        questionText = question.QuestionText;
+        answerOptions = question.Options.ToList();
+        if (answerOptions.Count < 2)
+        {
+            answerOptions.Add(string.Empty);
+        }
+
+        correctAnswerIndexes = question.CorrectOptionIndexes.ToHashSet();
+        draftQuestions.RemoveAt(index);
+    }
+
+    private void RemoveDraftQuestion(int index)
+    {
+        if (index < 0 || index >= draftQuestions.Count)
+        {
+            return;
+        }
+
+        draftQuestions.RemoveAt(index);
+    }
+
+    private void AddQuestionToDraft()
+    {
+        var validationError = ValidateCurrentQuestion();
+        if (validationError != null)
+        {
+            SetExamStatus(validationError);
+            return;
+        }
+
+        draftQuestions.Add(BuildCurrentQuestion());
+
+        questionText = string.Empty;
+        answerOptions = new List<string> { string.Empty, string.Empty };
+        correctAnswerIndexes.Clear();
+        questionType = "multiple-choice";
+        SetExamStatus($"Question {draftQuestions.Count} added.");
+    }
+
+    private async Task SaveExamAsync()
+    {
+        if (string.IsNullOrWhiteSpace(examTitle))
+        {
+            SetExamStatus("Please enter an exam title.");
+            return;
+        }
+
+        if (passingScorePercent is < 1 or > 100)
+        {
+            SetExamStatus("Passing score must be between 1 and 100.");
+            return;
+        }
+
+        var allQuestions = draftQuestions.ToList();
+
+        if (HasStartedCurrentQuestion())
+        {
+            var validationError = ValidateCurrentQuestion();
+            if (validationError != null)
+            {
+                SetExamStatus(validationError);
+                return;
+            }
+
+            allQuestions.Add(BuildCurrentQuestion());
+        }
+
+        if (!allQuestions.Any())
+        {
+            SetExamStatus("Add at least one question before saving.");
+            return;
+        }
+
+        try
+        {
+            await TrainingDocumentService.SaveExamAsync(new TrainingExam
+            {
+                Id = editingExamId ?? string.Empty,
+                Title = examTitle.Trim(),
+                PassingScorePercent = passingScorePercent,
+                Questions = allQuestions
+            });
+
+            await LoadExamsAsync();
+            isCreatingExam = false;
+            isEditingExam = false;
+            editingExamId = null;
+            SetExamStatus("Exam saved successfully.");
+            ResetExamBuilder();
+        }
+        catch (Exception ex)
+        {
+            SetExamStatus($"Could not save exam: {ex.Message}");
+        }
+    }
+
+    private bool HasStartedCurrentQuestion() =>
+        !string.IsNullOrWhiteSpace(questionText)
+        || answerOptions.Any(a => !string.IsNullOrWhiteSpace(a))
+        || correctAnswerIndexes.Any();
+
+    private async Task EditExamAsync(string examId)
+    {
+        var exam = await GetExamForEditAsync(examId);
+        if (exam == null)
+        {
+            SetExamStatus("Could not load exam for editing.");
+            return;
+        }
+
+        isCreatingExam = true;
+        isEditingExam = true;
+        editingExamId = exam.Id;
+
+        examTitle = exam.Title;
+        passingScorePercent = exam.PassingScorePercent;
+        draftQuestions.Clear();
+        draftQuestions.AddRange(exam.Questions.Select(q => new TrainingExamQuestion
+        {
+            QuestionType = q.QuestionType,
+            QuestionText = q.QuestionText,
+            Options = q.Options.ToList(),
+            CorrectOptionIndexes = q.CorrectOptionIndexes.ToList()
+        }));
+
+        questionType = "multiple-choice";
+        questionText = string.Empty;
+        answerOptions = new List<string> { string.Empty, string.Empty };
+        correctAnswerIndexes.Clear();
+        SetExamStatus($"Editing exam: {exam.Title}");
+    }
+
+    private void PromptDeleteExam(string examId, string examTitleValue)
+    {
+        examPendingDeleteId = examId;
+        examPendingDeleteTitle = examTitleValue;
+        showDeleteExamModal = true;
+    }
+
+    private void CancelDeleteExam()
+    {
+        showDeleteExamModal = false;
+        examPendingDeleteId = null;
+        examPendingDeleteTitle = string.Empty;
+    }
+
+    private async Task ConfirmDeleteExamAsync()
+    {
+        if (string.IsNullOrWhiteSpace(examPendingDeleteId))
+        {
+            CancelDeleteExam();
+            return;
+        }
+
+        await DeleteExamByIdAsync(examPendingDeleteId);
+        await LoadExamsAsync();
+
+        if (isEditingExam && editingExamId == examPendingDeleteId)
+        {
+            CancelExamCreation();
+        }
+
+        SetExamStatus("Exam deleted.");
+        CancelDeleteExam();
+    }
+
+    private async Task<TrainingExam?> GetExamForEditAsync(string examId)
+    {
+        var getExamMethod = TrainingDocumentService.GetType().GetMethod("GetExamAsync");
+        if (getExamMethod != null)
+        {
+            var methodTask = (Task<TrainingExam?>?)getExamMethod.Invoke(TrainingDocumentService, new object[] { examId });
+            if (methodTask != null)
+            {
+                return await methodTask;
+            }
+        }
+
+        // Fallback if service method is unavailable in local branch state.
+        SetExamStatus("Exam edit is unavailable until TrainingDocumentService.GetExamAsync is present.");
+        return null;
+    }
+
+    private async Task DeleteExamByIdAsync(string examId)
+    {
+        var deleteExamMethod = TrainingDocumentService.GetType().GetMethod("DeleteExamAsync");
+        if (deleteExamMethod != null)
+        {
+            var methodTask = (Task?)deleteExamMethod.Invoke(TrainingDocumentService, new object[] { examId });
+            if (methodTask != null)
+            {
+                await methodTask;
+                return;
+            }
+        }
+
+        // Fallback if service method is unavailable in local branch state.
+        throw new InvalidOperationException("TrainingDocumentService.DeleteExamAsync is unavailable.");
+    }
+
+    private TrainingExamQuestion BuildCurrentQuestion() => new()
+    {
+        QuestionType = questionType,
+        QuestionText = questionText.Trim(),
+        Options = answerOptions.Select(a => a.Trim()).ToList(),
+        CorrectOptionIndexes = correctAnswerIndexes.OrderBy(i => i).ToList()
+    };
+
+    private string? ValidateCurrentQuestion()
+    {
+        if (string.IsNullOrWhiteSpace(questionText))
+        {
+            return "Please enter a question.";
+        }
+
+        if (answerOptions.Count < 2 || answerOptions.Any(a => string.IsNullOrWhiteSpace(a)))
+        {
+            return "Please provide at least two possible answers and fill all answer fields.";
+        }
+
+        if (!correctAnswerIndexes.Any())
+        {
+            return "Please choose at least one correct answer.";
+        }
+
+        if (questionType == "multiple-choice" && correctAnswerIndexes.Count != 1)
+        {
+            return "Multiple choice questions must have exactly one correct answer.";
+        }
+
+        if (passingScorePercent is < 1 or > 100)
+        {
+            return "Passing score must be between 1 and 100.";
+        }
+
+        return null;
+    }
+
+    private void ResetExamBuilder()
+    {
+        examTitle = string.Empty;
+        passingScorePercent = 80;
+        questionType = "multiple-choice";
+        questionText = string.Empty;
+        answerOptions = new List<string> { string.Empty, string.Empty };
+        correctAnswerIndexes.Clear();
+        draftQuestions.Clear();
+    }
+
+    private void SetUploadStatus(string? message)
+    {
+        uploadStatus = message;
+
+        uploadStatusCts?.Cancel();
+        uploadStatusCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            uploadStatusCts = null;
+            return;
+        }
+
+        uploadStatusCts = new CancellationTokenSource();
+        _ = AutoClearUploadStatusAsync(uploadStatusCts.Token);
+    }
+
+    private async Task AutoClearUploadStatusAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            await InvokeAsync(() =>
+            {
+                uploadStatus = null;
+                StateHasChanged();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore canceled timers.
+        }
+    }
+
+    private void SetExamStatus(string? message)
+    {
+        examStatusMessage = message;
+
+        examStatusCts?.Cancel();
+        examStatusCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            examStatusCts = null;
+            return;
+        }
+
+        examStatusCts = new CancellationTokenSource();
+        _ = AutoClearExamStatusAsync(examStatusCts.Token);
+    }
+
+    private async Task AutoClearExamStatusAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            await InvokeAsync(() =>
+            {
+                examStatusMessage = null;
+                StateHasChanged();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore canceled timers.
+        }
+    }
+
+    public void Dispose()
+    {
+        uploadStatusCts?.Cancel();
+        uploadStatusCts?.Dispose();
+        examStatusCts?.Cancel();
+        examStatusCts?.Dispose();
+    }
+
+    private static string FormatFileSize(long? sizeInBytes)
+    {
+        if (sizeInBytes is null)
+        {
+            return "Unknown size";
+        }
+
+        var size = sizeInBytes.Value;
+        if (size < 1024)
+        {
+            return $"{size} B";
+        }
+
+        var kb = size / 1024d;
+        if (kb < 1024)
+        {
+            return $"{kb:F1} KB";
+        }
+
+        var mb = kb / 1024d;
+        if (mb < 1024)
+        {
+            return $"{mb:F1} MB";
+        }
+
+        var gb = mb / 1024d;
+        return $"{gb:F1} GB";
+    }
+}
