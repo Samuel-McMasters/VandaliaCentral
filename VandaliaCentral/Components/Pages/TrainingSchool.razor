@@ -1,0 +1,167 @@
+@page "/training-school"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Graph
+@using Microsoft.Identity.Web
+@using VandaliaCentral.Services
+@inject GraphUserService UserService
+
+@attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All" })]
+
+<div class="container-fluid training-school-page py-4">
+    <h3 class="mb-3">Training School</h3>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "users" ? "active" : string.Empty)" @onclick='() => SetTab("users")' type="button">Users</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "documents" ? "active" : string.Empty)" @onclick='() => SetTab("documents")' type="button">Documents</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "exams" ? "active" : string.Empty)" @onclick='() => SetTab("exams")' type="button">Exams</button>
+        </li>
+    </ul>
+
+    @if (activeTab == "users")
+    {
+        <div class="position-relative">
+            @if (isLoadingUsers)
+            {
+                <p>Loading users...</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Job Title</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (filteredUsers.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-muted">No users found.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var user in filteredUsers)
+                                {
+                                    <tr role="button" class="training-user-row" @onclick="() => OpenUserPanel(user)">
+                                        <td>@user.DisplayName</td>
+                                        <td>@(user.Mail ?? user.UserPrincipalName)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(user.JobTitle) ? "-" : user.JobTitle)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(user.OfficeLocation) ? "-" : user.OfficeLocation)</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (selectedUser is not null)
+            {
+                <div class="training-user-overlay" role="dialog" aria-modal="true">
+                    <div class="training-user-overlay-card border rounded shadow bg-white">
+                        <div class="d-flex justify-content-between align-items-center border-bottom px-3 py-2">
+                            <h5 class="mb-0">@selectedUser.DisplayName</h5>
+                        </div>
+                        <div class="p-3">
+                            <dl class="row mb-3">
+                                <dt class="col-sm-3">Email</dt>
+                                <dd class="col-sm-9">@(selectedUser.Mail ?? selectedUser.UserPrincipalName ?? "-")</dd>
+
+                                <dt class="col-sm-3">Job title</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(selectedUser.JobTitle) ? "-" : selectedUser.JobTitle)</dd>
+
+                                <dt class="col-sm-3">Office</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(selectedUser.OfficeLocation) ? "-" : selectedUser.OfficeLocation)</dd>
+                            </dl>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CloseUserPanel">Close</button>
+                                <button type="button" class="btn btn-primary" @onclick="AssignLearning">Assign Learning</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (activeTab == "documents")
+    {
+        <div class="text-muted">Document tools are available in this tab.</div>
+    }
+    else
+    {
+        <div class="text-muted">Exam tools are available in this tab.</div>
+    }
+</div>
+
+<style>
+    .training-user-row { cursor: pointer; }
+    .training-user-row:hover { background-color: #f7f9fc; }
+
+    .training-user-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 27, 42, 0.4);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 1.25rem;
+        z-index: 20;
+    }
+
+    .training-user-overlay-card {
+        width: min(900px, 100%);
+        min-height: 60%;
+    }
+</style>
+
+@code {
+    private string activeTab = "users";
+    private bool isLoadingUsers = true;
+    private List<User> allUsers = new();
+    private List<User> filteredUsers = new();
+    private User? selectedUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var users = await UserService.GetUsersAsync();
+        allUsers = users.ToList();
+        filteredUsers = allUsers;
+        isLoadingUsers = false;
+    }
+
+    private void SetTab(string tab)
+    {
+        activeTab = tab;
+        if (tab != "users")
+        {
+            selectedUser = null;
+        }
+    }
+
+    private void OpenUserPanel(User user)
+    {
+        selectedUser = user;
+    }
+
+    private void CloseUserPanel()
+    {
+        selectedUser = null;
+    }
+
+    private void AssignLearning()
+    {
+        // Placeholder for future assign-learning workflow.
+    }
+}
