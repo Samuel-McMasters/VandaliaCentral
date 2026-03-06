@@ -67,6 +67,77 @@ namespace VandaliaCentral.Services
         }
 
 
+
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            try
+            {
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                var users = new List<User>();
+
+                var page = await graphClient.Users
+                    .Request()
+                    .Select("id,displayName,mail,userPrincipalName,jobTitle")
+                    .Top(100)
+                    .GetAsync();
+
+                while (page != null)
+                {
+                    users.AddRange(page.CurrentPage.Where(u => !string.IsNullOrWhiteSpace(u.DisplayName)));
+
+                    if (page.NextPageRequest != null)
+                    {
+                        page = await page.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                return users
+                    .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return Enumerable.Empty<User>();
+            }
+        }
+
+        public async Task<User?> GetUserProfileAsync(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return null;
+                }
+
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                return await graphClient.Users[userId]
+                    .Request()
+                    .Select("id,displayName,mail,userPrincipalName,officeLocation")
+                    .GetAsync();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return null;
+            }
+        }
+
         public async Task<string?> GetCurrentUserOfficeLocationAsync()
         {
             try
