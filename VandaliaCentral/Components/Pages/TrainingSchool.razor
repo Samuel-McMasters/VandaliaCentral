@@ -423,7 +423,7 @@
     private string userSearchTerm = string.Empty;
     private string? selectedUserId;
     private User? selectedUserProfile;
-    private UserTrainingProfile? selectedUserTrainingProfile;
+    private UserTrainingProfileViewModel? selectedUserTrainingProfile;
     private bool isLoadingSelectedUserProfile;
     private List<TrainingExamSummary>? exams;
     private bool isCreatingExam;
@@ -441,6 +441,20 @@
     private readonly List<TrainingExamQuestion> draftQuestions = new();
     private string? examStatusMessage;
     private CancellationTokenSource? examStatusCts;
+
+    private class UserTrainingProfileViewModel
+    {
+        public string UserId { get; set; } = string.Empty;
+        public List<UserLearningAssignmentViewModel> ActiveAssignedLearning { get; set; } = new();
+        public List<UserLearningAssignmentViewModel> LearningHistory { get; set; } = new();
+    }
+
+    private class UserLearningAssignmentViewModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset? CompletedAtUtc { get; set; }
+    }
 
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
         trainingDocuments?
@@ -558,19 +572,118 @@
 
         try
         {
-            selectedUserProfile = await GraphUserService.GetUserProfileAsync(user.Id) ?? user;
-            selectedUserTrainingProfile = await TrainingDocumentService.GetUserTrainingProfileAsync(user.Id);
+            selectedUserProfile = await GetGraphUserProfileAsync(user) ?? user;
+            selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(user.Id);
         }
         catch (Exception ex)
         {
             selectedUserProfile = user;
-            selectedUserTrainingProfile = new UserTrainingProfile { UserId = user.Id };
+            selectedUserTrainingProfile = new UserTrainingProfileViewModel { UserId = user.Id };
             SetExamStatus($"Could not load full user profile: {ex.Message}");
         }
         finally
         {
             isLoadingSelectedUserProfile = false;
         }
+    }
+
+    private async Task<User?> GetGraphUserProfileAsync(User fallbackUser)
+    {
+        var getUserProfileMethod = GraphUserService.GetType().GetMethod("GetUserProfileAsync");
+        if (getUserProfileMethod != null)
+        {
+            var methodTask = (Task<User?>?)getUserProfileMethod.Invoke(GraphUserService, new object[] { fallbackUser.Id ?? string.Empty });
+            if (methodTask != null)
+            {
+                return await methodTask;
+            }
+        }
+
+        return fallbackUser;
+    }
+
+    private async Task<UserTrainingProfileViewModel> GetUserTrainingProfileDataAsync(string userId)
+    {
+        var fallback = new UserTrainingProfileViewModel { UserId = userId };
+
+        var getTrainingProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
+        if (getTrainingProfileMethod == null)
+        {
+            return fallback;
+        }
+
+        var methodTask = (Task?)getTrainingProfileMethod.Invoke(TrainingDocumentService, new object[] { userId });
+        if (methodTask == null)
+        {
+            return fallback;
+        }
+
+        await methodTask;
+
+        var resultProperty = methodTask.GetType().GetProperty("Result");
+        var resultObject = resultProperty?.GetValue(methodTask);
+        if (resultObject == null)
+        {
+            return fallback;
+        }
+
+        return MapTrainingProfile(resultObject, userId);
+    }
+
+    private static UserTrainingProfileViewModel MapTrainingProfile(object source, string userId)
+    {
+        var mapped = new UserTrainingProfileViewModel
+        {
+            UserId = ReadStringProperty(source, "UserId") ?? userId
+        };
+
+        mapped.ActiveAssignedLearning = ReadAssignments(source, "ActiveAssignedLearning");
+        mapped.LearningHistory = ReadAssignments(source, "LearningHistory");
+
+        return mapped;
+    }
+
+    private static List<UserLearningAssignmentViewModel> ReadAssignments(object source, string propertyName)
+    {
+        var prop = source.GetType().GetProperty(propertyName);
+        var value = prop?.GetValue(source);
+        if (value is not System.Collections.IEnumerable enumerable)
+        {
+            return new List<UserLearningAssignmentViewModel>();
+        }
+
+        var list = new List<UserLearningAssignmentViewModel>();
+        foreach (var item in enumerable)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            list.Add(new UserLearningAssignmentViewModel
+            {
+                Title = ReadStringProperty(item, "Title") ?? string.Empty,
+                AssignedAtUtc = ReadDateTimeOffsetProperty(item, "AssignedAtUtc"),
+                CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc")
+            });
+        }
+
+        return list;
+    }
+
+    private static string? ReadStringProperty(object source, string propertyName)
+        => source.GetType().GetProperty(propertyName)?.GetValue(source)?.ToString();
+
+    private static DateTimeOffset ReadDateTimeOffsetProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        return value is DateTimeOffset dto ? dto : DateTimeOffset.UtcNow;
+    }
+
+    private static DateTimeOffset? ReadNullableDateTimeOffsetProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        return value as DateTimeOffset?;
     }
 
     private void StartExamCreation()
