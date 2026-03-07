@@ -1664,6 +1664,44 @@
                 StartLaunchedExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
         }
+
+        var scorePercent = (int)Math.Round((double)correctCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
+        examResultPassed = scorePercent >= exam.PassingScorePercent;
+
+        if (examResultPassed)
+        {
+            examResultModalTitle = "Congratulations!";
+            examResultModalMessage = $"You passed with a score of {scorePercent}% (required: {exam.PassingScorePercent}%).";
+        }
+        else
+        {
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
+        }
+
+        showExamResultModal = true;
+    }
+
+    private void CloseExamResultModal()
+    {
+        showExamResultModal = false;
+    }
+
+    private async Task<TrainingExam?> LoadExamForBlobPathAsync(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var examId = Path.GetFileNameWithoutExtension(blobPath);
+        if (string.IsNullOrWhiteSpace(examId))
+        {
+            return null;
+        }
+
+        return await TrainingDocumentService.GetExamAsync(examId);
     }
 
     private async Task LoadLaunchedCourseStepExamAsync()
@@ -1773,10 +1811,12 @@
 
         var correctCount = 0;
 
+        var usesOneBasedIndexes = UsesOneBasedExamIndexes(exam);
+
         for (var qIndex = 0; qIndex < exam.Questions.Count; qIndex++)
         {
             var question = exam.Questions[qIndex];
-            var expected = question.CorrectOptionIndexes.OrderBy(i => i).ToList();
+            var expected = NormalizeCorrectIndexes(question, usesOneBasedIndexes);
             var selected = launchedExamResponses.TryGetValue(qIndex, out var selectedAnswers)
                 ? selectedAnswers.OrderBy(i => i).ToList()
                 : new List<int>();
@@ -1807,6 +1847,46 @@
     private void CloseExamResultModal()
     {
         showExamResultModal = false;
+    }
+
+    private static bool UsesOneBasedExamIndexes(TrainingExam exam)
+    {
+        var hasZeroBasedIndicator = exam.Questions.Any(q => q.CorrectOptionIndexes.Any(i => i == 0));
+        if (hasZeroBasedIndicator)
+        {
+            return false;
+        }
+
+        var hasOneBasedIndicator = exam.Questions.Any(q =>
+            q.Options.Any() && q.CorrectOptionIndexes.Any(i => i == q.Options.Count));
+
+        return hasOneBasedIndicator;
+    }
+
+    private static List<int> NormalizeCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+        return question.CorrectOptionIndexes
+            .Where(i => i >= 0 && i < optionCount)
+            .Distinct()
+            .OrderBy(i => i)
+            .ToList();
     }
 
     private async Task<TrainingExam?> LoadExamForBlobPathAsync(string blobPath)
