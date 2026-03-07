@@ -39,7 +39,7 @@
                         @if (launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase) && launchedCourse != null)
                         {
                             var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-                            @if (!orderedSteps.Any())
+                            if (!orderedSteps.Any())
                             {
                                 <p class="text-muted mb-0">This course has no steps configured yet.</p>
                             }
@@ -97,7 +97,7 @@
                         }
                     </div>
                 }
-                @if (launchedAssignment == null)
+                else
                 {
                     <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
                     <li class="nav-item">
