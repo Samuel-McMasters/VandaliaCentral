@@ -44,7 +44,11 @@ namespace VandaliaCentral.Services
 
     public class UserLearningAssignment
     {
+        public string AssignmentId { get; set; } = Guid.NewGuid().ToString("N");
         public string Title { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
+        public string BlobPath { get; set; } = string.Empty;
+        public string? ContentType { get; set; }
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
     }
@@ -56,11 +60,21 @@ namespace VandaliaCentral.Services
         public List<UserLearningAssignment> LearningHistory { get; set; } = new();
     }
 
+    public class AssignLearningRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
+        public string BlobPath { get; set; } = string.Empty;
+        public string? ContentType { get; set; }
+    }
+
     public class TrainingDocumentService
     {
         private const string ContainerName = "training-school";
         private const string ExamFolderPrefix = "exams/";
         private const string UserTrainingProfilePrefix = "user-training-profiles/";
+        private const string CourseFolderPrefix = "courses/";
         private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -90,7 +104,8 @@ namespace VandaliaCentral.Services
             await foreach (var blob in _containerClient.GetBlobsAsync())
             {
                 if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
-                    || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase))
+                    || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -234,6 +249,37 @@ namespace VandaliaCentral.Services
             {
                 return new UserTrainingProfile { UserId = safeUserId };
             }
+        }
+
+        public async Task AssignLearningToUserAsync(AssignLearningRequest request)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(request.UserId);
+            if (string.IsNullOrWhiteSpace(safeUserId))
+            {
+                throw new InvalidOperationException("User id is required for assignment.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Title)
+                || string.IsNullOrWhiteSpace(request.ItemType)
+                || string.IsNullOrWhiteSpace(request.BlobPath))
+            {
+                throw new InvalidOperationException("Assignment must include title, type, and blob path.");
+            }
+
+            var profile = await GetUserTrainingProfileAsync(safeUserId);
+            profile.UserId = safeUserId;
+
+            profile.ActiveAssignedLearning.Add(new UserLearningAssignment
+            {
+                AssignmentId = Guid.NewGuid().ToString("N"),
+                Title = request.Title,
+                ItemType = request.ItemType,
+                BlobPath = request.BlobPath,
+                ContentType = request.ContentType,
+                AssignedAtUtc = DateTimeOffset.UtcNow
+            });
+
+            await SaveUserTrainingProfileAsync(profile);
         }
 
         public async Task SaveUserTrainingProfileAsync(UserTrainingProfile profile)

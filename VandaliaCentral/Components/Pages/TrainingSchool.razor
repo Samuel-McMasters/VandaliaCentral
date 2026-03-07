@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Graph
 @using System.Threading
+@using System.Security.Claims
 @using VandaliaCentral.Services
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -44,7 +45,32 @@
                 <div class="border rounded p-4 bg-light-subtle">
                     @if (activeTab == "my-courses")
                     {
-                        <p class="mb-0">My Courses content is coming soon.</p>
+                        <h5 class="mb-3">My Assigned Learning</h5>
+
+                        @if (myTrainingProfile == null)
+                        {
+                            <p class="text-muted mb-0">Loading your assigned learning...</p>
+                        }
+                        else if (!myTrainingProfile.ActiveAssignedLearning.Any())
+                        {
+                            <p class="text-muted mb-0">You do not have any assigned learning yet.</p>
+                        }
+                        else
+                        {
+                            <ul class="list-group" style="max-width: 1000px;">
+                                @foreach (var assignment in myTrainingProfile.ActiveAssignedLearning.OrderByDescending(a => a.AssignedAtUtc))
+                                {
+                                    <li class="list-group-item">
+                                        <div class="fw-semibold text-break">@assignment.Title</div>
+                                        <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                        @if (!string.IsNullOrWhiteSpace(assignment.BlobPath) && !assignment.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <a class="btn btn-sm btn-outline-primary mt-2" href="@GetCourseContentUrl(assignment.BlobPath)" target="_blank" rel="noopener noreferrer">Open</a>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
                     }
                     else if (activeTab == "all-courses")
                     {
@@ -393,7 +419,7 @@
                                         else
                                         {
                                             <div class="d-flex flex-wrap gap-2 mb-3">
-                                                <button class="btn btn-primary btn-sm" type="button" @onclick="AssignLearningToSelectedUser">Assign Learning</button>
+                                                <button class="btn btn-primary btn-sm" type="button" @onclick="OpenAssignLearningWindow">Assign Learning</button>
                                                 <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="CloseSelectedUserProfile">Close</button>
                                             </div>
 
@@ -416,7 +442,7 @@
                                                         {
                                                             <li class="list-group-item">
                                                                 <div class="fw-semibold text-break">@assignment.Title</div>
-                                                                <div class="small text-muted">Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                                                <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
                                                             </li>
                                                         }
                                                     </ul>
@@ -436,7 +462,7 @@
                                                         {
                                                             <li class="list-group-item">
                                                                 <div class="fw-semibold text-break">@history.Title</div>
-                                                                <div class="small text-muted">Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")</div>
+                                                                <div class="small text-muted">@GetAssignmentTypeLabel(history.ItemType) • Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")</div>
                                                             </li>
                                                         }
                                                     </ul>
@@ -453,6 +479,72 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="modal fade @(showAssignLearningModal ? "show d-block" : "")"
+                                 style="@(showAssignLearningModal ? "display:block;" : "display:none;")"
+                                 tabindex="-1"
+                                 role="dialog"
+                                 aria-modal="true"
+                                 aria-hidden="@(!showAssignLearningModal)">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Assign Learning</h5>
+                                            <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAssignLearningWindow"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="text-muted">Select an item from Courses, Documents, or Exams to assign to <strong>@(selectedUserProfile?.DisplayName ?? "selected user")</strong>.</p>
+
+                                            <div class="row g-3">
+                                                <div class="col-12 col-lg-4">
+                                                    <h6>Courses</h6>
+                                                    <input class="form-control form-control-sm mb-2" type="search" placeholder="Search courses..." @bind="assignCourseSearchTerm" @bind:event="oninput" />
+                                                    <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                                        @foreach (var item in FilteredAssignableCourses)
+                                                        {
+                                                            <li class='list-group-item list-group-item-action @(selectedAssignableItem?.BlobPath == item.BlobPath ? "active" : "")' style="cursor:pointer;" @onclick='() => SelectAssignableItem(item)'>
+                                                                <div class="fw-semibold text-break">@item.Title</div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+
+                                                <div class="col-12 col-lg-4">
+                                                    <h6>Documents</h6>
+                                                    <input class="form-control form-control-sm mb-2" type="search" placeholder="Search documents..." @bind="assignDocumentSearchTerm" @bind:event="oninput" />
+                                                    <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                                        @foreach (var item in FilteredAssignableDocuments)
+                                                        {
+                                                            <li class='list-group-item list-group-item-action @(selectedAssignableItem?.BlobPath == item.BlobPath ? "active" : "")' style="cursor:pointer;" @onclick='() => SelectAssignableItem(item)'>
+                                                                <div class="fw-semibold text-break">@item.Title</div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+
+                                                <div class="col-12 col-lg-4">
+                                                    <h6>Exams</h6>
+                                                    <input class="form-control form-control-sm mb-2" type="search" placeholder="Search exams..." @bind="assignExamSearchTerm" @bind:event="oninput" />
+                                                    <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                                        @foreach (var item in FilteredAssignableExams)
+                                                        {
+                                                            <li class='list-group-item list-group-item-action @(selectedAssignableItem?.BlobPath == item.BlobPath ? "active" : "")' style="cursor:pointer;" @onclick='() => SelectAssignableItem(item)'>
+                                                                <div class="fw-semibold text-break">@item.Title</div>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseAssignLearningWindow">Close</button>
+                                            <button class="btn btn-primary" type="button" @onclick="AssignSelectedLearningAsync" disabled="@(selectedAssignableItem == null)">Assign Selected</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-backdrop fade @(showAssignLearningModal ? "show" : "")"
+                                 style="@(showAssignLearningModal ? "display:block;" : "display:none;")"></div>
                         }
                         else if (trainerToolTab == "exams")
                         {
@@ -630,6 +722,13 @@
     private User? selectedUserProfile;
     private UserTrainingProfileViewModel? selectedUserTrainingProfile;
     private bool isLoadingSelectedUserProfile;
+    private UserTrainingProfileViewModel? myTrainingProfile;
+    private string? currentUserId;
+    private bool showAssignLearningModal;
+    private string assignCourseSearchTerm = string.Empty;
+    private string assignDocumentSearchTerm = string.Empty;
+    private string assignExamSearchTerm = string.Empty;
+    private AssignableLearningItem? selectedAssignableItem;
     private bool isLoadingCourses;
     private List<CourseSummary> courses = new();
     private Course? editingCourse;
@@ -667,8 +766,19 @@
     private class UserLearningAssignmentViewModel
     {
         public string Title { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
+        public string BlobPath { get; set; } = string.Empty;
+        public string? ContentType { get; set; }
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
+    }
+
+    private class AssignableLearningItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
+        public string BlobPath { get; set; } = string.Empty;
+        public string? ContentType { get; set; }
     }
 
     private IEnumerable<TrainingDocumentInfo> FilteredTrainingDocuments =>
@@ -685,6 +795,43 @@
                 || (user.UserPrincipalName?.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
             ?? Enumerable.Empty<User>();
 
+    private IEnumerable<AssignableLearningItem> FilteredAssignableCourses =>
+        courses
+            .Where(c => string.IsNullOrWhiteSpace(assignCourseSearchTerm)
+                || c.Title.Contains(assignCourseSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .Select(c => new AssignableLearningItem
+            {
+                Title = c.Title,
+                ItemType = "Course",
+                BlobPath = $"courses/{c.Id}.json",
+                ContentType = "application/json"
+            });
+
+    private IEnumerable<AssignableLearningItem> FilteredAssignableDocuments =>
+        (trainingDocuments ?? new List<TrainingDocumentInfo>())
+            .Where(d => IsDocumentFileName(d.FileName)
+                && (string.IsNullOrWhiteSpace(assignDocumentSearchTerm)
+                    || d.FileName.Contains(assignDocumentSearchTerm, StringComparison.OrdinalIgnoreCase)))
+            .Select(d => new AssignableLearningItem
+            {
+                Title = Path.GetFileNameWithoutExtension(d.FileName),
+                ItemType = "Document",
+                BlobPath = d.FileName,
+                ContentType = d.ContentType
+            });
+
+    private IEnumerable<AssignableLearningItem> FilteredAssignableExams =>
+        courseExamOptions
+            .Where(e => string.IsNullOrWhiteSpace(assignExamSearchTerm)
+                || e.Title.Contains(assignExamSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .Select(e => new AssignableLearningItem
+            {
+                Title = e.Title,
+                ItemType = "Exam",
+                BlobPath = e.BlobPath,
+                ContentType = "application/json"
+            });
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -692,6 +839,16 @@
 
         IsTrainer = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == TrainerGroupId);
+
+        currentUserId = GetCurrentUserId(user);
+        if (!string.IsNullOrWhiteSpace(currentUserId))
+        {
+            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        }
+        else
+        {
+            myTrainingProfile = new UserTrainingProfileViewModel();
+        }
 
         if (IsTrainer)
         {
@@ -1143,12 +1300,65 @@
         selectedUserProfile = null;
         selectedUserTrainingProfile = null;
         isLoadingSelectedUserProfile = false;
+        CloseAssignLearningWindow();
     }
 
-    private Task AssignLearningToSelectedUser()
+    private async Task OpenAssignLearningWindow()
     {
-        // Placeholder for future assignment workflow.
-        return Task.CompletedTask;
+        if (selectedUserProfile == null || string.IsNullOrWhiteSpace(selectedUserProfile.Id))
+        {
+            SetCourseStatus("Select a user before assigning learning.");
+            return;
+        }
+
+        await LoadCoursesAsync();
+        await LoadTrainingDocumentsAsync();
+        await LoadCoursePickerDataAsync();
+
+        assignCourseSearchTerm = string.Empty;
+        assignDocumentSearchTerm = string.Empty;
+        assignExamSearchTerm = string.Empty;
+        selectedAssignableItem = null;
+        showAssignLearningModal = true;
+    }
+
+    private void CloseAssignLearningWindow()
+    {
+        showAssignLearningModal = false;
+        selectedAssignableItem = null;
+    }
+
+    private void SelectAssignableItem(AssignableLearningItem item)
+    {
+        selectedAssignableItem = item;
+    }
+
+    private async Task AssignSelectedLearningAsync()
+    {
+        if (selectedUserProfile == null || string.IsNullOrWhiteSpace(selectedUserProfile.Id) || selectedAssignableItem == null)
+        {
+            return;
+        }
+
+        await TrainingDocumentService.AssignLearningToUserAsync(new AssignLearningRequest
+        {
+            UserId = selectedUserProfile.Id,
+            Title = selectedAssignableItem.Title,
+            ItemType = selectedAssignableItem.ItemType,
+            BlobPath = selectedAssignableItem.BlobPath,
+            ContentType = selectedAssignableItem.ContentType
+        });
+
+        selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(selectedUserProfile.Id);
+
+        if (!string.IsNullOrWhiteSpace(currentUserId)
+            && string.Equals(currentUserId, selectedUserProfile.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        }
+
+        SetCourseStatus($"Assigned '{selectedAssignableItem.Title}' to {(selectedUserProfile.DisplayName ?? "user")}.");
+        CloseAssignLearningWindow();
     }
 
     private async Task<User?> GetGraphUserProfileAsync(User fallbackUser)
@@ -1227,12 +1437,46 @@
             list.Add(new UserLearningAssignmentViewModel
             {
                 Title = ReadStringProperty(item, "Title") ?? string.Empty,
+                ItemType = ReadStringProperty(item, "ItemType") ?? string.Empty,
+                BlobPath = ReadStringProperty(item, "BlobPath") ?? string.Empty,
+                ContentType = ReadStringProperty(item, "ContentType"),
                 AssignedAtUtc = ReadDateTimeOffsetProperty(item, "AssignedAtUtc"),
                 CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc")
             });
         }
 
         return list;
+    }
+
+    private static string GetCurrentUserId(ClaimsPrincipal user)
+    {
+        return user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+            ?? user.FindFirst("oid")?.Value
+            ?? string.Empty;
+    }
+
+    private static string GetAssignmentTypeLabel(string itemType)
+    {
+        if (string.IsNullOrWhiteSpace(itemType))
+        {
+            return "Assigned item";
+        }
+
+        return itemType;
+    }
+
+    private static bool IsDocumentFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        return extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".doc", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".docx", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".csv", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".ppt", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".pptx", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".xls", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? ReadStringProperty(object source, string propertyName)
