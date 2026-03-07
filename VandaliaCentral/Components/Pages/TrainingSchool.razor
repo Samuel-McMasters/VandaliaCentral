@@ -1,5 +1,6 @@
 @page "/training-school"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Graph
@@ -12,6 +13,7 @@
 @inject CourseStorageService CourseStorageService
 @inject GraphUserService GraphUserService
 @inject LoggingService Logger
+@inject NavigationManager NavigationManager
 
 @attribute [Authorize]
 @implements IDisposable
@@ -24,7 +26,80 @@
             <div class="bg-white border rounded shadow-sm p-4 p-md-5">
                 <h3 class="text-center mb-4">Training School</h3>
 
-                <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
+                @if (launchedAssignment != null)
+                {
+                    <div class="border rounded p-4 bg-light-subtle">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                            <h4 class="mb-0">@launchedAssignment.Title</h4>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="ExitLaunchedAssignment">Back to Training School</button>
+                        </div>
+
+                        <div class="text-muted small mb-3">@GetAssignmentTypeLabel(launchedAssignment.ItemType)</div>
+
+                        @if (launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase) && launchedCourse != null)
+                        {
+                            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+                            if (!orderedSteps.Any())
+                            {
+                                <p class="text-muted mb-0">This course has no steps configured yet.</p>
+                            }
+                            else
+                            {
+                                var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+                                <div class="border rounded p-3 mb-3 bg-white">
+                                    <div class="small text-muted mb-1">Step @activeStep.Order of @orderedSteps.Count</div>
+                                    <h5 class="mb-2">@activeStep.Title</h5>
+                                    @if (!string.IsNullOrWhiteSpace(activeStep.BodyText))
+                                    {
+                                        <p class="mb-2">@activeStep.BodyText</p>
+                                    }
+
+                                    <div class="small mb-2"><strong>Type:</strong> @activeStep.Type</div>
+
+                                    @if (!string.IsNullOrWhiteSpace(activeStep.Content.BlobPath))
+                                    {
+                                        <div class="small mb-2"><strong>Content:</strong> @activeStep.Content.BlobPath</div>
+                                        @if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <a class="btn btn-primary" href="@GetCourseContentUrl(activeStep.Content.BlobPath)" target="_blank" rel="noopener noreferrer">Open Step Content</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-secondary">Exam step</span>
+                                        }
+                                    }
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="LaunchedCoursePreviousStep" disabled="@(launchedCourseStepIndex <= 0)">Previous</button>
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="LaunchedCourseNextStep" disabled="@(launchedCourseStepIndex >= orderedSteps.Count - 1)">Next</button>
+                                </div>
+                            }
+                        }
+                        else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <video class="w-100 rounded border" controls style="max-height: 80vh;">
+                                <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
+                            </video>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <iframe class="w-100 border rounded bg-white" style="height: 80vh;" src="@GetCourseContentUrl(launchedAssignment.BlobPath)"></iframe>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && !launchedAssignment.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <a class="btn btn-primary" href="@GetCourseContentUrl(launchedAssignment.BlobPath)" target="_blank" rel="noopener noreferrer">Open Assigned Item</a>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Exam launch view is coming soon for this assigned item.</p>
+                        }
+                    </div>
+                }
+                else
+                {
+<ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
                     <li class="nav-item">
                         <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Courses</button>
                     </li>
@@ -63,10 +138,7 @@
                                     <li class="list-group-item">
                                         <div class="fw-semibold text-break">@assignment.Title</div>
                                         <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
-                                        @if (!string.IsNullOrWhiteSpace(assignment.BlobPath) && !assignment.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            <a class="btn btn-sm btn-outline-primary mt-2" href="@GetCourseContentUrl(assignment.BlobPath)" target="_blank" rel="noopener noreferrer">Open</a>
-                                        }
+                                        <button class="btn btn-sm btn-primary mt-2" type="button" @onclick='() => BeginAssignment(assignment)'>Begin</button>
                                     </li>
                                 }
                             </ul>
@@ -698,8 +770,10 @@
                             </div>
                             <div class="modal-backdrop fade @(showDeleteExamModal ? "show" : "")"
                                  style="@(showDeleteExamModal ? "display:block;" : "display:none;")"></div>
+
                         }
                     }
+                }
                 </div>
             </div>
         </div>
@@ -708,6 +782,9 @@
 
 
 @code {
+    [SupplyParameterFromQuery(Name = "assignment")]
+    public string? AssignmentLaunchId { get; set; }
+
     private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
     private bool IsTrainer;
     private string activeTab = "my-courses";
@@ -724,6 +801,9 @@
     private bool isLoadingSelectedUserProfile;
     private UserTrainingProfileViewModel? myTrainingProfile;
     private string? currentUserId;
+    private UserLearningAssignmentViewModel? launchedAssignment;
+    private Course? launchedCourse;
+    private int launchedCourseStepIndex;
     private bool showAssignLearningModal;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
@@ -765,6 +845,7 @@
 
     private class UserLearningAssignmentViewModel
     {
+        public string AssignmentId { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string ItemType { get; set; } = string.Empty;
         public string BlobPath { get; set; } = string.Empty;
@@ -858,6 +939,13 @@
             await LoadCoursesAsync();
             await LoadCoursePickerDataAsync();
         }
+
+        await TryActivateLaunchFromQueryAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await TryActivateLaunchFromQueryAsync();
     }
 
     private void SetActiveTab(string tab)
@@ -1361,6 +1449,81 @@
         CloseAssignLearningWindow();
     }
 
+    private void BeginAssignment(UserLearningAssignmentViewModel assignment)
+    {
+        var launchId = GetAssignmentLaunchId(assignment);
+        if (string.IsNullOrWhiteSpace(launchId))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/training-school?assignment={Uri.EscapeDataString(launchId)}");
+    }
+
+    private void ExitLaunchedAssignment()
+    {
+        NavigationManager.NavigateTo("/training-school");
+    }
+
+    private void LaunchedCoursePreviousStep()
+    {
+        launchedCourseStepIndex = Math.Max(0, launchedCourseStepIndex - 1);
+    }
+
+    private void LaunchedCourseNextStep()
+    {
+        if (launchedCourse == null)
+        {
+            return;
+        }
+
+        var maxIndex = Math.Max(0, launchedCourse.Steps.Count - 1);
+        launchedCourseStepIndex = Math.Min(maxIndex, launchedCourseStepIndex + 1);
+    }
+
+    private async Task TryActivateLaunchFromQueryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AssignmentLaunchId) || myTrainingProfile == null)
+        {
+            launchedAssignment = null;
+            launchedCourse = null;
+            launchedCourseStepIndex = 0;
+            return;
+        }
+
+        var matchingAssignment = myTrainingProfile.ActiveAssignedLearning
+            .FirstOrDefault(a => string.Equals(GetAssignmentLaunchId(a), AssignmentLaunchId, StringComparison.OrdinalIgnoreCase));
+
+        launchedAssignment = matchingAssignment;
+        launchedCourse = null;
+        launchedCourseStepIndex = 0;
+
+        if (matchingAssignment == null)
+        {
+            return;
+        }
+
+        if (matchingAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+        {
+            var courseId = Path.GetFileNameWithoutExtension(matchingAssignment.BlobPath);
+            if (!string.IsNullOrWhiteSpace(courseId))
+            {
+                launchedCourse = await CourseStorageService.GetCourseAsync(courseId);
+            }
+        }
+    }
+
+    private static string GetAssignmentLaunchId(UserLearningAssignmentViewModel assignment)
+    {
+        if (!string.IsNullOrWhiteSpace(assignment.AssignmentId))
+        {
+            return assignment.AssignmentId;
+        }
+
+        var assignedTicks = assignment.AssignedAtUtc.UtcTicks;
+        return $"{assignment.BlobPath}|{assignedTicks}";
+    }
+
     private async Task<User?> GetGraphUserProfileAsync(User fallbackUser)
     {
         var getUserProfileMethod = GraphUserService.GetType().GetMethod("GetUserProfileAsync");
@@ -1436,6 +1599,7 @@
 
             list.Add(new UserLearningAssignmentViewModel
             {
+                AssignmentId = ReadStringProperty(item, "AssignmentId") ?? string.Empty,
                 Title = ReadStringProperty(item, "Title") ?? string.Empty,
                 ItemType = ReadStringProperty(item, "ItemType") ?? string.Empty,
                 BlobPath = ReadStringProperty(item, "BlobPath") ?? string.Empty,
