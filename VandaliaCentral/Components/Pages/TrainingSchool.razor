@@ -169,6 +169,7 @@
                                                         </div>
                                                         <div class="d-flex gap-1">
                                                             <button class='btn btn-sm @(editingCourse?.Id == course.Id ? "btn-light" : "btn-outline-primary")' type="button" @onclick='async () => await EditCourseAsync(course.Id)'>Edit</button>
+                                                            <button class='btn btn-sm @(viewingCourse?.Id == course.Id ? "btn-light" : "btn-outline-secondary")' type="button" @onclick='async () => await ViewCourseAsync(course.Id)'>View</button>
                                                             <button class='btn btn-sm @(editingCourse?.Id == course.Id ? "btn-warning" : "btn-outline-danger")' type="button" @onclick='async () => await DeleteCourseAsync(course.Id)'>Delete</button>
                                                         </div>
                                                     </div>
@@ -181,7 +182,60 @@
                                 <div class="col-12 col-xl-8">
                                     <h6 class="mb-2">Course Editor</h6>
                                     <div class="border rounded bg-white p-3">
-                                        @if (editingCourse == null)
+                                        @if (viewingCourse != null)
+                                        {
+                                            <div class="d-flex justify-content-between align-items-start mb-3 gap-2 flex-wrap">
+                                                <div>
+                                                    <h5 class="mb-1">@viewingCourse.Title</h5>
+                                                    @if (!string.IsNullOrWhiteSpace(viewingCourse.Description))
+                                                    {
+                                                        <p class="text-muted mb-0">@viewingCourse.Description</p>
+                                                    }
+                                                </div>
+                                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="CloseCourseView">Close</button>
+                                            </div>
+
+                                            @if (!viewingCourse.Steps.Any())
+                                            {
+                                                <p class="text-muted mb-0">This course has no steps configured yet.</p>
+                                            }
+                                            else
+                                            {
+                                                var orderedSteps = viewingCourse.Steps.OrderBy(s => s.Order).ToList();
+                                                var activeStep = orderedSteps[Math.Clamp(viewingCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+                                                <div class="border rounded p-3 mb-3 bg-light-subtle">
+                                                    <div class="small text-muted mb-1">Step @activeStep.Order of @orderedSteps.Count</div>
+                                                    <h6 class="mb-2">@activeStep.Title</h6>
+
+                                                    @if (!string.IsNullOrWhiteSpace(activeStep.BodyText))
+                                                    {
+                                                        <p class="mb-2">@activeStep.BodyText</p>
+                                                    }
+
+                                                    <div class="small mb-2"><strong>Type:</strong> @activeStep.Type</div>
+
+                                                    @if (!string.IsNullOrWhiteSpace(activeStep.Content.BlobPath))
+                                                    {
+                                                        <div class="small mb-2"><strong>Content:</strong> @activeStep.Content.BlobPath</div>
+                                                        @if (activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+                                                        {
+                                                            <span class="badge text-bg-secondary">Exam step</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a class="btn btn-sm btn-outline-primary" href="@GetCourseContentUrl(activeStep.Content.BlobPath)" target="_blank" rel="noopener noreferrer">Open Content</a>
+                                                        }
+                                                    }
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="ViewPreviousCourseStep" disabled="@(viewingCourseStepIndex <= 0)">Previous</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="ViewNextCourseStep" disabled="@(viewingCourseStepIndex >= orderedSteps.Count - 1)">Next</button>
+                                                </div>
+                                            }
+                                        }
+                                        else if (editingCourse == null)
                                         {
                                             <p class="text-muted mb-0">Select a course to edit or create a new course.</p>
                                         }
@@ -579,6 +633,8 @@
     private bool isLoadingCourses;
     private List<CourseSummary> courses = new();
     private Course? editingCourse;
+    private Course? viewingCourse;
+    private int viewingCourseStepIndex;
     private List<BlobItemInfo> courseDocumentBlobs = new();
     private List<BlobItemInfo> courseVideoBlobs = new();
     private List<CourseExamSummary> courseExamOptions = new();
@@ -755,6 +811,7 @@
 
     private void CreateCourseDraft()
     {
+        viewingCourse = null;
         editingCourse = new Course
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -763,6 +820,53 @@
         };
 
         AddCourseStep();
+    }
+
+    private async Task ViewCourseAsync(string courseId)
+    {
+        var course = await CourseStorageService.GetCourseAsync(courseId);
+
+        if (course == null)
+        {
+            SetCourseStatus("The selected course could not be loaded.");
+            return;
+        }
+
+        viewingCourse = course;
+        viewingCourseStepIndex = 0;
+        editingCourse = null;
+    }
+
+    private void CloseCourseView()
+    {
+        viewingCourse = null;
+        viewingCourseStepIndex = 0;
+    }
+
+    private void ViewPreviousCourseStep()
+    {
+        if (viewingCourse == null)
+        {
+            return;
+        }
+
+        viewingCourseStepIndex = Math.Max(0, viewingCourseStepIndex - 1);
+    }
+
+    private void ViewNextCourseStep()
+    {
+        if (viewingCourse == null || !viewingCourse.Steps.Any())
+        {
+            return;
+        }
+
+        var maxIndex = viewingCourse.Steps.Count - 1;
+        viewingCourseStepIndex = Math.Min(maxIndex, viewingCourseStepIndex + 1);
+    }
+
+    private static string GetCourseContentUrl(string blobPath)
+    {
+        return $"/api/training-documents/download?fileName={Uri.EscapeDataString(blobPath)}";
     }
 
     private async Task EditCourseAsync(string courseId)
@@ -775,6 +879,7 @@
             return;
         }
 
+        viewingCourse = null;
         editingCourse = course;
 
         if (!editingCourse.Steps.Any())
@@ -793,6 +898,11 @@
         if (editingCourse?.Id == courseId)
         {
             editingCourse = null;
+        }
+
+        if (viewingCourse?.Id == courseId)
+        {
+            CloseCourseView();
         }
 
         await LoadCoursesAsync();
