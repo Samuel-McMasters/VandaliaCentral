@@ -31,6 +31,7 @@ builder.Services.AddSingleton<ItNewsService>();
 builder.Services.AddSingleton<FlappyLeaderboardService>();
 builder.Services.AddSingleton<SowDocumentService>();
 builder.Services.AddSingleton<TrainingDocumentService>();
+builder.Services.AddSingleton<CourseStorageService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
