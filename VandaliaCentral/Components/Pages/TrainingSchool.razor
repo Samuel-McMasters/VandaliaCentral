@@ -1664,6 +1664,44 @@
                 StartLaunchedExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
         }
+
+        var scorePercent = (int)Math.Round((double)correctCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
+        examResultPassed = scorePercent >= exam.PassingScorePercent;
+
+        if (examResultPassed)
+        {
+            examResultModalTitle = "Congratulations!";
+            examResultModalMessage = $"You passed with a score of {scorePercent}% (required: {exam.PassingScorePercent}%).";
+        }
+        else
+        {
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
+        }
+
+        showExamResultModal = true;
+    }
+
+    private void CloseExamResultModal()
+    {
+        showExamResultModal = false;
+    }
+
+    private async Task<TrainingExam?> LoadExamForBlobPathAsync(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var examId = Path.GetFileNameWithoutExtension(blobPath);
+        if (string.IsNullOrWhiteSpace(examId))
+        {
+            return null;
+        }
+
+        return await TrainingDocumentService.GetExamAsync(examId);
     }
 
     private async Task LoadLaunchedCourseStepExamAsync()
