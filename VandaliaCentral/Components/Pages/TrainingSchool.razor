@@ -8,6 +8,7 @@
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject TrainingDocumentService TrainingDocumentService
+@inject CourseStorageService CourseStorageService
 @inject GraphUserService GraphUserService
 @inject LoggingService Logger
 
@@ -133,10 +134,148 @@
                         }
                         else if (trainerToolTab == "courses")
                         {
-                            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-                                <button class="btn btn-primary" type="button">Create Course</button>
+                            @if (!string.IsNullOrWhiteSpace(courseStatusMessage))
+                            {
+                                <div class="alert alert-info py-2">@courseStatusMessage</div>
+                            }
+
+                            <div class="row g-4 align-items-start">
+                                <div class="col-12 col-xl-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                                        <h6 class="mb-0">Courses</h6>
+                                        <button class="btn btn-primary btn-sm" type="button" @onclick="CreateCourseDraft">Create Course</button>
+                                    </div>
+
+                                    @if (isLoadingCourses)
+                                    {
+                                        <p class="text-muted mb-0">Loading courses...</p>
+                                    }
+                                    else if (!courses.Any())
+                                    {
+                                        <p class="text-muted mb-0">No courses found. Create your first course.</p>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group">
+                                            @foreach (var course in courses)
+                                            {
+                                                <li class='list-group-item @(editingCourse?.Id == course.Id ? "active" : "")'>
+                                                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                                        <div>
+                                                            <div class="fw-semibold text-break">@course.Title</div>
+                                                            <div class="small @(editingCourse?.Id == course.Id ? "text-white" : "text-muted")">
+                                                                @(course.IsPublished ? "Published" : "Draft") • @course.UpdatedAtUtc.LocalDateTime.ToString("g")
+                                                            </div>
+                                                        </div>
+                                                        <div class="d-flex gap-1">
+                                                            <button class='btn btn-sm @(editingCourse?.Id == course.Id ? "btn-light" : "btn-outline-primary")' type="button" @onclick='async () => await EditCourseAsync(course.Id)'>Edit</button>
+                                                            <button class='btn btn-sm @(editingCourse?.Id == course.Id ? "btn-warning" : "btn-outline-danger")' type="button" @onclick='async () => await DeleteCourseAsync(course.Id)'>Delete</button>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+
+                                <div class="col-12 col-xl-8">
+                                    <h6 class="mb-2">Course Editor</h6>
+                                    <div class="border rounded bg-white p-3">
+                                        @if (editingCourse == null)
+                                        {
+                                            <p class="text-muted mb-0">Select a course to edit or create a new course.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-12">
+                                                    <label class="form-label">Title</label>
+                                                    <input class="form-control" @bind="editingCourse.Title" />
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">Description</label>
+                                                    <textarea class="form-control" rows="3" @bind="editingCourse.Description"></textarea>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" role="switch" @bind="editingCourse.IsPublished" />
+                                                        <label class="form-check-label">Published</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                                                <h6 class="mb-0">Steps</h6>
+                                                <button class="btn btn-outline-primary btn-sm" type="button" @onclick="AddCourseStep">Add Step</button>
+                                            </div>
+
+                                            @if (!editingCourse.Steps.Any())
+                                            {
+                                                <p class="text-muted mb-3">No steps yet. Add one to get started.</p>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex flex-column gap-3 mb-3">
+                                                    @foreach (var step in editingCourse.Steps.OrderBy(s => s.Order))
+                                                    {
+                                                        var currentStep = step;
+                                                        <div class="border rounded p-3 bg-light-subtle">
+                                                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                                                                <div class="fw-semibold">Step @currentStep.Order</div>
+                                                                <div class="d-flex gap-1">
+                                                                    <button class="btn btn-sm btn-outline-secondary" type="button" @onclick='() => MoveStepUp(currentStep.Id)'>Up</button>
+                                                                    <button class="btn btn-sm btn-outline-secondary" type="button" @onclick='() => MoveStepDown(currentStep.Id)'>Down</button>
+                                                                    <button class="btn btn-sm btn-outline-danger" type="button" @onclick='() => RemoveStep(currentStep.Id)'>Delete</button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="row g-3">
+                                                                <div class="col-12 col-md-6">
+                                                                    <label class="form-label">Step Title</label>
+                                                                    <input class="form-control" @bind="currentStep.Title" />
+                                                                </div>
+                                                                <div class="col-12 col-md-6">
+                                                                    <label class="form-label">Type</label>
+                                                                    <select class="form-select" value="@currentStep.Type" @onchange='(e) => OnStepTypeChanged(currentStep, e.Value?.ToString())'>
+                                                                        <option value="Document">Document</option>
+                                                                        <option value="Video">Video</option>
+                                                                        <option value="Exam">Exam</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label class="form-label">Additional Text</label>
+                                                                    <textarea class="form-control" rows="2" @bind="currentStep.BodyText"></textarea>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label class="form-label">Content</label>
+                                                                    <select class="form-select" value="@currentStep.Content.BlobPath" @onchange='(e) => OnStepContentChanged(currentStep, e.Value?.ToString())'>
+                                                                        <option value="">Select content...</option>
+                                                                        @foreach (var option in GetStepContentOptions(currentStep.Type))
+                                                                        {
+                                                                            <option value="@option.BlobPath">@option.DisplayName</option>
+                                                                        }
+                                                                    </select>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input" type="checkbox" @bind="currentStep.Required" />
+                                                                        <label class="form-check-label">Required</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-primary" type="button" @onclick="SaveCourseAsync">Save Course</button>
+                                                <button class="btn btn-outline-secondary" type="button" @onclick="CancelCourseEditing">Cancel</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
                             </div>
-                            <p class="mb-0">Course management tools are coming soon.</p>
                         }
                         else if (trainerToolTab == "assign-course")
                         {
@@ -199,6 +338,11 @@
                                         }
                                         else
                                         {
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                <button class="btn btn-primary btn-sm" type="button" @onclick="AssignLearningToSelectedUser">Assign Learning</button>
+                                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="CloseSelectedUserProfile">Close</button>
+                                            </div>
+
                                             <div class="mb-3">
                                                 <div><strong>Name:</strong> @(selectedUserProfile.DisplayName ?? "Unknown")</div>
                                                 <div><strong>Email:</strong> @(selectedUserProfile.Mail ?? selectedUserProfile.UserPrincipalName ?? "No email")</div>
@@ -245,6 +389,13 @@
                                                 }
                                             </div>
                                         }
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <h6 class="mb-2">Active Users</h6>
+                                        <div class="border rounded bg-white p-3">
+                                            <p class="text-muted mb-0">Users with assigned learning will appear here.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -425,6 +576,14 @@
     private User? selectedUserProfile;
     private UserTrainingProfileViewModel? selectedUserTrainingProfile;
     private bool isLoadingSelectedUserProfile;
+    private bool isLoadingCourses;
+    private List<CourseSummary> courses = new();
+    private Course? editingCourse;
+    private List<BlobItemInfo> courseDocumentBlobs = new();
+    private List<BlobItemInfo> courseVideoBlobs = new();
+    private List<CourseExamSummary> courseExamOptions = new();
+    private string? courseStatusMessage;
+    private CancellationTokenSource? courseStatusCts;
     private List<TrainingExamSummary>? exams;
     private bool isCreatingExam;
     private bool isEditingExam;
@@ -483,6 +642,8 @@
             await LoadTrainingDocumentsAsync();
             await LoadEntraUsersAsync();
             await LoadExamsAsync();
+            await LoadCoursesAsync();
+            await LoadCoursePickerDataAsync();
         }
     }
 
@@ -560,6 +721,285 @@
         exams = await TrainingDocumentService.ListExamsAsync();
     }
 
+    private async Task LoadCoursesAsync()
+    {
+        isLoadingCourses = true;
+
+        try
+        {
+            courses = (await CourseStorageService.ListCoursesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Unable to load courses: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingCourses = false;
+        }
+    }
+
+    private async Task LoadCoursePickerDataAsync()
+    {
+        try
+        {
+            courseDocumentBlobs = await CourseStorageService.ListDocumentBlobsAsync();
+            courseVideoBlobs = await CourseStorageService.ListVideoBlobsAsync();
+            courseExamOptions = await CourseStorageService.ListExamsAsync();
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Unable to load course assets: {ex.Message}");
+        }
+    }
+
+    private void CreateCourseDraft()
+    {
+        editingCourse = new Course
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            IsPublished = false,
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        AddCourseStep();
+    }
+
+    private async Task EditCourseAsync(string courseId)
+    {
+        var course = await CourseStorageService.GetCourseAsync(courseId);
+
+        if (course == null)
+        {
+            SetCourseStatus("The selected course could not be loaded.");
+            return;
+        }
+
+        editingCourse = course;
+
+        if (!editingCourse.Steps.Any())
+        {
+            AddCourseStep();
+        }
+        else
+        {
+            NormalizeEditingStepOrder();
+        }
+    }
+
+    private async Task DeleteCourseAsync(string courseId)
+    {
+        await CourseStorageService.DeleteCourseAsync(courseId);
+        if (editingCourse?.Id == courseId)
+        {
+            editingCourse = null;
+        }
+
+        await LoadCoursesAsync();
+        SetCourseStatus("Course deleted.");
+    }
+
+    private async Task SaveCourseAsync()
+    {
+        if (editingCourse == null)
+        {
+            return;
+        }
+
+        try
+        {
+            NormalizeEditingStepOrder();
+            await CourseStorageService.SaveCourseAsync(editingCourse);
+            await LoadCoursesAsync();
+            await LoadCoursePickerDataAsync();
+            SetCourseStatus("Course saved.");
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Course save failed: {ex.Message}");
+        }
+    }
+
+    private void CancelCourseEditing()
+    {
+        editingCourse = null;
+    }
+
+    private void AddCourseStep()
+    {
+        if (editingCourse == null)
+        {
+            return;
+        }
+
+        var newStep = new CourseStep
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Order = editingCourse.Steps.Count + 1,
+            Type = "Document",
+            Required = true,
+            Content = new CourseContentReference
+            {
+                BlobPath = courseDocumentBlobs.FirstOrDefault()?.BlobPath ?? string.Empty,
+                ContentType = courseDocumentBlobs.FirstOrDefault()?.ContentType
+            }
+        };
+
+        editingCourse.Steps.Add(newStep);
+        NormalizeEditingStepOrder();
+    }
+
+    private void RemoveStep(string stepId)
+    {
+        if (editingCourse == null)
+        {
+            return;
+        }
+
+        editingCourse.Steps.RemoveAll(s => s.Id == stepId);
+        NormalizeEditingStepOrder();
+    }
+
+    private void MoveStepUp(string stepId)
+    {
+        MoveStep(stepId, -1);
+    }
+
+    private void MoveStepDown(string stepId)
+    {
+        MoveStep(stepId, 1);
+    }
+
+    private void MoveStep(string stepId, int delta)
+    {
+        if (editingCourse == null)
+        {
+            return;
+        }
+
+        var ordered = editingCourse.Steps.OrderBy(s => s.Order).ToList();
+        var index = ordered.FindIndex(s => s.Id == stepId);
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        var targetIndex = index + delta;
+        if (targetIndex < 0 || targetIndex >= ordered.Count)
+        {
+            return;
+        }
+
+        (ordered[index], ordered[targetIndex]) = (ordered[targetIndex], ordered[index]);
+        editingCourse.Steps = ordered;
+        NormalizeEditingStepOrder();
+    }
+
+    private void NormalizeEditingStepOrder()
+    {
+        if (editingCourse == null)
+        {
+            return;
+        }
+
+        var ordered = editingCourse.Steps.OrderBy(s => s.Order).ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(ordered[i].Id))
+            {
+                ordered[i].Id = Guid.NewGuid().ToString("N");
+            }
+
+            ordered[i].Order = i + 1;
+        }
+
+        editingCourse.Steps = ordered;
+    }
+
+    private IReadOnlyList<BlobItemInfo> GetStepContentOptions(string stepType)
+    {
+        if (stepType.Equals("Video", StringComparison.OrdinalIgnoreCase))
+        {
+            return courseVideoBlobs;
+        }
+
+        if (stepType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
+        {
+            return courseExamOptions
+                .Select(exam => new BlobItemInfo
+                {
+                    BlobPath = exam.BlobPath,
+                    DisplayName = exam.Title,
+                    ContentType = "application/json"
+                })
+                .ToList();
+        }
+
+        return courseDocumentBlobs;
+    }
+
+    private void OnStepTypeChanged(CourseStep step, string? newType)
+    {
+        if (step == null || string.IsNullOrWhiteSpace(newType))
+        {
+            return;
+        }
+
+        step.Type = newType;
+        var firstOption = GetStepContentOptions(step.Type).FirstOrDefault();
+        step.Content.BlobPath = firstOption?.BlobPath ?? string.Empty;
+        step.Content.ContentType = firstOption?.ContentType;
+    }
+
+    private void OnStepContentChanged(CourseStep step, string? blobPath)
+    {
+        if (step == null)
+        {
+            return;
+        }
+
+        step.Content.BlobPath = blobPath ?? string.Empty;
+
+        var selectedContent = GetStepContentOptions(step.Type)
+            .FirstOrDefault(option => option.BlobPath == step.Content.BlobPath);
+
+        step.Content.ContentType = selectedContent?.ContentType;
+    }
+
+    private void SetCourseStatus(string message)
+    {
+        courseStatusCts?.Cancel();
+        courseStatusCts?.Dispose();
+
+        courseStatusMessage = message;
+
+        var cts = new CancellationTokenSource();
+        courseStatusCts = cts;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        if (courseStatusCts == cts)
+                        {
+                            courseStatusMessage = null;
+                            StateHasChanged();
+                        }
+                    });
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
+    }
+
     private async Task SelectUserAsync(User user)
     {
         if (string.IsNullOrWhiteSpace(user.Id))
@@ -585,6 +1025,20 @@
         {
             isLoadingSelectedUserProfile = false;
         }
+    }
+
+    private void CloseSelectedUserProfile()
+    {
+        selectedUserId = null;
+        selectedUserProfile = null;
+        selectedUserTrainingProfile = null;
+        isLoadingSelectedUserProfile = false;
+    }
+
+    private Task AssignLearningToSelectedUser()
+    {
+        // Placeholder for future assignment workflow.
+        return Task.CompletedTask;
     }
 
     private async Task<User?> GetGraphUserProfileAsync(User fallbackUser)
@@ -1088,6 +1542,8 @@
         uploadStatusCts?.Dispose();
         examStatusCts?.Cancel();
         examStatusCts?.Dispose();
+        courseStatusCts?.Cancel();
+        courseStatusCts?.Dispose();
     }
 
     private static string FormatFileSize(long? sizeInBytes)
