@@ -89,15 +89,36 @@
 
                                                             @if (question.Options.Any())
                                                             {
-                                                                <ol class="mb-0 ps-3">
-                                                                    @foreach (var option in question.Options)
-                                                                    {
-                                                                        <li>@option</li>
-                                                                    }
-                                                                </ol>
+                                                                @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
+                                                                {
+                                                                    var optionValue = question.Options[optionIndex];
+
+                                                                    <div class="form-check mb-1">
+                                                                        @if (IsMultipleSelectQuestion(question))
+                                                                        {
+                                                                            <input class="form-check-input"
+                                                                                   type="checkbox"
+                                                                                   id="course-step-question-@examQuestionIndex-option-@optionIndex"
+                                                                                   checked="@IsLaunchedExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                                                   @onchange="(ChangeEventArgs e) => SetLaunchedExamOption(examQuestionIndex, optionIndex, e.Value)" />
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <input class="form-check-input"
+                                                                                   type="radio"
+                                                                                   name="course-step-question-@examQuestionIndex"
+                                                                                   id="course-step-question-@examQuestionIndex-option-@optionIndex"
+                                                                                   checked="@IsLaunchedExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                                                   @onchange="() => SetLaunchedExamSingleAnswer(examQuestionIndex, optionIndex)" />
+                                                                        }
+                                                                        <label class="form-check-label" for="course-step-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
+                                                                    </div>
+                                                                }
                                                             }
                                                         </div>
                                                     }
+
+                                                    <button class="btn btn-primary btn-sm" type="button" @onclick="() => SubmitLaunchedExam(launchedCourseStepExam)">Submit Exam</button>
                                                 </div>
                                             }
                                             else
@@ -130,15 +151,36 @@
 
                                         @if (question.Options.Any())
                                         {
-                                            <ol class="mb-0 ps-3">
-                                                @foreach (var option in question.Options)
-                                                {
-                                                    <li>@option</li>
-                                                }
-                                            </ol>
+                                            @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
+                                            {
+                                                var optionValue = question.Options[optionIndex];
+
+                                                <div class="form-check mb-1">
+                                                    @if (IsMultipleSelectQuestion(question))
+                                                    {
+                                                        <input class="form-check-input"
+                                                               type="checkbox"
+                                                               id="assignment-question-@examQuestionIndex-option-@optionIndex"
+                                                               checked="@IsLaunchedExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                               @onchange="(ChangeEventArgs e) => SetLaunchedExamOption(examQuestionIndex, optionIndex, e.Value)" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input class="form-check-input"
+                                                               type="radio"
+                                                               name="assignment-question-@examQuestionIndex"
+                                                               id="assignment-question-@examQuestionIndex-option-@optionIndex"
+                                                               checked="@IsLaunchedExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                               @onchange="() => SetLaunchedExamSingleAnswer(examQuestionIndex, optionIndex)" />
+                                                    }
+                                                    <label class="form-check-label" for="assignment-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
+                                                </div>
+                                            }
                                         }
                                     </div>
                                 }
+
+                                <button class="btn btn-primary" type="button" @onclick="() => SubmitLaunchedExam(launchedExam)">Submit Exam</button>
                             </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
@@ -160,6 +202,27 @@
                             <p class="text-muted mb-0">Exam launch view is coming soon for this assigned item.</p>
                         }
                     </div>
+
+                    @if (showExamResultModal)
+                    {
+                        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="false">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">@examResultModalTitle</h5>
+                                        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseExamResultModal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-0">@examResultModalMessage</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="CloseExamResultModal">OK</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-backdrop fade show"></div>
+                    }
                 }
                 else
                 {
@@ -871,6 +934,12 @@
     private TrainingExam? launchedExam;
     private TrainingExam? launchedCourseStepExam;
     private int launchedCourseStepIndex;
+    private Dictionary<int, HashSet<int>> launchedExamResponses = new();
+    private string launchedExamResponseContext = string.Empty;
+    private bool showExamResultModal;
+    private bool examResultPassed;
+    private string examResultModalTitle = string.Empty;
+    private string examResultModalMessage = string.Empty;
     private bool showAssignLearningModal;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
@@ -1558,6 +1627,7 @@
             launchedExam = null;
             launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
+            ResetLaunchedExamAttempt();
             return;
         }
 
@@ -1569,6 +1639,7 @@
         launchedExam = null;
         launchedCourseStepExam = null;
         launchedCourseStepIndex = 0;
+        ResetLaunchedExamAttempt();
 
         if (matchingAssignment == null)
         {
@@ -1587,6 +1658,11 @@
         else if (matchingAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
         {
             launchedExam = await LoadExamForBlobPathAsync(matchingAssignment.BlobPath);
+
+            if (launchedExam != null)
+            {
+                StartLaunchedExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
+            }
         }
     }
 
@@ -1608,6 +1684,129 @@
         }
 
         launchedCourseStepExam = await LoadExamForBlobPathAsync(activeStep.Content.BlobPath);
+        if (launchedCourseStepExam != null)
+        {
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            StartLaunchedExamAttempt(launchedCourseStepExam, contextKey);
+        }
+    }
+
+    private void StartLaunchedExamAttempt(TrainingExam exam, string contextKey)
+    {
+        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedExamResponseContext = contextKey;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+
+        for (var i = 0; i < exam.Questions.Count; i++)
+        {
+            launchedExamResponses[i] = new HashSet<int>();
+        }
+    }
+
+    private void ResetLaunchedExamAttempt()
+    {
+        launchedExamResponseContext = string.Empty;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        CloseExamResultModal();
+    }
+
+    private static bool IsMultipleSelectQuestion(TrainingExamQuestion question)
+    {
+        return string.Equals(question.QuestionType, "multiple-select", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsLaunchedExamOptionSelected(int questionIndex, int optionIndex)
+    {
+        return launchedExamResponses.TryGetValue(questionIndex, out var selected)
+            && selected.Contains(optionIndex);
+    }
+
+    private void SetLaunchedExamSingleAnswer(int questionIndex, int optionIndex)
+    {
+        launchedExamResponses[questionIndex] = new HashSet<int> { optionIndex };
+    }
+
+    private void SetLaunchedExamOption(int questionIndex, int optionIndex, object? value)
+    {
+        var isChecked = false;
+
+        if (value is bool boolValue)
+        {
+            isChecked = boolValue;
+        }
+        else if (value is string stringValue)
+        {
+            isChecked = string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(stringValue, "on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (!launchedExamResponses.TryGetValue(questionIndex, out var selected))
+        {
+            selected = new HashSet<int>();
+            launchedExamResponses[questionIndex] = selected;
+        }
+
+        if (isChecked)
+        {
+            selected.Add(optionIndex);
+        }
+        else
+        {
+            selected.Remove(optionIndex);
+        }
+    }
+
+    private void SubmitLaunchedExam(TrainingExam exam)
+    {
+        if (exam.Questions.Count == 0)
+        {
+            examResultPassed = false;
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = "This exam has no questions configured yet.";
+            showExamResultModal = true;
+            return;
+        }
+
+        var correctCount = 0;
+
+        for (var qIndex = 0; qIndex < exam.Questions.Count; qIndex++)
+        {
+            var question = exam.Questions[qIndex];
+            var expected = question.CorrectOptionIndexes.OrderBy(i => i).ToList();
+            var selected = launchedExamResponses.TryGetValue(qIndex, out var selectedAnswers)
+                ? selectedAnswers.OrderBy(i => i).ToList()
+                : new List<int>();
+
+            if (expected.SequenceEqual(selected))
+            {
+                correctCount++;
+            }
+        }
+
+        var scorePercent = (int)Math.Round((double)correctCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
+        examResultPassed = scorePercent >= exam.PassingScorePercent;
+
+        if (examResultPassed)
+        {
+            examResultModalTitle = "Congratulations!";
+            examResultModalMessage = $"You passed with a score of {scorePercent}% (required: {exam.PassingScorePercent}%).";
+        }
+        else
+        {
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
+        }
+
+        showExamResultModal = true;
+    }
+
+    private void CloseExamResultModal()
+    {
+        showExamResultModal = false;
     }
 
     private async Task<TrainingExam?> LoadExamForBlobPathAsync(string blobPath)
