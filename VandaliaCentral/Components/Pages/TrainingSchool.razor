@@ -71,7 +71,39 @@
                                         }
                                         else
                                         {
-                                            <span class="badge text-bg-secondary">Exam step</span>
+                                            <span class="badge text-bg-secondary mb-2">Exam step</span>
+
+                                            @if (launchedCourseStepExam != null)
+                                            {
+                                                <div class="border rounded p-3 bg-light-subtle">
+                                                    <h6 class="mb-1">@launchedCourseStepExam.Title</h6>
+                                                    <div class="small text-muted mb-2">Passing score: @launchedCourseStepExam.PassingScorePercent% • @launchedCourseStepExam.Questions.Count question(s)</div>
+
+                                                    @for (var examQuestionIndex = 0; examQuestionIndex < launchedCourseStepExam.Questions.Count; examQuestionIndex++)
+                                                    {
+                                                        var question = launchedCourseStepExam.Questions[examQuestionIndex];
+
+                                                        <div class="border rounded p-2 bg-white mb-2">
+                                                            <div class="fw-semibold mb-1">Question @(examQuestionIndex + 1)</div>
+                                                            <div class="mb-2">@question.QuestionText</div>
+
+                                                            @if (question.Options.Any())
+                                                            {
+                                                                <ol class="mb-0 ps-3">
+                                                                    @foreach (var option in question.Options)
+                                                                    {
+                                                                        <li>@option</li>
+                                                                    }
+                                                                </ol>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <p class="text-muted mb-0">Unable to load this exam step.</p>
+                                            }
                                         }
                                     }
                                 </div>
@@ -81,6 +113,33 @@
                                     <button class="btn btn-outline-secondary" type="button" @onclick="LaunchedCourseNextStep" disabled="@(launchedCourseStepIndex >= orderedSteps.Count - 1)">Next</button>
                                 </div>
                             }
+                        }
+                        else if (launchedExam != null)
+                        {
+                            <div class="border rounded p-3 bg-white">
+                                <h5 class="mb-1">@launchedExam.Title</h5>
+                                <div class="small text-muted mb-3">Passing score: @launchedExam.PassingScorePercent% • @launchedExam.Questions.Count question(s)</div>
+
+                                @for (var examQuestionIndex = 0; examQuestionIndex < launchedExam.Questions.Count; examQuestionIndex++)
+                                {
+                                    var question = launchedExam.Questions[examQuestionIndex];
+
+                                    <div class="border rounded p-3 mb-3 bg-light-subtle">
+                                        <div class="fw-semibold mb-1">Question @(examQuestionIndex + 1)</div>
+                                        <div class="mb-2">@question.QuestionText</div>
+
+                                        @if (question.Options.Any())
+                                        {
+                                            <ol class="mb-0 ps-3">
+                                                @foreach (var option in question.Options)
+                                                {
+                                                    <li>@option</li>
+                                                }
+                                            </ol>
+                                        }
+                                    </div>
+                                }
+                            </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
                         {
@@ -809,6 +868,8 @@
     private string? currentUserId;
     private UserLearningAssignmentViewModel? launchedAssignment;
     private Course? launchedCourse;
+    private TrainingExam? launchedExam;
+    private TrainingExam? launchedCourseStepExam;
     private int launchedCourseStepIndex;
     private bool showAssignLearningModal;
     private string assignCourseSearchTerm = string.Empty;
@@ -1470,12 +1531,13 @@
         NavigationManager.NavigateTo("/training-school");
     }
 
-    private void LaunchedCoursePreviousStep()
+    private async Task LaunchedCoursePreviousStep()
     {
         launchedCourseStepIndex = Math.Max(0, launchedCourseStepIndex - 1);
+        await LoadLaunchedCourseStepExamAsync();
     }
 
-    private void LaunchedCourseNextStep()
+    private async Task LaunchedCourseNextStep()
     {
         if (launchedCourse == null)
         {
@@ -1484,6 +1546,7 @@
 
         var maxIndex = Math.Max(0, launchedCourse.Steps.Count - 1);
         launchedCourseStepIndex = Math.Min(maxIndex, launchedCourseStepIndex + 1);
+        await LoadLaunchedCourseStepExamAsync();
     }
 
     private async Task TryActivateLaunchFromQueryAsync()
@@ -1492,6 +1555,8 @@
         {
             launchedAssignment = null;
             launchedCourse = null;
+            launchedExam = null;
+            launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
             return;
         }
@@ -1501,6 +1566,8 @@
 
         launchedAssignment = matchingAssignment;
         launchedCourse = null;
+        launchedExam = null;
+        launchedCourseStepExam = null;
         launchedCourseStepIndex = 0;
 
         if (matchingAssignment == null)
@@ -1514,8 +1581,50 @@
             if (!string.IsNullOrWhiteSpace(courseId))
             {
                 launchedCourse = await CourseStorageService.GetCourseAsync(courseId);
+                await LoadLaunchedCourseStepExamAsync();
             }
         }
+        else if (matchingAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
+        {
+            launchedExam = await LoadExamForBlobPathAsync(matchingAssignment.BlobPath);
+        }
+    }
+
+    private async Task LoadLaunchedCourseStepExamAsync()
+    {
+        launchedCourseStepExam = null;
+
+        if (launchedCourse == null || !launchedCourse.Steps.Any())
+        {
+            return;
+        }
+
+        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+        if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedCourseStepExam = await LoadExamForBlobPathAsync(activeStep.Content.BlobPath);
+    }
+
+    private async Task<TrainingExam?> LoadExamForBlobPathAsync(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var examId = Path.GetFileNameWithoutExtension(blobPath);
+        if (string.IsNullOrWhiteSpace(examId))
+        {
+            return null;
+        }
+
+        return await TrainingDocumentService.GetExamAsync(examId);
     }
 
     private static string GetAssignmentLaunchId(UserLearningAssignmentViewModel assignment)
