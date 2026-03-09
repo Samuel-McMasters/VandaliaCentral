@@ -94,13 +94,13 @@
                                                                     var optionValue = question.Options[optionIndex];
 
                                                                     <div class="form-check mb-1">
-                                                                        @if (IsLaunchExamMultipleSelectQuestion(question))
+                                                                        @if (IsTrainingSchoolExamMultipleSelectQuestion(question))
                                                                         {
                                                                             <input class="form-check-input"
                                                                                    type="checkbox"
                                                                                    id="course-step-question-@examQuestionIndex-option-@optionIndex"
-                                                                                   checked="@IsLaunchExamOptionSelected(examQuestionIndex, optionIndex)"
-                                                                                   @onchange="(ChangeEventArgs e) => SetLaunchExamOption(examQuestionIndex, optionIndex, e.Value)" />
+                                                                                   checked="@IsTrainingSchoolExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                                                   @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOption(examQuestionIndex, optionIndex, e.Value)" />
                                                                         }
                                                                         else
                                                                         {
@@ -108,8 +108,8 @@
                                                                                    type="radio"
                                                                                    name="course-step-question-@examQuestionIndex"
                                                                                    id="course-step-question-@examQuestionIndex-option-@optionIndex"
-                                                                                   checked="@IsLaunchExamOptionSelected(examQuestionIndex, optionIndex)"
-                                                                                   @onchange="() => SetLaunchExamSingleAnswer(examQuestionIndex, optionIndex)" />
+                                                                                   checked="@IsTrainingSchoolExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                                                   @onchange="() => SetTrainingSchoolExamSingleAnswer(examQuestionIndex, optionIndex)" />
                                                                         }
                                                                         <label class="form-check-label" for="course-step-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
                                                                     </div>
@@ -118,7 +118,7 @@
                                                         </div>
                                                     }
 
-                                                    <button class="btn btn-primary btn-sm" type="button" @onclick="() => SubmitLaunchExam(launchedCourseStepExam)">Submit Exam</button>
+                                                    <button class="btn btn-primary btn-sm" type="button" @onclick="() => SubmitTrainingSchoolExamAttempt(launchedCourseStepExam)">Submit Exam</button>
                                                 </div>
                                             }
                                             else
@@ -156,13 +156,13 @@
                                                 var optionValue = question.Options[optionIndex];
 
                                                 <div class="form-check mb-1">
-                                                    @if (IsLaunchExamMultipleSelectQuestion(question))
+                                                    @if (IsTrainingSchoolExamMultipleSelectQuestion(question))
                                                     {
                                                         <input class="form-check-input"
                                                                type="checkbox"
                                                                id="assignment-question-@examQuestionIndex-option-@optionIndex"
-                                                               checked="@IsLaunchExamOptionSelected(examQuestionIndex, optionIndex)"
-                                                               @onchange="(ChangeEventArgs e) => SetLaunchExamOption(examQuestionIndex, optionIndex, e.Value)" />
+                                                               checked="@IsTrainingSchoolExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                               @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOption(examQuestionIndex, optionIndex, e.Value)" />
                                                     }
                                                     else
                                                     {
@@ -170,8 +170,8 @@
                                                                type="radio"
                                                                name="assignment-question-@examQuestionIndex"
                                                                id="assignment-question-@examQuestionIndex-option-@optionIndex"
-                                                               checked="@IsLaunchExamOptionSelected(examQuestionIndex, optionIndex)"
-                                                               @onchange="() => SetLaunchExamSingleAnswer(examQuestionIndex, optionIndex)" />
+                                                               checked="@IsTrainingSchoolExamOptionSelected(examQuestionIndex, optionIndex)"
+                                                               @onchange="() => SetTrainingSchoolExamSingleAnswer(examQuestionIndex, optionIndex)" />
                                                     }
                                                     <label class="form-check-label" for="assignment-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
                                                 </div>
@@ -180,7 +180,7 @@
                                     </div>
                                 }
 
-                                <button class="btn btn-primary" type="button" @onclick="() => SubmitLaunchExam(launchedExam)">Submit Exam</button>
+                                <button class="btn btn-primary" type="button" @onclick="() => SubmitTrainingSchoolExamAttempt(launchedExam)">Submit Exam</button>
                             </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
@@ -210,7 +210,7 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title">@examResultModalTitle</h5>
-                                        <button type="button" class="btn-close" aria-label="Close" @onclick="() => DismissLaunchExamResultModal()"></button>
+                                        <button type="button" class="btn-close" aria-label="Close" @onclick="() => DismissTrainingSchoolExamResultModal()"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p class="mb-0">@examResultModalMessage</p>
@@ -218,9 +218,9 @@
                                     <div class="modal-footer">
                                         @if (!examResultPassed)
                                         {
-                                            <button class="btn btn-outline-secondary" type="button" @onclick="RetakeLaunchExam">Retake Exam</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="RetakeTrainingSchoolExam">Retake Exam</button>
                                         }
-                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="HandleLaunchExamPrimaryActionAsync">OK</button>
+                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="HandleTrainingSchoolExamPrimaryActionAsync">OK</button>
                                     </div>
                                 </div>
                             </div>
@@ -1608,7 +1608,7 @@
     private async Task LaunchedCoursePreviousStep()
     {
         launchedCourseStepIndex = Math.Max(0, launchedCourseStepIndex - 1);
-        await LoadActiveLaunchedCourseStepExamAsync();
+        await LoadTrainingSchoolActiveExamStepAsync();
     }
 
     private async Task LaunchedCourseNextStep()
@@ -1620,7 +1620,7 @@
 
         var maxIndex = Math.Max(0, launchedCourse.Steps.Count - 1);
         launchedCourseStepIndex = Math.Min(maxIndex, launchedCourseStepIndex + 1);
-        await LoadActiveLaunchedCourseStepExamAsync();
+        await LoadTrainingSchoolActiveExamStepAsync();
     }
 
     private async Task TryActivateLaunchFromQueryAsync()
@@ -1632,7 +1632,7 @@
             launchedExam = null;
             launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
-            ResetLaunchExamAttempt();
+            ResetTrainingSchoolExamAttempt();
             return;
         }
 
@@ -1644,7 +1644,7 @@
         launchedExam = null;
         launchedCourseStepExam = null;
         launchedCourseStepIndex = 0;
-        ResetLaunchExamAttempt();
+        ResetTrainingSchoolExamAttempt();
 
         if (matchingAssignment == null)
         {
@@ -1657,630 +1657,16 @@
             if (!string.IsNullOrWhiteSpace(courseId))
             {
                 launchedCourse = await CourseStorageService.GetCourseAsync(courseId);
-                await LoadActiveLaunchedCourseStepExamAsync();
+                await LoadTrainingSchoolActiveExamStepAsync();
             }
         }
         else if (matchingAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
         {
-            launchedExam = await LoadLaunchExamForBlobPathAsync(matchingAssignment.BlobPath);
+            launchedExam = await LoadTrainingSchoolExamForBlobPathAsync(matchingAssignment.BlobPath);
 
             if (launchedExam != null)
             {
-                InitializeLaunchExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
-            }
-        }
-        else if (matchingAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
-        {
-            launchedExam = await LoadLaunchExamForBlobPathAsync(matchingAssignment.BlobPath);
-
-            if (launchedExam != null)
-            {
-                InitializeLaunchExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
-            }
-        }
-    }
-
-    private async Task LoadActiveLaunchedCourseStepExamAsync()
-    {
-        launchedCourseStepExam = null;
-
-        if (launchedCourse == null || !launchedCourse.Steps.Any())
-        {
-            return;
-        }
-
-        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
-
-        if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        launchedCourseStepExam = await LoadLaunchExamForBlobPathAsync(activeStep.Content.BlobPath);
-        if (launchedCourseStepExam != null)
-        {
-            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
-            InitializeLaunchExamAttempt(launchedCourseStepExam, contextKey);
-        }
-    }
-
-    private void InitializeLaunchExamAttempt(TrainingExam exam, string contextKey)
-    {
-        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        launchedExamResponseContext = contextKey;
-        launchedExamResponses = new Dictionary<int, HashSet<int>>();
-
-        for (var i = 0; i < exam.Questions.Count; i++)
-        {
-            launchedExamResponses[i] = new HashSet<int>();
-        }
-    }
-
-    private void ResetLaunchExamAttempt()
-    {
-        launchedExamResponseContext = string.Empty;
-        launchedExamResponses = new Dictionary<int, HashSet<int>>();
-        DismissLaunchExamResultModal();
-    }
-
-    private static bool IsLaunchExamMultipleSelectQuestion(TrainingExamQuestion question)
-    {
-        return string.Equals(question.QuestionType, "multiple-select", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool IsLaunchExamOptionSelected(int questionIndex, int optionIndex)
-    {
-        return launchedExamResponses.TryGetValue(questionIndex, out var selected)
-            && selected.Contains(optionIndex);
-    }
-
-    private void SetLaunchExamSingleAnswer(int questionIndex, int optionIndex)
-    {
-        launchedExamResponses[questionIndex] = new HashSet<int> { optionIndex };
-    }
-
-    private void SetLaunchExamOption(int questionIndex, int optionIndex, object? value)
-    {
-        var isChecked = false;
-
-        if (value is bool boolValue)
-        {
-            isChecked = boolValue;
-        }
-        else if (value is string stringValue)
-        {
-            isChecked = string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(stringValue, "on", StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (!launchedExamResponses.TryGetValue(questionIndex, out var selected))
-        {
-            selected = new HashSet<int>();
-            launchedExamResponses[questionIndex] = selected;
-        }
-
-        if (isChecked)
-        {
-            selected.Add(optionIndex);
-        }
-        else
-        {
-            selected.Remove(optionIndex);
-        }
-    }
-
-    private async Task SubmitLaunchExam(TrainingExam exam)
-    {
-        if (exam.Questions.Count == 0)
-        {
-            examResultPassed = false;
-            examResultModalTitle = "Please Try Again";
-            examResultModalMessage = "This exam has no questions configured yet.";
-            showExamResultModal = true;
-            return;
-        }
-
-        var matchedAnswerCount = 0;
-
-        for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
-        {
-            var question = exam.Questions[questionIndex];
-            var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
-                ? selectedAnswerIndexes.OrderBy(i => i).ToList()
-                : new List<int>();
-
-            if (IsLaunchExamQuestionCorrect(question, selectedAnswers))
-            {
-                matchedAnswerCount++;
-            }
-        }
-
-        var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
-        examResultPassed = scorePercent >= exam.PassingScorePercent;
-
-        if (examResultPassed)
-        {
-            await CompleteLaunchedAssignmentIfEligibleAsync();
-            examResultModalTitle = "Congratulations!";
-            examResultModalMessage = $"You passed with a score of {scorePercent}% (required: {exam.PassingScorePercent}%).";
-        }
-        else
-        {
-            examResultModalTitle = "Please Try Again";
-            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
-        }
-
-        showExamResultModal = true;
-    }
-
-    private bool IsLaunchExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
-    {
-        var expectedZeroBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: false);
-        if (expectedZeroBased.SequenceEqual(selectedAnswers))
-        {
-            return true;
-        }
-
-        var expectedOneBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: true);
-        return expectedOneBased.SequenceEqual(selectedAnswers);
-    }
-
-    private async Task CompleteLaunchedAssignmentIfEligibleAsync()
-    {
-        if (launchedAssignment == null
-            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(currentUserId)
-            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
-        {
-            return;
-        }
-
-        var completed = await TryCompleteAssignmentForCurrentUserAsync(launchedAssignment.AssignmentId);
-        if (!completed)
-        {
-            return;
-        }
-
-        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
-    }
-
-
-    private async Task<bool> TryCompleteAssignmentForCurrentUserAsync(string assignmentId)
-    {
-        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
-        {
-            return false;
-        }
-
-        var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
-        if (completeMethod != null)
-        {
-            var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
-            if (taskObj is Task<bool> boolTask)
-            {
-                return await boolTask;
-            }
-        }
-
-        var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
-        var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
-        if (getProfileMethod == null || saveProfileMethod == null)
-        {
-            return false;
-        }
-
-        var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
-        if (getTaskObj is not Task getTask)
-        {
-            return false;
-        }
-
-        await getTask;
-
-        var resultProperty = getTask.GetType().GetProperty("Result");
-        var profileObj = resultProperty?.GetValue(getTask);
-        if (profileObj == null)
-        {
-            return false;
-        }
-
-        var profileType = profileObj.GetType();
-        var activeProp = profileType.GetProperty("ActiveAssignedLearning");
-        var historyProp = profileType.GetProperty("LearningHistory");
-        if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
-            || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
-        {
-            return false;
-        }
-
-        object? matched = null;
-        foreach (var item in activeList)
-        {
-            if (item == null)
-            {
-                continue;
-            }
-
-            var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
-            var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
-            if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
-            {
-                matched = item;
-                break;
-            }
-        }
-
-        if (matched == null)
-        {
-            return false;
-        }
-
-        activeList.Remove(matched);
-
-        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
-        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
-        historyList.Add(matched);
-
-        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
-        if (saveTaskObj is not Task saveTask)
-        {
-            return false;
-        }
-
-        await saveTask;
-        return true;
-    }
-
-    private void DismissLaunchExamResultModal()
-    {
-        showExamResultModal = false;
-    }
-
-    private static List<int> NormalizeLaunchExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
-    {
-        if (!question.Options.Any())
-        {
-            return new List<int>();
-        }
-
-        var optionCount = question.Options.Count;
-
-        if (usesOneBasedIndexes)
-        {
-            return question.CorrectOptionIndexes
-                .Where(i => i >= 1 && i <= optionCount)
-                .Select(i => i - 1)
-                .Distinct()
-                .OrderBy(i => i)
-                .ToList();
-        }
-
-        return question.CorrectOptionIndexes
-            .Where(i => i >= 0 && i < optionCount)
-            .Distinct()
-            .OrderBy(i => i)
-            .ToList();
-    }
-
-    private async Task<TrainingExam?> LoadLaunchExamForBlobPathAsync(string blobPath)
-    {
-        if (string.IsNullOrWhiteSpace(blobPath)
-            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var examId = Path.GetFileNameWithoutExtension(blobPath);
-        if (string.IsNullOrWhiteSpace(examId))
-        {
-            return null;
-        }
-
-        return await TrainingDocumentService.GetExamAsync(examId);
-    }
-
-    private async Task LoadActiveLaunchedCourseStepExamAsync()
-    {
-        launchedCourseStepExam = null;
-
-        if (launchedCourse == null || !launchedCourse.Steps.Any())
-        {
-            return;
-        }
-
-        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
-
-        if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        launchedCourseStepExam = await LoadLaunchExamForBlobPathAsync(activeStep.Content.BlobPath);
-        if (launchedCourseStepExam != null)
-        {
-            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
-            InitializeLaunchExamAttempt(launchedCourseStepExam, contextKey);
-        }
-    }
-
-    private void InitializeLaunchExamAttempt(TrainingExam exam, string contextKey)
-    {
-        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        launchedExamResponseContext = contextKey;
-        launchedExamResponses = new Dictionary<int, HashSet<int>>();
-
-        for (var i = 0; i < exam.Questions.Count; i++)
-        {
-            launchedExamResponses[i] = new HashSet<int>();
-        }
-    }
-
-    private void ResetLaunchExamAttempt()
-    {
-        launchedExamResponseContext = string.Empty;
-        launchedExamResponses = new Dictionary<int, HashSet<int>>();
-        examResultScorePercent = 0;
-        DismissLaunchExamResultModal();
-    }
-
-    private static bool IsLaunchExamMultipleSelectQuestion(TrainingExamQuestion question)
-    {
-        return string.Equals(question.QuestionType, "multiple-select", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool IsLaunchExamOptionSelected(int questionIndex, int optionIndex)
-    {
-        return launchedExamResponses.TryGetValue(questionIndex, out var selected)
-            && selected.Contains(optionIndex);
-    }
-
-    private void SetLaunchExamSingleAnswer(int questionIndex, int optionIndex)
-    {
-        launchedExamResponses[questionIndex] = new HashSet<int> { optionIndex };
-    }
-
-    private void SetLaunchExamOption(int questionIndex, int optionIndex, object? value)
-    {
-        var isChecked = false;
-
-        if (value is bool boolValue)
-        {
-            isChecked = boolValue;
-        }
-        else if (value is string stringValue)
-        {
-            isChecked = string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(stringValue, "on", StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (!launchedExamResponses.TryGetValue(questionIndex, out var selected))
-        {
-            selected = new HashSet<int>();
-            launchedExamResponses[questionIndex] = selected;
-        }
-
-        if (isChecked)
-        {
-            selected.Add(optionIndex);
-        }
-        else
-        {
-            selected.Remove(optionIndex);
-        }
-    }
-
-    private async Task SubmitLaunchExam(TrainingExam exam)
-    {
-        if (exam.Questions.Count == 0)
-        {
-            examResultPassed = false;
-            examResultScorePercent = 0;
-            examResultModalTitle = "Please Try Again";
-            examResultModalMessage = "This exam has no questions configured yet.";
-            showExamResultModal = true;
-            return;
-        }
-
-        var matchedAnswerCount = 0;
-
-        for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
-        {
-            var question = exam.Questions[questionIndex];
-            var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
-                ? selectedAnswerIndexes.OrderBy(i => i).ToList()
-                : new List<int>();
-
-            if (IsLaunchExamQuestionCorrect(question, selectedAnswers))
-            {
-                matchedAnswerCount++;
-            }
-        }
-
-        var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
-        examResultScorePercent = scorePercent;
-        examResultPassed = scorePercent >= exam.PassingScorePercent;
-
-        if (examResultPassed)
-        {
-            await CompleteLaunchedAssignmentIfEligibleAsync();
-            examResultModalTitle = "Congratulations!";
-            examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
-        }
-        else
-        {
-            examResultModalTitle = "Please Try Again";
-            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
-        }
-
-        showExamResultModal = true;
-    }
-
-    private bool IsLaunchExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
-    {
-        var expectedZeroBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: false);
-        if (expectedZeroBased.SequenceEqual(selectedAnswers))
-        {
-            return true;
-        }
-
-        var expectedOneBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: true);
-        return expectedOneBased.SequenceEqual(selectedAnswers);
-    }
-
-    private async Task CompleteLaunchedAssignmentIfEligibleAsync()
-    {
-        if (launchedAssignment == null
-            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(currentUserId)
-            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
-        {
-            return;
-        }
-
-        var completed = await TryCompleteAssignmentForCurrentUserAsync(launchedAssignment.AssignmentId);
-        if (!completed)
-        {
-            return;
-        }
-
-        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
-    }
-
-
-    private async Task<bool> TryCompleteAssignmentForCurrentUserAsync(string assignmentId)
-    {
-        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
-        {
-            return false;
-        }
-
-        var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
-        if (completeMethod != null)
-        {
-            var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
-            if (taskObj is Task<bool> boolTask)
-            {
-                return await boolTask;
-            }
-        }
-
-        var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
-        var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
-        if (getProfileMethod == null || saveProfileMethod == null)
-        {
-            return false;
-        }
-
-        var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
-        if (getTaskObj is not Task getTask)
-        {
-            return false;
-        }
-
-        await getTask;
-
-        var resultProperty = getTask.GetType().GetProperty("Result");
-        var profileObj = resultProperty?.GetValue(getTask);
-        if (profileObj == null)
-        {
-            return false;
-        }
-
-        var profileType = profileObj.GetType();
-        var activeProp = profileType.GetProperty("ActiveAssignedLearning");
-        var historyProp = profileType.GetProperty("LearningHistory");
-        if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
-            || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
-        {
-            return false;
-        }
-
-        object? matched = null;
-        foreach (var item in activeList)
-        {
-            if (item == null)
-            {
-                continue;
-            }
-
-            var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
-            var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
-            if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
-            {
-                matched = item;
-                break;
-            }
-        }
-
-        if (matched == null)
-        {
-            return false;
-        }
-
-        activeList.Remove(matched);
-
-        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
-        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
-        historyList.Add(matched);
-
-        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
-        if (saveTaskObj is not Task saveTask)
-        {
-            return false;
-        }
-
-        await saveTask;
-        return true;
-    }
-
-    private async Task HandleLaunchExamPrimaryActionAsync()
-    {
-        var shouldReturnToMyCourses = examResultPassed;
-        DismissLaunchExamResultModal();
-
-        if (shouldReturnToMyCourses)
-        {
-            launchedAssignment = null;
-            launchedExam = null;
-            launchedCourse = null;
-            launchedCourseStepExam = null;
-            launchedCourseStepIndex = 0;
-            ResetLaunchExamAttempt();
-            activeTab = "my-courses";
-            NavigationManager.NavigateTo("/training-school", forceLoad: false);
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void RetakeLaunchExam()
-    {
-        showExamResultModal = false;
-        examResultScorePercent = 0;
-
-        if (launchedExam != null)
-        {
-            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
-            InitializeLaunchExamAttempt(launchedExam, $"assignment:{assignmentId}");
-            ClearLaunchExamResponses(launchedExam.Questions.Count);
-            return;
-        }
-
-        if (launchedCourseStepExam != null && launchedCourse != null)
-        {
-            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-            if (!orderedSteps.Any())
-            {
-                return;
+                InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
 
             var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
@@ -2304,7 +1690,327 @@
         }
     }
 
-    private static List<int> NormalizeLaunchExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    private async Task LoadTrainingSchoolActiveExamStepAsync()
+    {
+        launchedCourseStepExam = null;
+
+        if (launchedCourse == null || !launchedCourse.Steps.Any())
+        {
+            return;
+        }
+
+        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+        if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedCourseStepExam = await LoadTrainingSchoolExamForBlobPathAsync(activeStep.Content.BlobPath);
+        if (launchedCourseStepExam != null)
+        {
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+        }
+    }
+
+    private void InitializeTrainingSchoolExamAttempt(TrainingExam exam, string contextKey)
+    {
+        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedExamResponseContext = contextKey;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+
+        for (var i = 0; i < exam.Questions.Count; i++)
+        {
+            launchedExamResponses[i] = new HashSet<int>();
+        }
+    }
+
+    private void ResetTrainingSchoolExamAttempt()
+    {
+        launchedExamResponseContext = string.Empty;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        examResultScorePercent = 0;
+        DismissTrainingSchoolExamResultModal();
+    }
+
+    private static bool IsTrainingSchoolExamMultipleSelectQuestion(TrainingExamQuestion question)
+    {
+        return string.Equals(question.QuestionType, "multiple-select", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsTrainingSchoolExamOptionSelected(int questionIndex, int optionIndex)
+    {
+        return launchedExamResponses.TryGetValue(questionIndex, out var selected)
+            && selected.Contains(optionIndex);
+    }
+
+    private void SetTrainingSchoolExamSingleAnswer(int questionIndex, int optionIndex)
+    {
+        launchedExamResponses[questionIndex] = new HashSet<int> { optionIndex };
+    }
+
+    private void SetTrainingSchoolExamOption(int questionIndex, int optionIndex, object? value)
+    {
+        var isChecked = false;
+
+        if (value is bool boolValue)
+        {
+            isChecked = boolValue;
+        }
+        else if (value is string stringValue)
+        {
+            isChecked = string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(stringValue, "on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (!launchedExamResponses.TryGetValue(questionIndex, out var selected))
+        {
+            selected = new HashSet<int>();
+            launchedExamResponses[questionIndex] = selected;
+        }
+
+        if (isChecked)
+        {
+            selected.Add(optionIndex);
+        }
+        else
+        {
+            selected.Remove(optionIndex);
+        }
+    }
+
+    private async Task SubmitTrainingSchoolExamAttempt(TrainingExam exam)
+    {
+        if (exam.Questions.Count == 0)
+        {
+            examResultPassed = false;
+            examResultScorePercent = 0;
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = "This exam has no questions configured yet.";
+            showExamResultModal = true;
+            return;
+        }
+
+        var matchedAnswerCount = 0;
+
+        for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
+        {
+            var question = exam.Questions[questionIndex];
+            var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
+                ? selectedAnswerIndexes.OrderBy(i => i).ToList()
+                : new List<int>();
+
+            if (IsTrainingSchoolExamQuestionCorrect(question, selectedAnswers))
+            {
+                matchedAnswerCount++;
+            }
+        }
+
+        var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
+        examResultScorePercent = scorePercent;
+        examResultPassed = scorePercent >= exam.PassingScorePercent;
+
+        if (examResultPassed)
+        {
+            await CompleteTrainingSchoolAssignmentIfEligibleAsync();
+            examResultModalTitle = "Congratulations!";
+            examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
+        }
+        else
+        {
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
+        }
+
+        showExamResultModal = true;
+    }
+
+    private bool IsTrainingSchoolExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
+    {
+        var expectedZeroBased = NormalizeTrainingSchoolExamCorrectIndexes(question, usesOneBasedIndexes: false);
+        if (expectedZeroBased.SequenceEqual(selectedAnswers))
+        {
+            return true;
+        }
+
+        var expectedOneBased = NormalizeTrainingSchoolExamCorrectIndexes(question, usesOneBasedIndexes: true);
+        return expectedOneBased.SequenceEqual(selectedAnswers);
+    }
+
+    private async Task CompleteTrainingSchoolAssignmentIfEligibleAsync()
+    {
+        if (launchedAssignment == null
+            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(currentUserId)
+            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        {
+            return;
+        }
+
+        var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserAsync(launchedAssignment.AssignmentId);
+        if (!completed)
+        {
+            return;
+        }
+
+        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+    }
+
+
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserAsync(string assignmentId)
+    {
+        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
+        {
+            return false;
+        }
+
+        var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
+        if (completeMethod != null)
+        {
+            var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
+            if (taskObj is Task<bool> boolTask)
+            {
+                return await boolTask;
+            }
+        }
+
+        var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
+        var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
+        if (getProfileMethod == null || saveProfileMethod == null)
+        {
+            return false;
+        }
+
+        var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
+        if (getTaskObj is not Task getTask)
+        {
+            return false;
+        }
+
+        await getTask;
+
+        var resultProperty = getTask.GetType().GetProperty("Result");
+        var profileObj = resultProperty?.GetValue(getTask);
+        if (profileObj == null)
+        {
+            return false;
+        }
+
+        var profileType = profileObj.GetType();
+        var activeProp = profileType.GetProperty("ActiveAssignedLearning");
+        var historyProp = profileType.GetProperty("LearningHistory");
+        if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
+            || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
+        {
+            return false;
+        }
+
+        object? matched = null;
+        foreach (var item in activeList)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
+            var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
+            if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+            {
+                matched = item;
+                break;
+            }
+        }
+
+        if (matched == null)
+        {
+            return false;
+        }
+
+        activeList.Remove(matched);
+
+        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
+        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
+        historyList.Add(matched);
+
+        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
+        if (saveTaskObj is not Task saveTask)
+        {
+            return false;
+        }
+
+        await saveTask;
+        return true;
+    }
+
+    private async Task HandleTrainingSchoolExamPrimaryActionAsync()
+    {
+        var shouldReturnToMyCourses = examResultPassed;
+        DismissTrainingSchoolExamResultModal();
+
+        if (shouldReturnToMyCourses)
+        {
+            launchedAssignment = null;
+            launchedExam = null;
+            launchedCourse = null;
+            launchedCourseStepExam = null;
+            launchedCourseStepIndex = 0;
+            ResetTrainingSchoolExamAttempt();
+            activeTab = "my-courses";
+            NavigationManager.NavigateTo("/training-school", forceLoad: false);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RetakeTrainingSchoolExam()
+    {
+        showExamResultModal = false;
+        examResultScorePercent = 0;
+
+        if (launchedExam != null)
+        {
+            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
+            InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{assignmentId}");
+            ClearLaunchExamResponses(launchedExam.Questions.Count);
+            return;
+        }
+
+        if (launchedCourseStepExam != null && launchedCourse != null)
+        {
+            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+            if (!orderedSteps.Any())
+            {
+                return;
+            }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+            ClearLaunchExamResponses(launchedCourseStepExam.Questions.Count);
+        }
+    }
+
+    private void DismissTrainingSchoolExamResultModal()
+    {
+        showExamResultModal = false;
+    }
+
+    private void ClearLaunchExamResponses(int questionCount)
+    {
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        for (var questionIndex = 0; questionIndex < questionCount; questionIndex++)
+        {
+            launchedExamResponses[questionIndex] = new HashSet<int>();
+        }
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
     {
         if (!question.Options.Any())
         {
@@ -2330,7 +2036,7 @@
             .ToList();
     }
 
-    private async Task<TrainingExam?> LoadLaunchExamForBlobPathAsync(string blobPath)
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathAsync(string blobPath)
     {
         if (string.IsNullOrWhiteSpace(blobPath)
             || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
