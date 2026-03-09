@@ -1284,6 +1284,8 @@
     private async Task DeleteCourseAsync(string courseId)
     {
         await CourseStorageService.DeleteCourseAsync(courseId);
+        await TrainingDocumentService.RemoveActiveAssignmentsByBlobPathAsync($"courses/{courseId}.json");
+
         if (editingCourse?.Id == courseId)
         {
             editingCourse = null;

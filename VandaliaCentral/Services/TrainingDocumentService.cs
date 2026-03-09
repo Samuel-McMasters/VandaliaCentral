@@ -192,7 +192,10 @@ namespace VandaliaCentral.Services
                 return;
             }
 
-            await _containerClient.DeleteBlobIfExistsAsync($"{ExamFolderPrefix}{safeExamId}.json");
+            var examBlobPath = $"{ExamFolderPrefix}{safeExamId}.json";
+
+            await _containerClient.DeleteBlobIfExistsAsync(examBlobPath);
+            await RemoveActiveAssignmentsByBlobPathAsync(examBlobPath);
         }
 
         public async Task SaveExamAsync(TrainingExam exam)
@@ -378,6 +381,52 @@ namespace VandaliaCentral.Services
             }
 
             await _containerClient.DeleteBlobIfExistsAsync(safeFileName);
+            await RemoveActiveAssignmentsByBlobPathAsync(safeFileName);
+        }
+
+        public async Task RemoveActiveAssignmentsByBlobPathAsync(string blobPath)
+        {
+            if (string.IsNullOrWhiteSpace(blobPath))
+            {
+                return;
+            }
+
+            await foreach (var profileBlob in _containerClient.GetBlobsAsync(prefix: UserTrainingProfilePrefix))
+            {
+                var profileBlobClient = _containerClient.GetBlobClient(profileBlob.Name);
+
+                UserTrainingProfile? profile;
+                try
+                {
+                    var download = await profileBlobClient.DownloadContentAsync();
+                    profile = download.Value.Content.ToObjectFromJson<UserTrainingProfile>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (profile == null)
+                {
+                    continue;
+                }
+
+                var removed = profile.ActiveAssignedLearning.RemoveAll(assignment =>
+                    string.Equals(assignment.BlobPath, blobPath, StringComparison.OrdinalIgnoreCase));
+
+                if (removed <= 0)
+                {
+                    continue;
+                }
+
+                profile.UserId = Path.GetFileNameWithoutExtension(profile.UserId);
+                if (string.IsNullOrWhiteSpace(profile.UserId))
+                {
+                    profile.UserId = Path.GetFileNameWithoutExtension(profileBlob.Name);
+                }
+
+                await SaveUserTrainingProfileAsync(profile);
+            }
         }
     }
 }
