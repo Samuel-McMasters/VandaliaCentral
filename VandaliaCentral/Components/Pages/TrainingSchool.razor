@@ -1763,13 +1763,13 @@
 
     private void InitializeTrainingSchoolExamAttemptV5(TrainingExam exam, string contextKey)
     {
-        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         launchedExamResponseContext = contextKey;
         launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        examResultScorePercent = 0;
+        examResultPassed = false;
+        examResultModalTitle = string.Empty;
+        examResultModalMessage = string.Empty;
+        showExamResultModal = false;
 
         for (var i = 0; i < exam.Questions.Count; i++)
         {
