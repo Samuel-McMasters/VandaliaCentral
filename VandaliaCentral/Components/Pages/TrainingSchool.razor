@@ -195,7 +195,7 @@
                             <video class="w-100 rounded border"
                                    controls
                                    style="max-height: 80vh;"
-                                   @ref="launchedVideoElement">
+                                   @onended="HandleLaunchedVideoEnded">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
                             </video>
 
@@ -958,11 +958,8 @@
     private string examResultModalTitle = string.Empty;
     private string examResultModalMessage = string.Empty;
     private bool showAssignLearningModal;
-    private ElementReference launchedVideoElement;
     private bool canMarkLaunchedVideoComplete;
     private bool isCompletingLaunchedVideo;
-    private bool launchedVideoWatcherInitialized;
-    private DotNetObjectReference<TrainingSchool>? launchedVideoWatcherReference;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
     private string assignExamSearchTerm = string.Empty;
@@ -1659,7 +1656,6 @@
 
     private async Task TryActivateLaunchFromQueryAsync()
     {
-        await StopLaunchedVideoWatcherAsync();
         ResetLaunchedVideoCompletionState();
 
         if (string.IsNullOrWhiteSpace(AssignmentLaunchId) || myTrainingProfile == null)
@@ -1714,13 +1710,9 @@
     {
         canMarkLaunchedVideoComplete = false;
         isCompletingLaunchedVideo = false;
-        launchedVideoWatcherInitialized = false;
-        launchedVideoWatcherReference?.Dispose();
-        launchedVideoWatcherReference = null;
     }
 
-    [JSInvokable]
-    public Task NotifyLaunchedVideoNearEndAsync()
+    private Task HandleLaunchedVideoEnded()
     {
         if (!IsLaunchedVideoAssignment() || canMarkLaunchedVideoComplete)
         {
@@ -1729,17 +1721,6 @@
 
         canMarkLaunchedVideoComplete = true;
         return InvokeAsync(StateHasChanged);
-    }
-
-    private async Task StopLaunchedVideoWatcherAsync()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("trainingSchoolVideo.stopWatching", launchedVideoElement);
-        }
-        catch
-        {
-        }
     }
 
     private bool IsLaunchedVideoAssignment()
@@ -1778,7 +1759,6 @@
             launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
             ResetTrainingSchoolExamAttemptV5();
-            await StopLaunchedVideoWatcherAsync();
             ResetLaunchedVideoCompletionState();
             activeTab = "my-courses";
             NavigationManager.NavigateTo("/training-school", forceLoad: false);
