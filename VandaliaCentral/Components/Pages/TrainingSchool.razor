@@ -960,6 +960,10 @@
     private bool showAssignLearningModal;
     private bool canMarkLaunchedVideoComplete;
     private bool isCompletingLaunchedVideo;
+    // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
+    private bool launchedVideoWatcherInitialized;
+    private object? launchedVideoWatcherReference;
+    private ElementReference launchedVideoElement;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
     private string assignExamSearchTerm = string.Empty;
