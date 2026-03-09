@@ -239,10 +239,27 @@ main {
     background: transparent !important;
     box-shadow: none !important;
     padding: 0 !important;
+    min-width: 0 !important;
+    transform: none !important;
 }
 
+    .top-nav-image-button::after {
+        content: none !important;
+    }
+
+    .top-nav-image-button:hover,
+    .top-nav-image-button:focus,
+    .top-nav-image-button:focus-visible,
+    .top-nav-image-button:active,
+    .top-nav-image-button.active {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
 .top-nav-action-image {
-    height: 42px;
+    height: 30px;
     width: auto;
     display: block;
 }
