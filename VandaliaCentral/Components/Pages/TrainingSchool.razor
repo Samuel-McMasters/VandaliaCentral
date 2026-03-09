@@ -1761,8 +1761,13 @@
         }
     }
 
-    private void InitializeTrainingSchoolExamAttemptV5(TrainingExam exam, string contextKey)
+    private void InitializeTrainingSchoolExamAttemptV5(TrainingExam exam, string contextKey, bool forceReset = false)
     {
+        if (!forceReset && launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         launchedExamResponseContext = contextKey;
         launchedExamResponses = new Dictionary<int, HashSet<int>>();
         examResultScorePercent = 0;
@@ -2025,8 +2030,7 @@
         if (launchedExam != null)
         {
             var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
-            ResetTrainingSchoolExamAttemptV5();
-            InitializeTrainingSchoolExamAttemptV5(launchedExam, $"assignment:{assignmentId}");
+            InitializeTrainingSchoolExamAttemptV5(launchedExam, $"assignment:{assignmentId}", forceReset: true);
         }
         else if (launchedCourseStepExam != null && launchedCourse != null)
         {
@@ -2035,8 +2039,7 @@
             {
                 var retakeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
                 var retakeContextKey = $"course:{launchedCourse.Id}:step:{retakeStep.Id}";
-                ResetTrainingSchoolExamAttemptV5();
-                InitializeTrainingSchoolExamAttemptV5(launchedCourseStepExam, retakeContextKey);
+                InitializeTrainingSchoolExamAttemptV5(launchedCourseStepExam, retakeContextKey, forceReset: true);
             }
         }
 
