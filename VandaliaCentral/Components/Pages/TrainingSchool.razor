@@ -299,13 +299,10 @@
                                     <button class='nav-link @(trainerToolTab == "courses" ? "active" : "")' @onclick='() => SetTrainerToolTab("courses")'>Courses</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class='nav-link @(trainerToolTab == "assign-course" ? "active" : "")' @onclick='() => SetTrainerToolTab("assign-course")'>Assign Course</button>
+                                    <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
                                 </li>
                                 <li class="nav-item">
                                     <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
-                                </li>
-                                <li class="nav-item">
-                                    <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
                                 </li>
                             </ul>
 
@@ -564,10 +561,6 @@
                                         </div>
                                     </div>
                                 </div>
-                            }
-                            else if (trainerToolTab == "assign-course")
-                            {
-                                <p class="mb-0">Assign Course is coming soon.</p>
                             }
                             else if (trainerToolTab == "users")
                             {
