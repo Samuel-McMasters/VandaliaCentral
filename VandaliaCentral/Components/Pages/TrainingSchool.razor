@@ -102,19 +102,19 @@
                                                                         @if (IsTrainingSchoolExamMultipleSelectQuestionV5(question))
                                                                         {
                                                                             <input class="form-check-input"
-                                                                                   type="checkbox"
-                                                                                   id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
-                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
-                                                                                   @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
+                                                                            type="checkbox"
+                                                                            id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
+                                                                            checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                                            @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
                                                                         }
                                                                         else
                                                                         {
                                                                             <input class="form-check-input"
-                                                                                   type="radio"
-                                                                                   name="course-step-question-@localQuestionIndex"
-                                                                                   id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
-                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
-                                                                                   @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
+                                                                            type="radio"
+                                                                            name="course-step-question-@localQuestionIndex"
+                                                                            id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
+                                                                            checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                                            @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
                                                                         }
                                                                         <label class="form-check-label" for="course-step-question-@localQuestionIndex-option-@localOptionIndex">@optionValue</label>
                                                                     </div>
@@ -166,19 +166,19 @@
                                                     @if (IsTrainingSchoolExamMultipleSelectQuestionV5(question))
                                                     {
                                                         <input class="form-check-input"
-                                                               type="checkbox"
-                                                               id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
-                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
-                                                               @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
+                                                        type="checkbox"
+                                                        id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
+                                                        checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                        @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
                                                     }
                                                     else
                                                     {
                                                         <input class="form-check-input"
-                                                               type="radio"
-                                                               name="assignment-question-@localQuestionIndex"
-                                                               id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
-                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
-                                                               @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
+                                                        type="radio"
+                                                        name="assignment-question-@localQuestionIndex"
+                                                        id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
+                                                        checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                        @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
                                                     }
                                                     <label class="form-check-label" for="assignment-question-@localQuestionIndex-option-@localOptionIndex">@optionValue</label>
                                                 </div>
@@ -193,16 +193,16 @@
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
                         {
                             <video class="w-100 rounded border"
-                                   controls
-                                   style="max-height: 80vh;">
+                            controls
+                            style="max-height: 80vh;">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
                             </video>
 
                             <div class="mt-3">
                                 <button class="btn btn-success"
-                                        type="button"
-                                        disabled="@isCompletingLaunchedVideo"
-                                        @onclick="MarkLaunchedVideoCompleteAsync">
+                                type="button"
+                                disabled="@isCompletingLaunchedVideo"
+                                @onclick="MarkLaunchedVideoCompleteAsync">
                                     @(isCompletingLaunchedVideo ? "Completing..." : "Mark Complete")
                                 </button>
                             </div>
@@ -335,10 +335,10 @@
 
                                 <div class="mb-3" style="max-width: 460px;">
                                     <input type="search"
-                                           class="form-control"
-                                           placeholder="Search training documents..."
-                                           @bind="trainingDocumentSearchTerm"
-                                           @bind:event="oninput" />
+                                    class="form-control"
+                                    placeholder="Search training documents..."
+                                    @bind="trainingDocumentSearchTerm"
+                                    @bind:event="oninput" />
                                 </div>
 
                                 @if (trainingDocuments == null)
@@ -580,10 +580,10 @@
                             {
                                 <div class="mb-3" style="max-width: 460px;">
                                     <input type="search"
-                                           class="form-control"
-                                           placeholder="Search users..."
-                                           @bind="userSearchTerm"
-                                           @bind:event="oninput" />
+                                    class="form-control"
+                                    placeholder="Search users..."
+                                    @bind="userSearchTerm"
+                                    @bind:event="oninput" />
                                 </div>
 
                                 <div class="row g-4 align-items-start">
@@ -610,8 +610,8 @@
                                                 @foreach (var user in FilteredEntraUsers)
                                                 {
                                                     <li class='list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")'
-                                                        style="cursor: pointer;"
-                                                        @onclick='async () => await SelectUserAsync(user)'>
+                                                    style="cursor: pointer;"
+                                                    @onclick='async () => await SelectUserAsync(user)'>
                                                         <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
                                                         <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
                                                     </li>
@@ -696,11 +696,11 @@
                                 </div>
 
                                 <div class="modal fade @(showAssignLearningModal ? "show d-block" : "")"
-                                     style="@(showAssignLearningModal ? "display:block;" : "display:none;")"
-                                     tabindex="-1"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-hidden="@(!showAssignLearningModal)">
+                                style="@(showAssignLearningModal ? "display:block;" : "display:none;")"
+                                tabindex="-1"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-hidden="@(!showAssignLearningModal)">
                                     <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header">
@@ -759,7 +759,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-backdrop fade @(showAssignLearningModal ? "show" : "")"
-                                     style="@(showAssignLearningModal ? "display:block;" : "display:none;")"></div>
+                                style="@(showAssignLearningModal ? "display:block;" : "display:none;")"></div>
                             }
                             else if (trainerToolTab == "exams")
                             {
@@ -819,8 +819,8 @@
                                                         <input class="form-check-input" type="checkbox" checked="@(correctAnswerIndexes.Contains(optionIndex))" @onchange="() => ToggleCorrectAnswer(optionIndex)" />
                                                     }
                                                     <input class="form-control"
-                                                           value="@GetAnswerOptionValue(optionIndex)"
-                                                           @oninput='(ChangeEventArgs e) => UpdateAnswerOption(optionIndex, e.Value?.ToString() ?? string.Empty)' />
+                                                    value="@GetAnswerOptionValue(optionIndex)"
+                                                    @oninput='(ChangeEventArgs e) => UpdateAnswerOption(optionIndex, e.Value?.ToString() ?? string.Empty)' />
                                                     <button class="btn btn-outline-danger btn-sm" type="button" @onclick='() => RemoveAnswerOption(optionIndex)' disabled="@(answerOptions.Count <= 2)">Remove</button>
                                                 </div>
                                             }
@@ -892,11 +892,11 @@
                                 }
 
                                 <div class="modal fade @(showDeleteExamModal ? "show d-block" : "")"
-                                     style="@(showDeleteExamModal ? "display:block;" : "display:none;")"
-                                     tabindex="-1"
-                                     role="dialog"
-                                     aria-modal="true"
-                                     aria-hidden="@(!showDeleteExamModal)">
+                                style="@(showDeleteExamModal ? "display:block;" : "display:none;")"
+                                tabindex="-1"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-hidden="@(!showDeleteExamModal)">
                                     <div class="modal-dialog modal-dialog-centered" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header">
@@ -914,7 +914,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-backdrop fade @(showDeleteExamModal ? "show" : "")"
-                                     style="@(showDeleteExamModal ? "display:block;" : "display:none;")"></div>
+                                style="@(showDeleteExamModal ? "display:block;" : "display:none;")"></div>
                             }
                         }
                     </div>
@@ -2047,6 +2047,8 @@
                 launchId = GetAssignmentLaunchId(assignment);
             }
 
+            
+        }
         return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(assignmentId, launchId);
     }
 
@@ -2876,3 +2878,5 @@
         return $"{gb:F1} GB";
     }
 }
+}
+
