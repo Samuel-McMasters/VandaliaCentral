@@ -1811,7 +1811,216 @@
             {
                 matchedAnswerCount++;
             }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
         }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissTrainingSchoolExamResultV2Modal()
+    {
+        showExamResultModal = false;
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+        return question.CorrectOptionIndexes
+            .Where(i => i >= 0 && i < optionCount)
+            .Distinct()
+            .OrderBy(i => i)
+            .ToList();
+    }
+
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissTrainingSchoolExamResultV2Modal()
+    {
+        showExamResultModal = false;
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+    }
+
+    private async Task LoadTrainingSchoolActiveExamStepV4Async()
+    {
+        launchedCourseStepExam = null;
+
+        if (launchedCourse == null || !launchedCourse.Steps.Any())
+        {
+            return;
+        }
+
+        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+        if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedCourseStepExam = await LoadTrainingSchoolExamForBlobPathV4Async(activeStep.Content.BlobPath);
+        if (launchedCourseStepExam != null)
+        {
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            InitializeTrainingSchoolExamAttemptV4(launchedCourseStepExam, contextKey);
+        }
+    }
+
+    private void InitializeTrainingSchoolExamAttempt(TrainingExam exam, string contextKey)
+    {
+        InitializeTrainingSchoolExamAttemptV4(exam, contextKey);
+    }
+
+    private void InitializeTrainingSchoolExamAttemptV4(TrainingExam exam, string contextKey)
+    {
+        if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        launchedExamResponseContext = contextKey;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+
+        for (var i = 0; i < exam.Questions.Count; i++)
+        {
+            launchedExamResponses[i] = new HashSet<int>();
+        }
+    }
+
+    private void ResetTrainingSchoolExamAttempt()
+    {
+        ResetTrainingSchoolExamAttemptV4();
+    }
+
+    private void ResetTrainingSchoolExamAttemptV4()
+    {
+        launchedExamResponseContext = string.Empty;
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        examResultScorePercent = 0;
+        CloseTrainingSchoolExamResultModalV4();
+    }
+
+    private static bool IsTrainingSchoolExamMultipleSelectQuestionV4(TrainingExamQuestion question)
+    {
+        return string.Equals(question.QuestionType, "multiple-select", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsTrainingSchoolExamOptionSelectedV4(int questionIndex, int optionIndex)
+    {
+        return launchedExamResponses.TryGetValue(questionIndex, out var selected)
+            && selected.Contains(optionIndex);
+    }
+
+    private void SetTrainingSchoolExamSingleAnswerV4(int questionIndex, int optionIndex)
+    {
+        launchedExamResponses[questionIndex] = new HashSet<int> { optionIndex };
+    }
+
+    private void SetTrainingSchoolExamOptionV4(int questionIndex, int optionIndex, object? value)
+    {
+        var isChecked = false;
+
+        if (value is bool boolValue)
+        {
+            isChecked = boolValue;
+        }
+        else if (value is string stringValue)
+        {
+            isChecked = string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(stringValue, "on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (!launchedExamResponses.TryGetValue(questionIndex, out var selected))
+        {
+            selected = new HashSet<int>();
+            launchedExamResponses[questionIndex] = selected;
+        }
+
+        if (isChecked)
+        {
+            selected.Add(optionIndex);
+        }
+        else
+        {
+            selected.Remove(optionIndex);
+        }
+    }
+
+    private async Task SubmitTrainingSchoolExamAttemptV4(TrainingExam exam)
+    {
+        if (exam.Questions.Count == 0)
+        {
+            examResultPassed = false;
+            examResultScorePercent = 0;
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = "This exam has no questions configured yet.";
+            showExamResultModal = true;
+            return;
+        }
+
+        var matchedAnswerCount = 0;
+
+        for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
+        {
+            var question = exam.Questions[questionIndex];
+            var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
+                ? selectedAnswerIndexes.OrderBy(i => i).ToList()
+                : new List<int>();
+
+            if (IsTrainingSchoolExamQuestionCorrectV4(question, selectedAnswers))
+            {
+                matchedAnswerCount++;
+            }
+        }
+
 
         var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
         examResultScorePercent = scorePercent;
