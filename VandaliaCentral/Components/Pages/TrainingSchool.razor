@@ -81,37 +81,39 @@
 
                                                     @for (var examQuestionIndex = 0; examQuestionIndex < launchedCourseStepExam.Questions.Count; examQuestionIndex++)
                                                     {
-                                                        var question = launchedCourseStepExam.Questions[examQuestionIndex];
+                                                        var localQuestionIndex = examQuestionIndex;
+                                                        var question = launchedCourseStepExam.Questions[localQuestionIndex];
 
                                                         <div class="border rounded p-2 bg-white mb-2">
-                                                            <div class="fw-semibold mb-1">Question @(examQuestionIndex + 1)</div>
+                                                            <div class="fw-semibold mb-1">Question @(localQuestionIndex + 1)</div>
                                                             <div class="mb-2">@question.QuestionText</div>
 
                                                             @if (question.Options.Any())
                                                             {
                                                                 @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
                                                                 {
-                                                                    var optionValue = question.Options[optionIndex];
+                                                                    var localOptionIndex = optionIndex;
+                                                                    var optionValue = question.Options[localOptionIndex];
 
                                                                     <div class="form-check mb-1">
                                                                         @if (IsTrainingSchoolExamMultipleSelectQuestionV5(question))
                                                                         {
                                                                             <input class="form-check-input"
                                                                                    type="checkbox"
-                                                                                   id="course-step-question-@examQuestionIndex-option-@optionIndex"
-                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(examQuestionIndex, optionIndex)"
-                                                                                   @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(examQuestionIndex, optionIndex, e.Value)" />
+                                                                                   id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
+                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                                                   @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
                                                                         }
                                                                         else
                                                                         {
                                                                             <input class="form-check-input"
                                                                                    type="radio"
-                                                                                   name="course-step-question-@examQuestionIndex"
-                                                                                   id="course-step-question-@examQuestionIndex-option-@optionIndex"
-                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(examQuestionIndex, optionIndex)"
-                                                                                   @onchange="() => SetTrainingSchoolExamSingleAnswerV5(examQuestionIndex, optionIndex)" />
+                                                                                   name="course-step-question-@localQuestionIndex"
+                                                                                   id="course-step-question-@localQuestionIndex-option-@localOptionIndex"
+                                                                                   checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                                                   @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
                                                                         }
-                                                                        <label class="form-check-label" for="course-step-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
+                                                                        <label class="form-check-label" for="course-step-question-@localQuestionIndex-option-@localOptionIndex">@optionValue</label>
                                                                     </div>
                                                                 }
                                                             }
@@ -143,37 +145,39 @@
 
                                 @for (var examQuestionIndex = 0; examQuestionIndex < launchedExam.Questions.Count; examQuestionIndex++)
                                 {
-                                    var question = launchedExam.Questions[examQuestionIndex];
+                                    var localQuestionIndex = examQuestionIndex;
+                                    var question = launchedExam.Questions[localQuestionIndex];
 
                                     <div class="border rounded p-3 mb-3 bg-light-subtle">
-                                        <div class="fw-semibold mb-1">Question @(examQuestionIndex + 1)</div>
+                                        <div class="fw-semibold mb-1">Question @(localQuestionIndex + 1)</div>
                                         <div class="mb-2">@question.QuestionText</div>
 
                                         @if (question.Options.Any())
                                         {
                                             @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
                                             {
-                                                var optionValue = question.Options[optionIndex];
+                                                var localOptionIndex = optionIndex;
+                                                var optionValue = question.Options[localOptionIndex];
 
                                                 <div class="form-check mb-1">
                                                     @if (IsTrainingSchoolExamMultipleSelectQuestionV5(question))
                                                     {
                                                         <input class="form-check-input"
                                                                type="checkbox"
-                                                               id="assignment-question-@examQuestionIndex-option-@optionIndex"
-                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(examQuestionIndex, optionIndex)"
-                                                               @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(examQuestionIndex, optionIndex, e.Value)" />
+                                                               id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
+                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                               @onchange="(ChangeEventArgs e) => SetTrainingSchoolExamOptionV5(localQuestionIndex, localOptionIndex, e.Value)" />
                                                     }
                                                     else
                                                     {
                                                         <input class="form-check-input"
                                                                type="radio"
-                                                               name="assignment-question-@examQuestionIndex"
-                                                               id="assignment-question-@examQuestionIndex-option-@optionIndex"
-                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(examQuestionIndex, optionIndex)"
-                                                               @onchange="() => SetTrainingSchoolExamSingleAnswerV5(examQuestionIndex, optionIndex)" />
+                                                               name="assignment-question-@localQuestionIndex"
+                                                               id="assignment-question-@localQuestionIndex-option-@localOptionIndex"
+                                                               checked="@IsTrainingSchoolExamOptionSelectedV5(localQuestionIndex, localOptionIndex)"
+                                                               @onchange="() => SetTrainingSchoolExamSingleAnswerV5(localQuestionIndex, localOptionIndex)" />
                                                     }
-                                                    <label class="form-check-label" for="assignment-question-@examQuestionIndex-option-@optionIndex">@optionValue</label>
+                                                    <label class="form-check-label" for="assignment-question-@localQuestionIndex-option-@localOptionIndex">@optionValue</label>
                                                 </div>
                                             }
                                         }
