@@ -195,7 +195,7 @@
                             <video class="w-100 rounded border"
                                    controls
                                    style="max-height: 80vh;"
-                                   @onended="HandleLaunchedVideoEnded">
+                                   @onended="() => HandleLaunchedVideoEnded()">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
                             </video>
 
@@ -1736,15 +1736,21 @@
         isCompletingLaunchedVideo = false;
     }
 
-    private Task HandleLaunchedVideoEnded()
+    private void HandleLaunchedVideoEnded()
     {
-        if (!IsLaunchedVideoAssignment() || canMarkLaunchedVideoComplete)
+        try
         {
-            return Task.CompletedTask;
-        }
+            if (!IsLaunchedVideoAssignment() || canMarkLaunchedVideoComplete)
+            {
+                return;
+            }
 
-        canMarkLaunchedVideoComplete = true;
-        return InvokeAsync(StateHasChanged);
+            canMarkLaunchedVideoComplete = true;
+        }
+        catch
+        {
+            // Do not allow a video-ended callback failure to break page interactivity.
+        }
     }
 
     private bool IsLaunchedVideoAssignment()
