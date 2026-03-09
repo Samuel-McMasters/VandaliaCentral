@@ -234,6 +234,19 @@ main {
     white-space: nowrap; /* Optional: prevents wrapping */
 }
 
+.top-nav-image-button {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.top-nav-action-image {
+    height: 42px;
+    width: auto;
+    display: block;
+}
+
 
 
 
