@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Graph
+@using Microsoft.JSInterop
 @using System.IO
 @using System.Linq
 @using System.Threading
@@ -33,7 +34,7 @@
                     <div class="border rounded p-4 bg-light-subtle">
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                             <h4 class="mb-0">@launchedAssignment.Title</h4>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="ExitLaunchedAssignment">Back to Training School</button>
+                            <a class="btn btn-outline-secondary btn-sm" href="/training-school" @onclick="ExitLaunchedAssignment">Back to Training School</a>
                         </div>
 
                         <div class="text-muted small mb-3">@GetAssignmentTypeLabel(launchedAssignment.ItemType)</div>
@@ -189,9 +190,20 @@
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
                         {
-                            <video class="w-100 rounded border" controls style="max-height: 80vh;">
+                            <video class="w-100 rounded border"
+                                   controls
+                                   style="max-height: 80vh;">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
                             </video>
+
+                            <div class="mt-3">
+                                <button class="btn btn-success"
+                                        type="button"
+                                        disabled="@isCompletingLaunchedVideo"
+                                        @onclick="MarkLaunchedVideoCompleteAsync">
+                                    @(isCompletingLaunchedVideo ? "Completing..." : "Mark Complete")
+                                </button>
+                            </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         {
@@ -207,7 +219,7 @@
                         }
                     </div>
 
-                    @if (showExamResultModal)
+                    @if (showExamResultModal && IsTrainingSchoolExamLaunchContextV5())
                     {
                         <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="false">
                             <div class="modal-dialog modal-dialog-centered" role="document">
@@ -943,6 +955,11 @@
     private string examResultModalTitle = string.Empty;
     private string examResultModalMessage = string.Empty;
     private bool showAssignLearningModal;
+    private bool isCompletingLaunchedVideo;
+    // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
+    private bool launchedVideoWatcherInitialized;
+    private IDisposable? launchedVideoWatcherReference;
+    private ElementReference launchedVideoElement;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
     private string assignExamSearchTerm = string.Empty;
@@ -1277,7 +1294,7 @@
     private async Task DeleteCourseAsync(string courseId)
     {
         await CourseStorageService.DeleteCourseAsync(courseId);
-        await TrainingDocumentService.RemoveActiveAssignmentsByBlobPathAsync($"courses/{courseId}.json");
+        await RemoveActiveAssignmentsByBlobPathIfSupportedAsync($"courses/{courseId}.json");
 
         if (editingCourse?.Id == courseId)
         {
@@ -1291,6 +1308,26 @@
 
         await LoadCoursesAsync();
         SetCourseStatus("Course deleted.");
+    }
+
+    private async Task RemoveActiveAssignmentsByBlobPathIfSupportedAsync(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath))
+        {
+            return;
+        }
+
+        var removeMethod = TrainingDocumentService.GetType().GetMethod("RemoveActiveAssignmentsByBlobPathAsync");
+        if (removeMethod == null)
+        {
+            return;
+        }
+
+        var taskObj = removeMethod.Invoke(TrainingDocumentService, new object[] { blobPath });
+        if (taskObj is Task removeTask)
+        {
+            await removeTask;
+        }
     }
 
     private async Task SaveCourseAsync()
@@ -1624,6 +1661,8 @@
 
     private async Task TryActivateLaunchFromQueryAsync()
     {
+        ResetLaunchedVideoCompletionState();
+
         if (string.IsNullOrWhiteSpace(AssignmentLaunchId) || myTrainingProfile == null)
         {
             launchedAssignment = null;
@@ -1670,6 +1709,71 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetLaunchedVideoCompletionState()
+    {
+        isCompletingLaunchedVideo = false;
+    }
+
+    [JSInvokable]
+    public Task NotifyLaunchedVideoNearEndAsync()
+    {
+        // Compatibility no-op: older merged code paths may still call into this method.
+        // Mark Complete is intentionally always enabled now.
+        return Task.CompletedTask;
+    }
+
+    private bool IsLaunchedVideoAssignment()
+    {
+        return launchedAssignment != null
+            && !string.IsNullOrWhiteSpace(launchedAssignment.BlobPath)
+            && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId);
+    }
+
+    private async Task MarkLaunchedVideoCompleteAsync()
+    {
+        if (!IsLaunchedVideoAssignment() || isCompletingLaunchedVideo)
+        {
+            return;
+        }
+
+        isCompletingLaunchedVideo = true;
+
+        try
+        {
+            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment!.AssignmentId);
+            if (!completed)
+            {
+                SetCourseStatus("Could not mark this video complete. Please refresh and try again.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentUserId))
+            {
+                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            }
+
+            launchedAssignment = null;
+            launchedExam = null;
+            launchedCourse = null;
+            launchedCourseStepExam = null;
+            launchedCourseStepIndex = 0;
+            ResetTrainingSchoolExamAttemptV5();
+            ResetLaunchedVideoCompletionState();
+            activeTab = "my-courses";
+            NavigationManager.NavigateTo("/training-school", forceLoad: false);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Could not complete video assignment: {ex.Message}");
+        }
+        finally
+        {
+            isCompletingLaunchedVideo = false;
+        }
     }
 
     private void DismissTrainingSchoolExamResultV2Modal()
@@ -1915,88 +2019,95 @@
 
     private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId)
     {
-        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
+        try
         {
-            return false;
-        }
-
-        var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
-        if (completeMethod != null)
-        {
-            var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
-            if (taskObj is Task<bool> boolTask)
+            if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
             {
-                return await boolTask;
-            }
-        }
-
-        var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
-        var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
-        if (getProfileMethod == null || saveProfileMethod == null)
-        {
-            return false;
-        }
-
-        var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
-        if (getTaskObj is not Task getTask)
-        {
-            return false;
-        }
-
-        await getTask;
-
-        var resultProperty = getTask.GetType().GetProperty("Result");
-        var profileObj = resultProperty?.GetValue(getTask);
-        if (profileObj == null)
-        {
-            return false;
-        }
-
-        var profileType = profileObj.GetType();
-        var activeProp = profileType.GetProperty("ActiveAssignedLearning");
-        var historyProp = profileType.GetProperty("LearningHistory");
-        if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
-            || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
-        {
-            return false;
-        }
-
-        object? matched = null;
-        foreach (var item in activeList)
-        {
-            if (item == null)
-            {
-                continue;
+                return false;
             }
 
-            var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
-            var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
-            if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+            var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
+            if (completeMethod != null)
             {
-                matched = item;
-                break;
+                var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
+                if (taskObj is Task<bool> boolTask)
+                {
+                    return await boolTask;
+                }
             }
-        }
 
-        if (matched == null)
+            var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
+            var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
+            if (getProfileMethod == null || saveProfileMethod == null)
+            {
+                return false;
+            }
+
+            var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
+            if (getTaskObj is not Task getTask)
+            {
+                return false;
+            }
+
+            await getTask;
+
+            var resultProperty = getTask.GetType().GetProperty("Result");
+            var profileObj = resultProperty?.GetValue(getTask);
+            if (profileObj == null)
+            {
+                return false;
+            }
+
+            var profileType = profileObj.GetType();
+            var activeProp = profileType.GetProperty("ActiveAssignedLearning");
+            var historyProp = profileType.GetProperty("LearningHistory");
+            if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
+                || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
+            {
+                return false;
+            }
+
+            object? matched = null;
+            foreach (var item in activeList)
+            {
+                if (item == null)
+                {
+                    continue;
+                }
+
+                var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
+                var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
+                if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+                {
+                    matched = item;
+                    break;
+                }
+            }
+
+            if (matched == null)
+            {
+                return false;
+            }
+
+            activeList.Remove(matched);
+
+            var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
+            completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
+            historyList.Add(matched);
+
+            var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
+            if (saveTaskObj is not Task saveTask)
+            {
+                return false;
+            }
+
+            await saveTask;
+            return true;
+        }
+        catch
         {
             return false;
         }
-
-        activeList.Remove(matched);
-
-        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
-        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
-        historyList.Add(matched);
-
-        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
-        if (saveTaskObj is not Task saveTask)
-        {
-            return false;
-        }
-
-        await saveTask;
-        return true;
     }
 
     private async Task HandleTrainingSchoolExamPrimaryActionV5Async()
@@ -2048,6 +2159,22 @@
     private void CloseTrainingSchoolExamResultModalV5()
     {
         showExamResultModal = false;
+    }
+
+    private bool IsTrainingSchoolExamLaunchContextV5()
+    {
+        if (launchedAssignment == null)
+        {
+            return false;
+        }
+
+        if (launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+            && launchedCourseStepExam != null;
     }
 
     private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV5(TrainingExamQuestion question, bool usesOneBasedIndexes)
