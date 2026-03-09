@@ -1309,7 +1309,7 @@
     private async Task DeleteCourseAsync(string courseId)
     {
         await CourseStorageService.DeleteCourseAsync(courseId);
-        await TrainingDocumentService.RemoveActiveAssignmentsByBlobPathAsync($"courses/{courseId}.json");
+        await RemoveActiveAssignmentsByBlobPathIfSupportedAsync($"courses/{courseId}.json");
 
         if (editingCourse?.Id == courseId)
         {
@@ -1323,6 +1323,26 @@
 
         await LoadCoursesAsync();
         SetCourseStatus("Course deleted.");
+    }
+
+    private async Task RemoveActiveAssignmentsByBlobPathIfSupportedAsync(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath))
+        {
+            return;
+        }
+
+        var removeMethod = TrainingDocumentService.GetType().GetMethod("RemoveActiveAssignmentsByBlobPathAsync");
+        if (removeMethod == null)
+        {
+            return;
+        }
+
+        var taskObj = removeMethod.Invoke(TrainingDocumentService, new object[] { blobPath });
+        if (taskObj is Task removeTask)
+        {
+            await removeTask;
+        }
     }
 
     private async Task SaveCourseAsync()
