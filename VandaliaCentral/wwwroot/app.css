@@ -260,7 +260,8 @@ main {
 
 .top-nav-action-image {
     height: 30px;
-    width: auto;
+    width: 86px;
+    object-fit: contain;
     display: block;
 }
 
