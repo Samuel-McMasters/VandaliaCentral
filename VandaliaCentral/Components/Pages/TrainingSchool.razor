@@ -1668,6 +1668,25 @@
             {
                 InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            InitializeLaunchExamAttempt(launchedCourseStepExam, contextKey);
+            ClearLaunchExamResponses(launchedCourseStepExam.Questions.Count);
+        }
+    }
+
+    private void DismissLaunchExamResultModal()
+    {
+        showExamResultModal = false;
+    }
+
+    private void ClearLaunchExamResponses(int questionCount)
+    {
+        launchedExamResponses = new Dictionary<int, HashSet<int>>();
+        for (var questionIndex = 0; questionIndex < questionCount; questionIndex++)
+        {
+            launchedExamResponses[questionIndex] = new HashSet<int>();
         }
     }
 
