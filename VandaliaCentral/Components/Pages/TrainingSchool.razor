@@ -1760,7 +1760,7 @@
         }
     }
 
-    private void SubmitLaunchExam(TrainingExam exam)
+    private async Task SubmitLaunchExam(TrainingExam exam)
     {
         if (exam.Questions.Count == 0)
         {
@@ -1771,18 +1771,16 @@
             return;
         }
 
-        var usesOneBasedIndexes = ExamUsesOneBasedCorrectIndexes(exam);
         var matchedAnswerCount = 0;
 
         for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
         {
             var question = exam.Questions[questionIndex];
-            var expectedAnswers = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes);
             var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
                 ? selectedAnswerIndexes.OrderBy(i => i).ToList()
                 : new List<int>();
 
-            if (expectedAnswers.SequenceEqual(selectedAnswers))
+            if (IsLaunchExamQuestionCorrect(question, selectedAnswers))
             {
                 matchedAnswerCount++;
             }
@@ -1793,6 +1791,7 @@
 
         if (examResultPassed)
         {
+            await CompleteLaunchedAssignmentIfEligibleAsync();
             examResultModalTitle = "Congratulations!";
             examResultModalMessage = $"You passed with a score of {scorePercent}% (required: {exam.PassingScorePercent}%).";
         }
@@ -1805,23 +1804,40 @@
         showExamResultModal = true;
     }
 
+    private bool IsLaunchExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
+    {
+        var expectedZeroBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: false);
+        if (expectedZeroBased.SequenceEqual(selectedAnswers))
+        {
+            return true;
+        }
+
+        var expectedOneBased = NormalizeLaunchExamCorrectIndexes(question, usesOneBasedIndexes: true);
+        return expectedOneBased.SequenceEqual(selectedAnswers);
+    }
+
+    private async Task CompleteLaunchedAssignmentIfEligibleAsync()
+    {
+        if (launchedAssignment == null
+            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(currentUserId)
+            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        {
+            return;
+        }
+
+        var completed = await TrainingDocumentService.CompleteAssignmentForUserAsync(currentUserId, launchedAssignment.AssignmentId);
+        if (!completed)
+        {
+            return;
+        }
+
+        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+    }
+
     private void DismissLaunchExamResultModal()
     {
         showExamResultModal = false;
-    }
-
-    private static bool ExamUsesOneBasedCorrectIndexes(TrainingExam exam)
-    {
-        var hasZeroBasedIndicator = exam.Questions.Any(q => q.CorrectOptionIndexes.Any(i => i == 0));
-        if (hasZeroBasedIndicator)
-        {
-            return false;
-        }
-
-        var hasOneBasedIndicator = exam.Questions.Any(q =>
-            q.Options.Any() && q.CorrectOptionIndexes.Any(i => i == q.Options.Count));
-
-        return hasOneBasedIndicator;
     }
 
     private static List<int> NormalizeLaunchExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
