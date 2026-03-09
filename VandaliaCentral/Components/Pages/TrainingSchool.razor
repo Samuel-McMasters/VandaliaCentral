@@ -210,7 +210,7 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title">@examResultModalTitle</h5>
-                                        <button type="button" class="btn-close" aria-label="Close" @onclick="() => DismissTrainingSchoolExamResultModal()"></button>
+                                        <button type="button" class="btn-close" aria-label="Close" @onclick="() => DismissTrainingSchoolExamResultV2Modal()"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p class="mb-0">@examResultModalMessage</p>
@@ -218,9 +218,9 @@
                                     <div class="modal-footer">
                                         @if (!examResultPassed)
                                         {
-                                            <button class="btn btn-outline-secondary" type="button" @onclick="RetakeTrainingSchoolExamAsync">Retake Exam</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="() => RetakeTrainingSchoolExamAsync()">Retake Exam</button>
                                         }
-                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="HandleTrainingSchoolExamPrimaryActionAsync">OK</button>
+                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="() => HandleTrainingSchoolExamPrimaryActionV2Async()">OK</button>
                                     </div>
                                 </div>
                             </div>
@@ -1662,7 +1662,7 @@
         }
         else if (matchingAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase))
         {
-            launchedExam = await LoadTrainingSchoolExamForBlobPathAsync(matchingAssignment.BlobPath);
+            launchedExam = await LoadTrainingSchoolExamForBlobPathV2Async(matchingAssignment.BlobPath);
 
             if (launchedExam != null)
             {
@@ -1688,7 +1688,7 @@
             return;
         }
 
-        launchedCourseStepExam = await LoadTrainingSchoolExamForBlobPathAsync(activeStep.Content.BlobPath);
+        launchedCourseStepExam = await LoadTrainingSchoolExamForBlobPathV2Async(activeStep.Content.BlobPath);
         if (launchedCourseStepExam != null)
         {
             var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
@@ -1722,7 +1722,7 @@
         launchedExamResponseContext = string.Empty;
         launchedExamResponses = new Dictionary<int, HashSet<int>>();
         examResultScorePercent = 0;
-        DismissTrainingSchoolExamResultModal();
+        DismissTrainingSchoolExamResultV2Modal();
     }
 
     private static bool IsTrainingSchoolExamMultipleSelectQuestion(TrainingExamQuestion question)
@@ -1819,13 +1819,13 @@
 
     private bool IsTrainingSchoolExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
     {
-        var expectedZeroBased = NormalizeTrainingSchoolExamCorrectIndexes(question, usesOneBasedIndexes: false);
+        var expectedZeroBased = NormalizeTrainingSchoolExamCorrectIndexesV2(question, usesOneBasedIndexes: false);
         if (expectedZeroBased.SequenceEqual(selectedAnswers))
         {
             return true;
         }
 
-        var expectedOneBased = NormalizeTrainingSchoolExamCorrectIndexes(question, usesOneBasedIndexes: true);
+        var expectedOneBased = NormalizeTrainingSchoolExamCorrectIndexesV2(question, usesOneBasedIndexes: true);
         return expectedOneBased.SequenceEqual(selectedAnswers);
     }
 
@@ -1935,10 +1935,10 @@
         return true;
     }
 
-    private async Task HandleTrainingSchoolExamPrimaryActionAsync()
+    private async Task HandleTrainingSchoolExamPrimaryActionV2Async()
     {
         var shouldReturnToMyCourses = examResultPassed;
-        DismissTrainingSchoolExamResultModal();
+        DismissTrainingSchoolExamResultV2Modal();
 
         if (shouldReturnToMyCourses)
         {
@@ -1953,86 +1953,12 @@
             await InvokeAsync(StateHasChanged);
         }
 
-        if (matched == null)
-        {
-            return false;
-        }
-
-        activeList.Remove(matched);
-
-        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
-        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
-        historyList.Add(matched);
-
-        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
-        if (saveTaskObj is not Task saveTask)
-        {
-            return false;
-        }
-
-        await saveTask;
-        return true;
-    }
-
-    private async Task HandleTrainingSchoolExamPrimaryActionAsync()
-    {
-        var shouldReturnToMyCourses = examResultPassed;
-        DismissTrainingSchoolExamResultModal();
-
-        if (shouldReturnToMyCourses)
-        {
-            launchedAssignment = null;
-            launchedExam = null;
-            launchedCourse = null;
-            launchedCourseStepExam = null;
-            launchedCourseStepIndex = 0;
-            ResetTrainingSchoolExamAttempt();
-            activeTab = "my-courses";
-            NavigationManager.NavigateTo("/training-school", forceLoad: false);
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void RetakeTrainingSchoolExam()
-    {
-        showExamResultModal = false;
-        examResultScorePercent = 0;
-
-        if (launchedExam != null)
-        {
-            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
-            InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{assignmentId}");
-            ClearTrainingSchoolExamResponses(launchedExam.Questions.Count);
-            return;
-        }
-
-        if (launchedCourseStepExam != null && launchedCourse != null)
-        {
-            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-            if (!orderedSteps.Any())
-            {
-                return;
-            }
-
-            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
-            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
-            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
-            ClearTrainingSchoolExamResponses(launchedCourseStepExam.Questions.Count);
-        }
+        await InvokeAsync(StateHasChanged);
     }
 
     private void DismissTrainingSchoolExamResultModal()
     {
         showExamResultModal = false;
-    }
-
-    private void ClearTrainingSchoolExamResponses(int questionCount)
-    {
-        launchedExamResponses = new Dictionary<int, HashSet<int>>();
-        for (var questionIndex = 0; questionIndex < questionCount; questionIndex++)
-        {
-            launchedExamResponses[questionIndex] = new HashSet<int>();
-        }
     }
 
     private static List<int> NormalizeTrainingSchoolExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
@@ -2111,12 +2037,12 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void DismissTrainingSchoolExamResultModal()
+    private void DismissTrainingSchoolExamResultV2Modal()
     {
         showExamResultModal = false;
     }
 
-    private static List<int> NormalizeTrainingSchoolExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
     {
         if (!question.Options.Any())
         {
@@ -2142,7 +2068,7 @@
             .ToList();
     }
 
-    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathAsync(string blobPath)
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
     {
         if (string.IsNullOrWhiteSpace(blobPath)
             || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
