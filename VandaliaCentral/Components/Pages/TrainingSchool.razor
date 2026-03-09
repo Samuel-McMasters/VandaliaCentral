@@ -3,7 +3,9 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Graph
+@using Microsoft.JSInterop
 @using System.IO
 @using System.Linq
 @using System.Threading
@@ -16,6 +18,7 @@
 @inject GraphUserService GraphUserService
 @inject LoggingService Logger
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 @attribute [Authorize]
 @implements IDisposable
@@ -1098,6 +1101,21 @@
     protected override async Task OnParametersSetAsync()
     {
         await TryActivateLaunchFromQueryAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (!IsLaunchedVideoAssignment() || launchedVideoWatcherInitialized)
+        {
+            return;
+        }
+
+        launchedVideoWatcherReference?.Dispose();
+        launchedVideoWatcherReference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("trainingSchoolVideo.watchForNearEnd", launchedVideoElement, launchedVideoWatcherReference, 10);
+        launchedVideoWatcherInitialized = true;
     }
 
     private void SetActiveTab(string tab)
@@ -2724,6 +2742,7 @@
         examStatusCts?.Dispose();
         courseStatusCts?.Cancel();
         courseStatusCts?.Dispose();
+        launchedVideoWatcherReference?.Dispose();
     }
 
     private static string FormatFileSize(long? sizeInBytes)
