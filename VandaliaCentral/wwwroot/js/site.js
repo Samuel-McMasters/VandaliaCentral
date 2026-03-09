@@ -278,3 +278,17 @@ window.adminFlappyBird = (() => {
         dispose
     };
 })();
+
+window.trainingSchoolVideo = window.trainingSchoolVideo || {
+    isNearEnd: (videoElement, secondsThreshold) => {
+        if (!videoElement || typeof videoElement.duration !== "number" || !Number.isFinite(videoElement.duration)) {
+            return false;
+        }
+
+        const threshold = typeof secondsThreshold === "number" && Number.isFinite(secondsThreshold)
+            ? Math.max(0, secondsThreshold)
+            : 10;
+
+        return (videoElement.duration - videoElement.currentTime) <= threshold;
+    }
+};
