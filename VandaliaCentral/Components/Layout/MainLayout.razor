@@ -66,18 +66,17 @@
             @if (IsUploader && !IsOnEditorPage && !IsAdmin)
             {
                 <div class="ms-auto">
-                    <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
-                            style="max-width: 200px;"
+                    <button class="btn btn-primary mmbtn custom-upload-button text-nowrap top-nav-image-button"
                             @onclick='(e) => NavigateToEditor("Monday Minute Manager")'>
-                        Resource Hub
+                        <img src="/top-nav-action-button.svg" alt="Resource Hub" class="top-nav-action-image" />
                     </button>
                 </div>
             }
             else if (IsAdmin)
             {
                 <div class="ms-auto">
-                    <NavLink href="/admin" @onclick='(e) => NavigateToAdmin("Admin Dashboard")' class="btn btn-danger" activeClass="active">
-                        @(isMobile ? "Admin" : "Admin Dashboard")
+                    <NavLink href="/admin" @onclick='(e) => NavigateToAdmin("Admin Dashboard")' class="btn btn-danger top-nav-image-button" activeClass="active">
+                        <img src="/top-nav-action-button.svg" alt="Admin Dashboard" class="top-nav-action-image" />
                     </NavLink>
                 </div>
             }
