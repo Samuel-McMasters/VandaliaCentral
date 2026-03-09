@@ -84,8 +84,7 @@ namespace VandaliaCentral.Services
 
         private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         {
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
-            ".mp4", ".mov", ".avi", ".wmv", ".m4v", ".webm"
+            ".pdf", ".mp4"
         };
 
         private readonly BlobContainerClient _containerClient;
@@ -337,7 +336,7 @@ namespace VandaliaCentral.Services
 
             if (string.IsNullOrWhiteSpace(safeFileName) || !AllowedExtensions.Contains(extension))
             {
-                throw new InvalidOperationException("Unsupported file type. Please upload a document or video file.");
+                throw new InvalidOperationException("Unsupported file type. Please upload a .pdf or .mp4 file.");
             }
 
             var blobClient = _containerClient.GetBlobClient(safeFileName);
