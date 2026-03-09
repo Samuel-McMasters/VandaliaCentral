@@ -1952,16 +1952,48 @@
             NavigationManager.NavigateTo("/training-school", forceLoad: false);
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task RetakeTrainingSchoolExamAsync()
+    {
+        showExamResultModal = false;
+        examResultPassed = false;
+        examResultScorePercent = 0;
+        examResultModalTitle = string.Empty;
+        examResultModalMessage = string.Empty;
+
+        if (launchedExam != null)
+        {
+            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{assignmentId}");
+        }
+        else if (launchedCourseStepExam != null && launchedCourse != null)
+        {
+            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+            if (orderedSteps.Any())
+            {
+                var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+                var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+                ResetTrainingSchoolExamAttempt();
+                InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+            }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+        }
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private void DismissTrainingSchoolExamResultModal()
+    private void DismissTrainingSchoolExamResultV2Modal()
     {
         showExamResultModal = false;
     }
 
-    private static List<int> NormalizeTrainingSchoolExamCorrectIndexes(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
     {
         if (!question.Options.Any())
         {
@@ -1987,51 +2019,12 @@
             .ToList();
     }
 
-    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathAsync(string blobPath)
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
     {
         if (string.IsNullOrWhiteSpace(blobPath)
             || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
         {
             return null;
-        }
-
-        var examId = Path.GetFileNameWithoutExtension(blobPath);
-        if (string.IsNullOrWhiteSpace(examId))
-        {
-            return null;
-        }
-
-        return await TrainingDocumentService.GetExamAsync(examId);
-    }
-
-    private async Task RetakeTrainingSchoolExamAsync()
-    {
-        showExamResultModal = false;
-        examResultPassed = false;
-        examResultScorePercent = 0;
-        examResultModalTitle = string.Empty;
-        examResultModalMessage = string.Empty;
-
-        if (launchedExam != null)
-        {
-            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
-            ResetTrainingSchoolExamAttempt();
-            InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{assignmentId}");
-            return;
-        }
-
-        if (launchedCourseStepExam != null && launchedCourse != null)
-        {
-            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
-            if (!orderedSteps.Any())
-            {
-                return;
-            }
-
-            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
-            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
-            ResetTrainingSchoolExamAttempt();
-            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
         }
 
         await InvokeAsync(StateHasChanged);
