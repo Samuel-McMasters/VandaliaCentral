@@ -194,15 +194,14 @@
                         {
                             <video class="w-100 rounded border"
                                    controls
-                                   style="max-height: 80vh;"
-                                   @onended="() => HandleLaunchedVideoEnded()">
+                                   style="max-height: 80vh;">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
                             </video>
 
                             <div class="mt-3">
                                 <button class="btn btn-success"
                                         type="button"
-                                        disabled="@(!canMarkLaunchedVideoComplete || isCompletingLaunchedVideo)"
+                                        disabled="@isCompletingLaunchedVideo"
                                         @onclick="MarkLaunchedVideoCompleteAsync">
                                     @(isCompletingLaunchedVideo ? "Completing..." : "Mark Complete")
                                 </button>
@@ -958,7 +957,6 @@
     private string examResultModalTitle = string.Empty;
     private string examResultModalMessage = string.Empty;
     private bool showAssignLearningModal;
-    private bool canMarkLaunchedVideoComplete;
     private bool isCompletingLaunchedVideo;
     // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
     private bool launchedVideoWatcherInitialized;
@@ -1732,31 +1730,7 @@
 
     private void ResetLaunchedVideoCompletionState()
     {
-        canMarkLaunchedVideoComplete = false;
         isCompletingLaunchedVideo = false;
-    }
-
-    private void HandleLaunchedVideoEnded()
-    {
-        try
-        {
-            if (!IsLaunchedVideoAssignment() || canMarkLaunchedVideoComplete)
-            {
-                return;
-            }
-
-            canMarkLaunchedVideoComplete = true;
-        }
-        catch
-        {
-            // Do not allow a video-ended callback failure to break page interactivity.
-        }
-    }
-
-    [JSInvokable]
-    public void NotifyLaunchedVideoNearEndAsync()
-    {
-        HandleLaunchedVideoEnded();
     }
 
     private bool IsLaunchedVideoAssignment()
@@ -1769,7 +1743,7 @@
 
     private async Task MarkLaunchedVideoCompleteAsync()
     {
-        if (!IsLaunchedVideoAssignment() || !canMarkLaunchedVideoComplete || isCompletingLaunchedVideo)
+        if (!IsLaunchedVideoAssignment() || isCompletingLaunchedVideo)
         {
             return;
         }
