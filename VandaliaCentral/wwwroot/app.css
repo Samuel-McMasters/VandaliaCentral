@@ -259,8 +259,8 @@ main {
     }
 
 .top-nav-action-image {
-    height: 30px;
-    width: 68px;
+    height: 100px;
+    width: 60px;
     object-fit: contain;
     display: block;
 }
