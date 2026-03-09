@@ -247,11 +247,11 @@ main {
         content: none !important;
     }
 
-    .top-nav-image-button:hover,
-    .top-nav-image-button:focus,
-    .top-nav-image-button:focus-visible,
-    .top-nav-image-button:active,
-    .top-nav-image-button.active {
+    .btn.top-nav-image-button:hover,
+    .btn.top-nav-image-button:focus,
+    .btn.top-nav-image-button:focus-visible,
+    .btn.top-nav-image-button:active,
+    .btn.top-nav-image-button.active {
         border: none !important;
         background: transparent !important;
         box-shadow: none !important;
@@ -430,7 +430,7 @@ a.disabled {
     cursor: default;
 }
 
-.mmbtn:hover {
+.mmbtn:not(.top-nav-image-button):hover {
     background-color: dodgerblue !important;
     border-color: blue !important;
 }
