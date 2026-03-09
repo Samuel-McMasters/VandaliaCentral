@@ -1669,6 +1669,288 @@
                 InitializeTrainingSchoolExamAttemptV4(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
         }
+<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
+=======
+
+        var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
+        examResultScorePercent = scorePercent;
+        examResultPassed = scorePercent >= exam.PassingScorePercent;
+
+        if (examResultPassed)
+        {
+            await CompleteTrainingSchoolAssignmentIfEligibleAsync();
+            examResultModalTitle = "Congratulations!";
+            examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
+        }
+        else
+        {
+            examResultModalTitle = "Please Try Again";
+            examResultModalMessage = $"You scored {scorePercent}%. You need at least {exam.PassingScorePercent}% to pass.";
+        }
+
+        showExamResultModal = true;
+    }
+
+    private bool IsTrainingSchoolExamQuestionCorrect(TrainingExamQuestion question, List<int> selectedAnswers)
+    {
+        var expectedZeroBased = NormalizeTrainingSchoolExamCorrectIndexesV2(question, usesOneBasedIndexes: false);
+        if (expectedZeroBased.SequenceEqual(selectedAnswers))
+        {
+            return true;
+        }
+
+        var expectedOneBased = NormalizeTrainingSchoolExamCorrectIndexesV2(question, usesOneBasedIndexes: true);
+        return expectedOneBased.SequenceEqual(selectedAnswers);
+    }
+
+    private async Task CompleteTrainingSchoolAssignmentIfEligibleAsync()
+    {
+        if (launchedAssignment == null
+            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(currentUserId)
+            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        {
+            return;
+        }
+
+        var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserAsync(launchedAssignment.AssignmentId);
+        if (!completed)
+        {
+            return;
+        }
+
+        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+    }
+
+
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserAsync(string assignmentId)
+    {
+        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
+        {
+            return false;
+        }
+
+        var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
+        if (completeMethod != null)
+        {
+            var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
+            if (taskObj is Task<bool> boolTask)
+            {
+                return await boolTask;
+            }
+        }
+
+        var getProfileMethod = TrainingDocumentService.GetType().GetMethod("GetUserTrainingProfileAsync");
+        var saveProfileMethod = TrainingDocumentService.GetType().GetMethod("SaveUserTrainingProfileAsync");
+        if (getProfileMethod == null || saveProfileMethod == null)
+        {
+            return false;
+        }
+
+        var getTaskObj = getProfileMethod.Invoke(TrainingDocumentService, new object[] { currentUserId });
+        if (getTaskObj is not Task getTask)
+        {
+            return false;
+        }
+
+        await getTask;
+
+        var resultProperty = getTask.GetType().GetProperty("Result");
+        var profileObj = resultProperty?.GetValue(getTask);
+        if (profileObj == null)
+        {
+            return false;
+        }
+
+        var profileType = profileObj.GetType();
+        var activeProp = profileType.GetProperty("ActiveAssignedLearning");
+        var historyProp = profileType.GetProperty("LearningHistory");
+        if (activeProp?.GetValue(profileObj) is not System.Collections.IList activeList
+            || historyProp?.GetValue(profileObj) is not System.Collections.IList historyList)
+        {
+            return false;
+        }
+
+        object? matched = null;
+        foreach (var item in activeList)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
+            var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
+            if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+            {
+                matched = item;
+                break;
+            }
+        }
+
+        if (matched == null)
+        {
+            return false;
+        }
+
+        activeList.Remove(matched);
+
+        var completedAtProp = matched.GetType().GetProperty("CompletedAtUtc");
+        completedAtProp?.SetValue(matched, DateTimeOffset.UtcNow);
+        historyList.Add(matched);
+
+        var saveTaskObj = saveProfileMethod.Invoke(TrainingDocumentService, new object[] { profileObj });
+        if (saveTaskObj is not Task saveTask)
+        {
+            return false;
+        }
+
+        await saveTask;
+        return true;
+    }
+
+    private async Task HandleTrainingSchoolExamPrimaryActionV2Async()
+    {
+        var shouldReturnToMyCourses = examResultPassed;
+        DismissTrainingSchoolExamResultV2Modal();
+
+        if (shouldReturnToMyCourses)
+        {
+            launchedAssignment = null;
+            launchedExam = null;
+            launchedCourse = null;
+            launchedCourseStepExam = null;
+            launchedCourseStepIndex = 0;
+            ResetTrainingSchoolExamAttempt();
+            activeTab = "my-courses";
+            NavigationManager.NavigateTo("/training-school", forceLoad: false);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RetakeTrainingSchoolExamAsync()
+    {
+        showExamResultModal = false;
+        examResultPassed = false;
+        examResultScorePercent = 0;
+        examResultModalTitle = string.Empty;
+        examResultModalMessage = string.Empty;
+
+        if (launchedExam != null)
+        {
+            var assignmentId = launchedAssignment?.AssignmentId ?? string.Empty;
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedExam, $"assignment:{assignmentId}");
+        }
+        else if (launchedCourseStepExam != null && launchedCourse != null)
+        {
+            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+            if (orderedSteps.Any())
+            {
+                var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+                var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+                ResetTrainingSchoolExamAttempt();
+                InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+            }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissTrainingSchoolExamResultV2Modal()
+    {
+        showExamResultModal = false;
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+        return question.CorrectOptionIndexes
+            .Where(i => i >= 0 && i < optionCount)
+            .Distinct()
+            .OrderBy(i => i)
+            .ToList();
+    }
+
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissTrainingSchoolExamResultV2Modal()
+    {
+        showExamResultModal = false;
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+        return question.CorrectOptionIndexes
+            .Where(i => i >= 0 && i < optionCount)
+            .Distinct()
+            .OrderBy(i => i)
+            .ToList();
+    }
+
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var examId = Path.GetFileNameWithoutExtension(blobPath);
+        if (string.IsNullOrWhiteSpace(examId))
+        {
+            return null;
+        }
+
+        return await TrainingDocumentService.GetExamAsync(examId);
+>>>>>>> training-school
     }
 
     private async Task LoadTrainingSchoolActiveExamStepV4Async()
@@ -1696,11 +1978,14 @@
         }
     }
 
+<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
     private void InitializeTrainingSchoolExamAttempt(TrainingExam exam, string contextKey)
     {
         InitializeTrainingSchoolExamAttemptV4(exam, contextKey);
     }
 
+=======
+>>>>>>> training-school
     private void InitializeTrainingSchoolExamAttemptV4(TrainingExam exam, string contextKey)
     {
         if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
@@ -1717,11 +2002,14 @@
         }
     }
 
+<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
     private void ResetTrainingSchoolExamAttempt()
     {
         ResetTrainingSchoolExamAttemptV4();
     }
 
+=======
+>>>>>>> training-school
     private void ResetTrainingSchoolExamAttemptV4()
     {
         launchedExamResponseContext = string.Empty;
