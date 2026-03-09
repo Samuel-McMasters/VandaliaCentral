@@ -962,7 +962,7 @@
     private bool isCompletingLaunchedVideo;
     // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
     private bool launchedVideoWatcherInitialized;
-    private object? launchedVideoWatcherReference;
+    private IDisposable? launchedVideoWatcherReference;
     private ElementReference launchedVideoElement;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
