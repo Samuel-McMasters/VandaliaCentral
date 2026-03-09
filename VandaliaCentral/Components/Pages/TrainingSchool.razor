@@ -36,7 +36,7 @@
                     <div class="border rounded p-4 bg-light-subtle">
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                             <h4 class="mb-0">@launchedAssignment.Title</h4>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="ExitLaunchedAssignment">Back to Training School</button>
+                            <a class="btn btn-outline-secondary btn-sm" href="/training-school" @onclick="ExitLaunchedAssignment">Back to Training School</a>
                         </div>
 
                         <div class="text-muted small mb-3">@GetAssignmentTypeLabel(launchedAssignment.ItemType)</div>
@@ -1731,6 +1731,14 @@
     private void ResetLaunchedVideoCompletionState()
     {
         isCompletingLaunchedVideo = false;
+    }
+
+    [JSInvokable]
+    public Task NotifyLaunchedVideoNearEndAsync()
+    {
+        // Compatibility no-op: older merged code paths may still call into this method.
+        // Mark Complete is intentionally always enabled now.
+        return Task.CompletedTask;
     }
 
     private bool IsLaunchedVideoAssignment()
