@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" role="img" aria-labelledby="title">
+  <title id="title">Navigation action icon</title>
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-width="8">
+    <line x1="18" y1="12" x2="142" y2="12" />
+    <line x1="18" y1="24" x2="142" y2="24" />
+    <line x1="18" y1="36" x2="142" y2="36" />
+  </g>
+  <g fill="#000">
+    <circle cx="48" cy="12" r="9" />
+    <circle cx="104" cy="24" r="9" />
+    <circle cx="76" cy="36" r="9" />
+  </g>
+</svg>
