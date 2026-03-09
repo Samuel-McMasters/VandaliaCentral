@@ -279,8 +279,10 @@ window.adminFlappyBird = (() => {
     };
 })();
 
-window.trainingSchoolVideo = window.trainingSchoolVideo || {
-    isNearEnd: (videoElement, secondsThreshold) => {
+window.trainingSchoolVideo = (() => {
+    const listeners = new WeakMap();
+
+    const isNearEnd = (videoElement, secondsThreshold) => {
         if (!videoElement || typeof videoElement.duration !== "number" || !Number.isFinite(videoElement.duration)) {
             return false;
         }
@@ -290,5 +292,48 @@ window.trainingSchoolVideo = window.trainingSchoolVideo || {
             : 10;
 
         return (videoElement.duration - videoElement.currentTime) <= threshold;
-    }
-};
+    };
+
+    const stopWatching = (videoElement) => {
+        if (!videoElement) {
+            return;
+        }
+
+        const entry = listeners.get(videoElement);
+        if (!entry) {
+            return;
+        }
+
+        videoElement.removeEventListener("timeupdate", entry.handler);
+        videoElement.removeEventListener("ended", entry.handler);
+        listeners.delete(videoElement);
+    };
+
+    const watchForNearEnd = (videoElement, dotNetRef, secondsThreshold) => {
+        if (!videoElement || !dotNetRef) {
+            return;
+        }
+
+        stopWatching(videoElement);
+
+        const handler = () => {
+            if (!isNearEnd(videoElement, secondsThreshold)) {
+                return;
+            }
+
+            stopWatching(videoElement);
+            dotNetRef.invokeMethodAsync("NotifyLaunchedVideoNearEndAsync");
+        };
+
+        videoElement.addEventListener("timeupdate", handler);
+        videoElement.addEventListener("ended", handler);
+        listeners.set(videoElement, { handler });
+
+        handler();
+    };
+
+    return {
+        watchForNearEnd,
+        stopWatching
+    };
+})();
