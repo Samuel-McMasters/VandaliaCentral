@@ -1669,8 +1669,6 @@
                 InitializeTrainingSchoolExamAttemptV4(launchedExam, $"assignment:{matchingAssignment.AssignmentId}");
             }
         }
-<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
-=======
 
         var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
         examResultScorePercent = scorePercent;
@@ -1950,7 +1948,6 @@
         }
 
         return await TrainingDocumentService.GetExamAsync(examId);
->>>>>>> training-school
     }
 
     private async Task LoadTrainingSchoolActiveExamStepV4Async()
@@ -1978,14 +1975,12 @@
         }
     }
 
-<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
     private void InitializeTrainingSchoolExamAttempt(TrainingExam exam, string contextKey)
     {
         InitializeTrainingSchoolExamAttemptV4(exam, contextKey);
     }
 
-=======
->>>>>>> training-school
+
     private void InitializeTrainingSchoolExamAttemptV4(TrainingExam exam, string contextKey)
     {
         if (launchedExamResponseContext.Equals(contextKey, StringComparison.OrdinalIgnoreCase))
@@ -2002,14 +1997,12 @@
         }
     }
 
-<<<<<<< codex/build-exam-launch-view-in-trainingschool.razor
     private void ResetTrainingSchoolExamAttempt()
     {
         ResetTrainingSchoolExamAttemptV4();
     }
 
-=======
->>>>>>> training-school
+
     private void ResetTrainingSchoolExamAttemptV4()
     {
         launchedExamResponseContext = string.Empty;
