@@ -282,6 +282,33 @@ namespace VandaliaCentral.Services
             await SaveUserTrainingProfileAsync(profile);
         }
 
+        public async Task<bool> CompleteAssignmentForUserAsync(string userId, string assignmentId)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(userId);
+            if (string.IsNullOrWhiteSpace(safeUserId) || string.IsNullOrWhiteSpace(assignmentId))
+            {
+                return false;
+            }
+
+            var profile = await GetUserTrainingProfileAsync(safeUserId);
+            profile.UserId = safeUserId;
+
+            var assignment = profile.ActiveAssignedLearning.FirstOrDefault(a =>
+                string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase));
+
+            if (assignment == null)
+            {
+                return false;
+            }
+
+            profile.ActiveAssignedLearning.Remove(assignment);
+            assignment.CompletedAtUtc = DateTimeOffset.UtcNow;
+            profile.LearningHistory.Add(assignment);
+
+            await SaveUserTrainingProfileAsync(profile);
+            return true;
+        }
+
         public async Task SaveUserTrainingProfileAsync(UserTrainingProfile profile)
         {
             var safeUserId = Path.GetFileNameWithoutExtension(profile.UserId);
