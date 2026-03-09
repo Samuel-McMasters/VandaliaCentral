@@ -1978,6 +1978,53 @@
                 ResetTrainingSchoolExamAttempt();
                 InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
             }
+
+            var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            var contextKey = $"course:{launchedCourse.Id}:step:{activeStep.Id}";
+            ResetTrainingSchoolExamAttempt();
+            InitializeTrainingSchoolExamAttempt(launchedCourseStepExam, contextKey);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissTrainingSchoolExamResultV2Modal()
+    {
+        showExamResultModal = false;
+    }
+
+    private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV2(TrainingExamQuestion question, bool usesOneBasedIndexes)
+    {
+        if (!question.Options.Any())
+        {
+            return new List<int>();
+        }
+
+        var optionCount = question.Options.Count;
+
+        if (usesOneBasedIndexes)
+        {
+            return question.CorrectOptionIndexes
+                .Where(i => i >= 1 && i <= optionCount)
+                .Select(i => i - 1)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList();
+        }
+
+        return question.CorrectOptionIndexes
+            .Where(i => i >= 0 && i < optionCount)
+            .Distinct()
+            .OrderBy(i => i)
+            .ToList();
+    }
+
+    private async Task<TrainingExam?> LoadTrainingSchoolExamForBlobPathV2Async(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath)
+            || !blobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
         }
 
         await InvokeAsync(StateHasChanged);
