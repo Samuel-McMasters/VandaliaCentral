@@ -1745,8 +1745,7 @@
     {
         return launchedAssignment != null
             && !string.IsNullOrWhiteSpace(launchedAssignment.BlobPath)
-            && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId);
+            && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task MarkLaunchedVideoCompleteAsync()
@@ -1760,7 +1759,7 @@
 
         try
         {
-            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment!.AssignmentId);
+            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment!);
             if (!completed)
             {
                 SetCourseStatus("Could not mark this video complete. Please refresh and try again.");
@@ -2036,20 +2035,53 @@
 
     private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId)
     {
+        var launchId = string.Empty;
+
+        if (myTrainingProfile != null)
+        {
+            var assignment = myTrainingProfile.ActiveAssignedLearning
+                .FirstOrDefault(a => string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase));
+
+            if (assignment != null)
+            {
+                launchId = GetAssignmentLaunchId(assignment);
+            }
+
+        return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(assignmentId, launchId);
+    }
+
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(UserLearningAssignmentViewModel assignment)
+    {
+        if (assignment == null)
+        {
+            return false;
+        }
+
+        return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(
+            assignment.AssignmentId,
+            GetAssignmentLaunchId(assignment));
+    }
+
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId, string assignmentLaunchId)
+    {
         try
         {
-            if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(assignmentId))
+            if (string.IsNullOrWhiteSpace(currentUserId)
+                || (string.IsNullOrWhiteSpace(assignmentId) && string.IsNullOrWhiteSpace(assignmentLaunchId)))
             {
                 return false;
             }
 
-            var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
-            if (completeMethod != null)
+            if (!string.IsNullOrWhiteSpace(assignmentId))
             {
-                var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
-                if (taskObj is Task<bool> boolTask)
+                var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
+                if (completeMethod != null)
                 {
-                    return await boolTask;
+                    var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
+                    if (taskObj is Task<bool> boolTask)
+                    {
+                        return await boolTask;
+                    }
                 }
             }
 
@@ -2094,7 +2126,16 @@
 
                 var assignmentIdProp = item.GetType().GetProperty("AssignmentId");
                 var candidateId = assignmentIdProp?.GetValue(item)?.ToString();
-                if (string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(assignmentId)
+                    && string.Equals(candidateId, assignmentId, StringComparison.OrdinalIgnoreCase))
+                {
+                    matched = item;
+                    break;
+                }
+
+                var candidateLaunchId = BuildAssignmentLaunchIdFromUnknownObject(item);
+                if (!string.IsNullOrWhiteSpace(assignmentLaunchId)
+                    && string.Equals(candidateLaunchId, assignmentLaunchId, StringComparison.OrdinalIgnoreCase))
                 {
                     matched = item;
                     break;
@@ -2125,6 +2166,21 @@
         {
             return false;
         }
+    }
+
+    private static string BuildAssignmentLaunchIdFromUnknownObject(object item)
+    {
+        var assignmentId = ReadStringProperty(item, "AssignmentId") ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(assignmentId))
+        {
+            return assignmentId;
+        }
+
+        var blobPath = ReadStringProperty(item, "BlobPath") ?? string.Empty;
+        var assignedAt = ReadDateTimeOffsetProperty(item, "AssignedAtUtc");
+        var assignedTicks = assignedAt.UtcTicks;
+
+        return $"{blobPath}|{assignedTicks}";
     }
 
     private async Task HandleTrainingSchoolExamPrimaryActionV5Async()
