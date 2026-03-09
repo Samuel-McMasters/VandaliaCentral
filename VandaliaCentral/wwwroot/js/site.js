@@ -279,7 +279,9 @@ window.adminFlappyBird = (() => {
     };
 })();
 
-window.trainingSchoolVideo = (() => {
+// Training School video helper: keeps backward compatibility for code paths
+// that still call trainingSchoolVideo.watchForNearEnd/stopWatching.
+window.trainingSchoolVideo = window.trainingSchoolVideo || (() => {
     const listeners = new WeakMap();
 
     const isNearEnd = (videoElement, secondsThreshold) => {
@@ -310,7 +312,7 @@ window.trainingSchoolVideo = (() => {
     };
 
     const watchForNearEnd = (videoElement, dotNetRef, secondsThreshold) => {
-        if (!videoElement || !dotNetRef) {
+        if (!videoElement || !dotNetRef || typeof dotNetRef.invokeMethodAsync !== "function") {
             return;
         }
 
@@ -322,7 +324,9 @@ window.trainingSchoolVideo = (() => {
             }
 
             stopWatching(videoElement);
-            dotNetRef.invokeMethodAsync("NotifyLaunchedVideoNearEndAsync");
+            dotNetRef.invokeMethodAsync("NotifyLaunchedVideoNearEndAsync").catch(() => {
+                // Swallow callback errors to avoid breaking page interactivity.
+            });
         };
 
         videoElement.addEventListener("timeupdate", handler);

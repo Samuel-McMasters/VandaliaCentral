@@ -1753,6 +1753,12 @@
         }
     }
 
+    [JSInvokable]
+    public void NotifyLaunchedVideoNearEndAsync()
+    {
+        HandleLaunchedVideoEnded();
+    }
+
     private bool IsLaunchedVideoAssignment()
     {
         return launchedAssignment != null
