@@ -289,32 +289,18 @@
                     </div>
 
                     <div class="border rounded p-3" style="min-width: 280px;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">Top 5 Leaderboard</h6>
-                            @if (canClearFlappyLeaderboard)
-                            {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard" disabled="@isClearingFlappyLeaderboard">Clear</button>
-                            }
-                        </div>
+                        <h6 class="mb-3">Leaderboards (Top 5)</h6>
 
-                        @if (flappyTopScores == null)
+                        @if (flappyLeaderboards == null)
                         {
                             <p class="text-muted mb-0">Loading scores...</p>
                         }
-                        else if (!flappyTopScores.Any())
-                        {
-                            <p class="text-muted mb-0">No scores yet. Be the first!</p>
-                        }
                         else
                         {
-                            <ol class="mb-0 ps-3">
-                                @foreach (var score in flappyTopScores)
-                                {
-                                    <li class="mb-1">
-                                        <span class="fw-semibold">@score.UserName</span> — @score.Score
-                                    </li>
-                                }
-                            </ol>
+                            @RenderLeaderboard("Daily Leaderboard", flappyLeaderboards.Daily)
+                            @RenderLeaderboard("Weekly Leaderboard", flappyLeaderboards.Weekly)
+                            @RenderLeaderboard("Monthly Leaderboard", flappyLeaderboards.Monthly)
+                            @RenderLeaderboard("All Time Leaderboard", flappyLeaderboards.AllTime, false)
                         }
                     </div>
                 </div>
@@ -340,16 +326,13 @@
     private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
-    private List<FlappyScore>? flappyTopScores;
+    private FlappyLeaderboardSnapshot? flappyLeaderboards;
     private string currentUserName = "anonymous";
     private int lastFlappyScore = 0;
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
     private string? flappyStatusMessage;
     private string signedInUserLogin = "anonymous";
-    private bool canClearFlappyLeaderboard = false;
-    private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
-    private bool isClearingFlappyLeaderboard = false;
     private List<SowDocumentInfo>? sowDocuments;
     private string? sowUploadStatus;
 
@@ -375,7 +358,6 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             signedInUserLogin = user?.Identity?.Name ?? "anonymous";
-            canClearFlappyLeaderboard = string.Equals(signedInUserLogin, FlappyLeaderboardAdminLogin, StringComparison.OrdinalIgnoreCase);
             currentUserName = GetLeaderboardDisplayName(signedInUserLogin);
 
             if (user.Identity?.IsAuthenticated == true)
@@ -392,7 +374,7 @@
             {
                 logFiles = await Logger.GetLogFileNamesAsync();
                 itNewsItems = await ItNewsService.LoadNewsAsync();
-                flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+                flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
             }
         }
@@ -484,7 +466,7 @@
             var isNewHighScore = score > currentTopScore;
 
             await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
-            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+            flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
 
             if (isNewHighScore)
             {
@@ -496,33 +478,52 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ClearFlappyLeaderboard()
+    private RenderFragment RenderLeaderboard(string title, List<FlappyScore> scores, bool addSpacing = true) => builder =>
     {
-        if (!canClearFlappyLeaderboard || isClearingFlappyLeaderboard)
+        var sequence = 0;
+
+        builder.OpenElement(sequence++, "div");
+        if (addSpacing)
         {
-            return;
+            builder.AddAttribute(sequence++, "class", "mb-3");
         }
 
-        isClearingFlappyLeaderboard = true;
-        flappyStatusMessage = null;
+        builder.OpenElement(sequence++, "h6");
+        builder.AddAttribute(sequence++, "class", "mb-2");
+        builder.AddContent(sequence++, title);
+        builder.CloseElement();
 
-        try
+        if (scores.Count == 0)
         {
-            await FlappyLeaderboardService.ClearScoresAsync();
-            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
-            await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
+            builder.OpenElement(sequence++, "p");
+            builder.AddAttribute(sequence++, "class", "text-muted mb-0 small");
+            builder.AddContent(sequence++, "No scores yet.");
+            builder.CloseElement();
         }
-        catch (Exception ex)
+        else
         {
-            flappyStatusMessage = "Unable to clear leaderboard right now. Please try again.";
-            Console.WriteLine($"Error clearing Flappy leaderboard: {ex.Message}");
+            builder.OpenElement(sequence++, "ol");
+            builder.AddAttribute(sequence++, "class", "mb-0 ps-3");
+
+            foreach (var score in scores)
+            {
+                builder.OpenElement(sequence++, "li");
+                builder.AddAttribute(sequence++, "class", "mb-1");
+
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "fw-semibold");
+                builder.AddContent(sequence++, score.UserName);
+                builder.CloseElement();
+
+                builder.AddContent(sequence++, $" — {score.Score}");
+                builder.CloseElement();
+            }
+
+            builder.CloseElement();
         }
-        finally
-        {
-            isClearingFlappyLeaderboard = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
+
+        builder.CloseElement();
+    };
 
     private async Task OnLogSelected(ChangeEventArgs e)
     {
