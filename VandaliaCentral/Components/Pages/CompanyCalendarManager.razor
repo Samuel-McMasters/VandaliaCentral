@@ -50,7 +50,7 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-primary" @onclick="StopEditing">Done</button>
+                            <button class="btn btn-sm btn-primary" @onclick="DoneEditing">Done</button>
                             <button class="btn btn-sm btn-secondary" @onclick="CancelEdit">Cancel</button>
                         </div>
                     }
@@ -118,10 +118,16 @@
         };
     }
 
-    private void StopEditing()
+    private void ResetEditingState()
     {
         editingEvent = null;
         editingBackup = null;
+    }
+
+    private async Task DoneEditing()
+    {
+        ResetEditingState();
+        await SaveCalendar();
     }
 
     private void CancelEdit()
@@ -135,14 +141,14 @@
         editingEvent.Title = editingBackup.Title;
         editingEvent.Type = editingBackup.Type;
 
-        StopEditing();
+        ResetEditingState();
     }
 
     private void DeleteEvent(CalendarEvent ev)
     {
         if (ReferenceEquals(editingEvent, ev))
         {
-            StopEditing();
+            ResetEditingState();
         }
 
         calendarEvents?.Remove(ev);
