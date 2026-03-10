@@ -24,8 +24,19 @@
 <body>
     <Routes @rendermode=RenderMode.InteractiveServer />
     
-    <script src="_framework/blazor.web.js"></script>
+    <script src="_framework/blazor.web.js" autostart="false"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script>
+        Blazor.start({
+            circuit: {
+                reconnectionOptions: {
+                    maxRetries: 30,
+                    retryIntervalMilliseconds: (previousAttempts, maxRetries) =>
+                        Math.min(30000, 1000 * Math.pow(2, previousAttempts))
+                }
+            }
+        });
+    </script>
     <script>
         window.addEventListener('beforeunload', () => {
             navigator.sendBeacon('/MicrosoftIdentity/Account/SignOut');
