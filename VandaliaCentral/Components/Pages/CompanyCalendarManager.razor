@@ -1,0 +1,173 @@
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject CalendarService CalendarService
+
+<div>
+    <h5>Company Calendar Manager</h5>
+
+    <div class="mb-3 w-25">
+        <label>Date:</label>
+        <InputDate @bind-Value="newEvent.Date" class="form-control" />
+
+        <label class="mt-2">Title:</label>
+        <InputText @bind-Value="newEvent.Title" class="form-control" />
+
+        <label class="mt-2">Type:</label>
+        <InputText @bind-Value="newEvent.Type" class="form-control" />
+
+        <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
+    </div>
+
+    @if (calendarEvents == null)
+    {
+        <p>Loading calendar events...</p>
+    }
+    else if (!calendarEvents.Any())
+    {
+        <p class="text-muted">No events yet.</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var ev in calendarEvents)
+            {
+                var isEditing = ReferenceEquals(editingEvent, ev);
+
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    @if (isEditing)
+                    {
+                        <div class="flex-grow-1">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <InputDate @bind-Value="ev.Date" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-5">
+                                    <InputText @bind-Value="ev.Title" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-4">
+                                    <InputText @bind-Value="ev.Type" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" @onclick="StopEditing">Done</button>
+                            <button class="btn btn-sm btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
+                            <div class="text-muted small">@ev.Type</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditing(ev)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+
+        <button class="btn btn-primary mt-3" @onclick="SaveCalendar">Save Changes</button>
+
+        @if (showSaveSuccess)
+        {
+            <div class="text-success fw-bold mt-2">✓ Calendar saved!</div>
+        }
+    }
+</div>
+
+@code {
+    private List<CalendarEvent>? calendarEvents;
+    private CalendarEvent newEvent = new() { Date = DateTime.Today };
+    private bool showSaveSuccess;
+    private CalendarEvent? editingEvent;
+    private CalendarEvent? editingBackup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        calendarEvents = await CalendarService.LoadCalendarAsync();
+    }
+
+    private void AddEvent()
+    {
+        if (string.IsNullOrWhiteSpace(newEvent.Title))
+        {
+            return;
+        }
+
+        calendarEvents?.Add(new CalendarEvent
+        {
+            Date = newEvent.Date,
+            Title = newEvent.Title,
+            Type = newEvent.Type
+        });
+
+        newEvent = new CalendarEvent { Date = DateTime.Today };
+    }
+
+    private void StartEditing(CalendarEvent ev)
+    {
+        editingEvent = ev;
+        editingBackup = new CalendarEvent
+        {
+            Date = ev.Date,
+            Title = ev.Title,
+            Type = ev.Type
+        };
+    }
+
+    private void StopEditing()
+    {
+        editingEvent = null;
+        editingBackup = null;
+    }
+
+    private void CancelEdit()
+    {
+        if (editingEvent == null || editingBackup == null)
+        {
+            return;
+        }
+
+        editingEvent.Date = editingBackup.Date;
+        editingEvent.Title = editingBackup.Title;
+        editingEvent.Type = editingBackup.Type;
+
+        StopEditing();
+    }
+
+    private void DeleteEvent(CalendarEvent ev)
+    {
+        if (ReferenceEquals(editingEvent, ev))
+        {
+            StopEditing();
+        }
+
+        calendarEvents?.Remove(ev);
+    }
+
+    private async Task SaveCalendar()
+    {
+        try
+        {
+            if (calendarEvents == null)
+            {
+                return;
+            }
+
+            await CalendarService.SaveCalendarAsync(calendarEvents);
+            showSaveSuccess = true;
+            StateHasChanged();
+
+            await Task.Delay(4000);
+            showSaveSuccess = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error saving calendar: " + ex.Message);
+        }
+    }
+}
