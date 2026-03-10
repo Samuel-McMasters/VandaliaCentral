@@ -152,25 +152,22 @@
     private readonly HashSet<string> selectedJobTitles = new(StringComparer.OrdinalIgnoreCase);
 
     private IEnumerable<string> DistrictOptions =>
-        employees
-            .Select(GetDistrict)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value);
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreDistrictFilter: true),
+            GetDistrict,
+            selectedDistricts);
 
     private IEnumerable<string> OfficeLocationOptions =>
-        employees
-            .Select(user => user.OfficeLocation ?? string.Empty)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value);
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreOfficeLocationFilter: true),
+            user => user.OfficeLocation ?? string.Empty,
+            selectedOfficeLocations);
 
     private IEnumerable<string> JobTitleOptions =>
-        employees
-            .Select(user => user.JobTitle ?? string.Empty)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(value => value);
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreJobTitleFilter: true),
+            user => user.JobTitle ?? string.Empty,
+            selectedJobTitles);
 
     private bool HasActiveFilters =>
         selectedDistricts.Count > 0 ||
@@ -251,15 +248,37 @@
 
     //Search functionality 
     private IEnumerable<User> FilteredEmployees =>
-        employees.Where(u =>
-            (string.IsNullOrWhiteSpace(searchTerm) ||
-                (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-            (selectedDistricts.Count == 0 || selectedDistricts.Contains(GetDistrict(u))) &&
-            (selectedOfficeLocations.Count == 0 || selectedOfficeLocations.Contains(u.OfficeLocation ?? string.Empty)) &&
-            (selectedJobTitles.Count == 0 || selectedJobTitles.Contains(u.JobTitle ?? string.Empty))
+        EmployeesFilteredBySelections().Where(u =>
+            string.IsNullOrWhiteSpace(searchTerm) ||
+            (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
         );
+
+    private IEnumerable<User> EmployeesFilteredBySelections(
+        bool ignoreDistrictFilter = false,
+        bool ignoreOfficeLocationFilter = false,
+        bool ignoreJobTitleFilter = false)
+    {
+        return employees.Where(user =>
+            (ignoreDistrictFilter || selectedDistricts.Count == 0 || selectedDistricts.Contains(GetDistrict(user))) &&
+            (ignoreOfficeLocationFilter || selectedOfficeLocations.Count == 0 || selectedOfficeLocations.Contains(user.OfficeLocation ?? string.Empty)) &&
+            (ignoreJobTitleFilter || selectedJobTitles.Count == 0 || selectedJobTitles.Contains(user.JobTitle ?? string.Empty))
+        );
+    }
+
+    private static IEnumerable<string> BuildFilterOptions(
+        IEnumerable<User> source,
+        Func<User, string> selector,
+        IEnumerable<string> selectedValues)
+    {
+        return source
+            .Select(selector)
+            .Concat(selectedValues)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value);
+    }
 
     private static string GetDistrict(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute1 ?? string.Empty;
 
