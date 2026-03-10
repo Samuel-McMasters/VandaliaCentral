@@ -31,12 +31,40 @@
         <ul class="list-group">
             @foreach (var ev in calendarEvents)
             {
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
-                        <div class="text-muted small">@ev.Type</div>
-                    </div>
-                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                var isEditing = ReferenceEquals(editingEvent, ev);
+
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                    @if (isEditing)
+                    {
+                        <div class="flex-grow-1">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <InputDate @bind-Value="ev.Date" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-5">
+                                    <InputText @bind-Value="ev.Title" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-4">
+                                    <InputText @bind-Value="ev.Type" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" @onclick="StopEditing">Done</button>
+                            <button class="btn btn-sm btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
+                            <div class="text-muted small">@ev.Type</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditing(ev)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                        </div>
+                    }
                 </li>
             }
         </ul>
@@ -54,6 +82,8 @@
     private List<CalendarEvent>? calendarEvents;
     private CalendarEvent newEvent = new() { Date = DateTime.Today };
     private bool showSaveSuccess;
+    private CalendarEvent? editingEvent;
+    private CalendarEvent? editingBackup;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,8 +107,44 @@
         newEvent = new CalendarEvent { Date = DateTime.Today };
     }
 
+    private void StartEditing(CalendarEvent ev)
+    {
+        editingEvent = ev;
+        editingBackup = new CalendarEvent
+        {
+            Date = ev.Date,
+            Title = ev.Title,
+            Type = ev.Type
+        };
+    }
+
+    private void StopEditing()
+    {
+        editingEvent = null;
+        editingBackup = null;
+    }
+
+    private void CancelEdit()
+    {
+        if (editingEvent == null || editingBackup == null)
+        {
+            return;
+        }
+
+        editingEvent.Date = editingBackup.Date;
+        editingEvent.Title = editingBackup.Title;
+        editingEvent.Type = editingBackup.Type;
+
+        StopEditing();
+    }
+
     private void DeleteEvent(CalendarEvent ev)
     {
+        if (ReferenceEquals(editingEvent, ev))
+        {
+            StopEditing();
+        }
+
         calendarEvents?.Remove(ev);
     }
 
