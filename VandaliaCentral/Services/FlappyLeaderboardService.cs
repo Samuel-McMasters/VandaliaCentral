@@ -17,22 +17,24 @@ namespace VandaliaCentral.Services
             _containerClient.CreateIfNotExists();
         }
 
-        public async Task<List<FlappyScore>> GetTopScoresAsync(int top = 5)
+        public async Task<FlappyLeaderboardSnapshot> GetLeaderboardsAsync(int top = 5)
         {
             var scores = await LoadScoresAsync();
+            var now = DateTime.UtcNow;
 
-            return scores
-                .OrderByDescending(x => x.Score)
-                .ThenBy(x => x.AchievedOnUtc)
-                .Take(top)
-                .ToList();
+            return new FlappyLeaderboardSnapshot
+            {
+                Daily = GetTopScoresForWindow(scores, GetDailyStartUtc(now), top),
+                Weekly = GetTopScoresForWindow(scores, GetWeeklyStartUtc(now), top),
+                Monthly = GetTopScoresForWindow(scores, GetMonthlyStartUtc(now), top),
+                AllTime = GetTopScoresForWindow(scores, null, top)
+            };
         }
 
-
-        public async Task ClearScoresAsync()
+        public async Task<List<FlappyScore>> GetTopScoresAsync(int top = 5)
         {
-            var blobClient = _containerClient.GetBlobClient(BlobName);
-            await blobClient.DeleteIfExistsAsync();
+            var snapshot = await GetLeaderboardsAsync(top);
+            return snapshot.AllTime;
         }
 
         public async Task AddScoreAsync(string userName, int score)
@@ -51,6 +53,40 @@ namespace VandaliaCentral.Services
             });
 
             await SaveScoresAsync(scores);
+        }
+
+        private static List<FlappyScore> GetTopScoresForWindow(IEnumerable<FlappyScore> scores, DateTime? windowStartUtc, int top)
+        {
+            var filteredScores = windowStartUtc.HasValue
+                ? scores.Where(s => s.AchievedOnUtc >= windowStartUtc.Value)
+                : scores;
+
+            return filteredScores
+                .GroupBy(s => (s.UserName ?? string.Empty).Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group
+                    .OrderByDescending(s => s.Score)
+                    .ThenBy(s => s.AchievedOnUtc)
+                    .First())
+                .OrderByDescending(s => s.Score)
+                .ThenBy(s => s.AchievedOnUtc)
+                .Take(top)
+                .ToList();
+        }
+
+        private static DateTime GetDailyStartUtc(DateTime nowUtc)
+        {
+            return nowUtc.Date;
+        }
+
+        private static DateTime GetWeeklyStartUtc(DateTime nowUtc)
+        {
+            var daysSinceMonday = ((int)nowUtc.DayOfWeek + 6) % 7;
+            return nowUtc.Date.AddDays(-daysSinceMonday);
+        }
+
+        private static DateTime GetMonthlyStartUtc(DateTime nowUtc)
+        {
+            return new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 30, 0, DateTimeKind.Utc);
         }
 
         private async Task<List<FlappyScore>> LoadScoresAsync()
