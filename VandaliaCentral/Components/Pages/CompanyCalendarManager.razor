@@ -1,0 +1,107 @@
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject CalendarService CalendarService
+
+<div>
+    <h5>Company Calendar Manager</h5>
+
+    <div class="mb-3 w-25">
+        <label>Date:</label>
+        <InputDate @bind-Value="newEvent.Date" class="form-control" />
+
+        <label class="mt-2">Title:</label>
+        <InputText @bind-Value="newEvent.Title" class="form-control" />
+
+        <label class="mt-2">Type:</label>
+        <InputText @bind-Value="newEvent.Type" class="form-control" />
+
+        <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
+    </div>
+
+    @if (calendarEvents == null)
+    {
+        <p>Loading calendar events...</p>
+    }
+    else if (!calendarEvents.Any())
+    {
+        <p class="text-muted">No events yet.</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var ev in calendarEvents)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
+                        <div class="text-muted small">@ev.Type</div>
+                    </div>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
+                </li>
+            }
+        </ul>
+
+        <button class="btn btn-primary mt-3" @onclick="SaveCalendar">Save Changes</button>
+
+        @if (showSaveSuccess)
+        {
+            <div class="text-success fw-bold mt-2">✓ Calendar saved!</div>
+        }
+    }
+</div>
+
+@code {
+    private List<CalendarEvent>? calendarEvents;
+    private CalendarEvent newEvent = new() { Date = DateTime.Today };
+    private bool showSaveSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        calendarEvents = await CalendarService.LoadCalendarAsync();
+    }
+
+    private void AddEvent()
+    {
+        if (string.IsNullOrWhiteSpace(newEvent.Title))
+        {
+            return;
+        }
+
+        calendarEvents?.Add(new CalendarEvent
+        {
+            Date = newEvent.Date,
+            Title = newEvent.Title,
+            Type = newEvent.Type
+        });
+
+        newEvent = new CalendarEvent { Date = DateTime.Today };
+    }
+
+    private void DeleteEvent(CalendarEvent ev)
+    {
+        calendarEvents?.Remove(ev);
+    }
+
+    private async Task SaveCalendar()
+    {
+        try
+        {
+            if (calendarEvents == null)
+            {
+                return;
+            }
+
+            await CalendarService.SaveCalendarAsync(calendarEvents);
+            showSaveSuccess = true;
+            StateHasChanged();
+
+            await Task.Delay(4000);
+            showSaveSuccess = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error saving calendar: " + ex.Message);
+        }
+    }
+}
