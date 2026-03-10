@@ -52,7 +52,7 @@
 
 @code {
     private List<CalendarEvent>? calendarEvents;
-    private CalendarEvent newEvent = new();
+    private CalendarEvent newEvent = new() { Date = DateTime.Today };
     private bool showSaveSuccess;
 
     protected override async Task OnInitializedAsync()
@@ -74,7 +74,7 @@
             Type = newEvent.Type
         });
 
-        newEvent = new CalendarEvent();
+        newEvent = new CalendarEvent { Date = DateTime.Today };
     }
 
     private void DeleteEvent(CalendarEvent ev)
