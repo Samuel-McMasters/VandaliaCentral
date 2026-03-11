@@ -690,8 +690,18 @@
                                                             @foreach (var assignment in selectedUserTrainingProfile.ActiveAssignedLearning)
                                                             {
                                                                 <li class="list-group-item">
-                                                                    <div class="fw-semibold text-break">@assignment.Title</div>
-                                                                    <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                                                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                                                                        <div>
+                                                                            <div class="fw-semibold text-break">@assignment.Title</div>
+                                                                            <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                                                        </div>
+                                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                                type="button"
+                                                                                disabled="@(assignment.AssignmentId == assignmentPendingUnassignId)"
+                                                                                @onclick='() => UnassignSelectedUserLearningAsync(assignment)'>
+                                                                            @(assignment.AssignmentId == assignmentPendingUnassignId ? "Deleting..." : "Delete")
+                                                                        </button>
+                                                                    </div>
                                                                 </li>
                                                             }
                                                         </ul>
@@ -1002,6 +1012,7 @@
     private string assignDocumentSearchTerm = string.Empty;
     private string assignExamSearchTerm = string.Empty;
     private AssignableLearningItem? selectedAssignableItem;
+    private string? assignmentPendingUnassignId;
     private bool isLoadingCourses;
     private List<CourseSummary> courses = new();
     private Course? editingCourse;
@@ -1684,6 +1695,73 @@
 
         SetCourseStatus($"Assigned '{selectedAssignableItem.Title}' to {(selectedUserProfile.DisplayName ?? "user")}.");
         CloseAssignLearningWindow();
+    }
+
+    private async Task UnassignSelectedUserLearningAsync(UserLearningAssignmentViewModel assignment)
+    {
+        if (selectedUserProfile == null
+            || string.IsNullOrWhiteSpace(selectedUserProfile.Id)
+            || selectedUserTrainingProfile == null)
+        {
+            return;
+        }
+
+        var assignmentLookupId = GetAssignmentLaunchId(assignment);
+        if (string.IsNullOrWhiteSpace(assignmentLookupId))
+        {
+            SetCourseStatus("Could not delete assignment because it has no valid identifier.");
+            return;
+        }
+
+        assignmentPendingUnassignId = assignment.AssignmentId;
+
+        try
+        {
+            var unassigned = await TrainingDocumentService.UnassignLearningFromUserAsync(
+                selectedUserProfile.Id,
+                assignment.AssignmentId,
+                assignment.BlobPath,
+                assignment.AssignedAtUtc);
+
+            if (!unassigned)
+            {
+                SetCourseStatus($"Could not delete '{assignment.Title}' because it is no longer assigned.");
+                return;
+            }
+
+            selectedUserTrainingProfile.ActiveAssignedLearning.RemoveAll(a =>
+                string.Equals(GetAssignmentLaunchId(a), assignmentLookupId, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(currentUserId)
+                && string.Equals(currentUserId, selectedUserProfile.Id, StringComparison.OrdinalIgnoreCase)
+                && myTrainingProfile != null)
+            {
+                myTrainingProfile.ActiveAssignedLearning.RemoveAll(a =>
+                    string.Equals(GetAssignmentLaunchId(a), assignmentLookupId, StringComparison.OrdinalIgnoreCase));
+
+                if (launchedAssignment != null
+                    && string.Equals(GetAssignmentLaunchId(launchedAssignment), assignmentLookupId, StringComparison.OrdinalIgnoreCase))
+                {
+                    launchedAssignment = null;
+                    launchedCourse = null;
+                    launchedExam = null;
+                    launchedCourseStepExam = null;
+                    launchedCourseStepIndex = 0;
+                    ResetTrainingSchoolExamAttemptV5();
+                    NavigationManager.NavigateTo("/training-school", forceLoad: false);
+                }
+            }
+
+            SetCourseStatus($"Deleted '{assignment.Title}' from {(selectedUserProfile.DisplayName ?? "user")}.");
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Could not delete assignment: {ex.Message}");
+        }
+        finally
+        {
+            assignmentPendingUnassignId = null;
+        }
     }
 
     private void BeginAssignment(UserLearningAssignmentViewModel assignment)
@@ -3134,4 +3212,3 @@
     }
 }
 }
-
