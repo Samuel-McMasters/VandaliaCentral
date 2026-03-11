@@ -14,7 +14,7 @@ namespace VandaliaCentral.Models
         public string Location { get; set; }
 
         [Required]
-        public DateTime LastDateOfEmployment { get; set; }
+        public DateTime LastDateOfEmployment { get; set; } = DateTime.Today;
 
         
         public bool Cellphone { get; set; }

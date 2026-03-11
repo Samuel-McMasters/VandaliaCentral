@@ -24,6 +24,19 @@ builder.Configuration.AddEnvironmentVariables();
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
+builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
+{
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(5);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options =>
+{
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(10);
+    options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(2);
+});
+
 builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
@@ -50,6 +63,13 @@ builder.Services
     .AddOptions<EmployeeChangeEmailOptions>()
     .Bind(builder.Configuration.GetSection("EmployeeChangeEmail"))
     .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeChangeEmail:To is required.")
+    .ValidateOnStart();
+
+// Employee Termination Form
+builder.Services
+    .AddOptions<EmployeeTerminationEmailOptions>()
+    .Bind(builder.Configuration.GetSection("EmployeeTerminationEmail"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeTerminationEmail:To is required.")
     .ValidateOnStart();
 
 // ===============================

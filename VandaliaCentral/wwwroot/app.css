@@ -234,6 +234,37 @@ main {
     white-space: nowrap; /* Optional: prevents wrapping */
 }
 
+.top-nav-image-button {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    transform: none !important;
+}
+
+    .top-nav-image-button::after {
+        content: none !important;
+    }
+
+    .btn.top-nav-image-button:hover,
+    .btn.top-nav-image-button:focus,
+    .btn.top-nav-image-button:focus-visible,
+    .btn.top-nav-image-button:active,
+    .btn.top-nav-image-button.active {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
+.top-nav-action-image {
+    height: 24px;
+    width: 52px;
+    object-fit: contain;
+    display: block;
+}
+
 
 
 
@@ -399,7 +430,7 @@ a.disabled {
     cursor: default;
 }
 
-.mmbtn:hover {
+.mmbtn:not(.top-nav-image-button):hover {
     background-color: dodgerblue !important;
     border-color: blue !important;
 }

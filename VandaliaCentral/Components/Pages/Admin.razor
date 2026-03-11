@@ -7,7 +7,6 @@
 @using Microsoft.Identity.Web
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
-@inject CalendarService CalendarService
 @inject ItNewsService ItNewsService
 @inject LoggingService Logger
 @inject GraphUserService GraphUserService
@@ -110,54 +109,7 @@
 
         @if (activeTab == "calendar")
         {
-            <div>
-                <h5>Company Calendar Manager</h5>
-
-                <div class="mb-3 w-25">
-                    <label>Date:</label>
-                    <InputDate @bind-Value="newEvent.Date" class="form-control" />
-
-                    <label class="mt-2">Title:</label>
-                    <InputText @bind-Value="newEvent.Title" class="form-control" />
-
-                    <label class="mt-2">Type:</label>
-                    <InputText @bind-Value="newEvent.Type" class="form-control" />
-
-                    <button class="btn btn-success mt-3" @onclick="AddEvent">Add Event</button>
-                </div>
-
-                @if (calendarEvents == null)
-                {
-                    <p>Loading calendar events...</p>
-                }
-                else if (!calendarEvents.Any())
-                {
-                    <p class="text-muted">No events yet.</p>
-                }
-                else
-                {
-                    <ul class="list-group">
-                        @foreach (var ev in calendarEvents)
-                        {
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>@ev.Date.ToString("MMMM d")</strong> – @ev.Title
-                                    <div class="text-muted small">@ev.Type</div>
-                                </div>
-                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteEvent(ev)">Delete</button>
-                            </li>
-                        }
-                    </ul>
-
-                    <div class="d-flex align-items-center gap-3 mt-3">
-                        <button class="btn btn-primary" @onclick="SaveCalendar">Save Changes</button>
-                        @if (showSaveSuccess)
-                        {
-                            <div class="text-success fw-bold">✓ Saved!</div>
-                        }
-                    </div>
-                }
-            </div>
+            <CompanyCalendarManager />
         }
 
         @if (activeTab == "itnews")
@@ -337,32 +289,18 @@
                     </div>
 
                     <div class="border rounded p-3" style="min-width: 280px;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">Top 5 Leaderboard</h6>
-                            @if (canClearFlappyLeaderboard)
-                            {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearFlappyLeaderboard" disabled="@isClearingFlappyLeaderboard">Clear</button>
-                            }
-                        </div>
+                        <h6 class="mb-3">Leaderboards (Top 5)</h6>
 
-                        @if (flappyTopScores == null)
+                        @if (flappyLeaderboards == null)
                         {
                             <p class="text-muted mb-0">Loading scores...</p>
                         }
-                        else if (!flappyTopScores.Any())
-                        {
-                            <p class="text-muted mb-0">No scores yet. Be the first!</p>
-                        }
                         else
                         {
-                            <ol class="mb-0 ps-3">
-                                @foreach (var score in flappyTopScores)
-                                {
-                                    <li class="mb-1">
-                                        <span class="fw-semibold">@score.UserName</span> — @score.Score
-                                    </li>
-                                }
-                            </ol>
+                            @RenderLeaderboard("Daily Leaderboard", flappyLeaderboards.Daily)
+                            @RenderLeaderboard("Weekly Leaderboard", flappyLeaderboards.Weekly)
+                            @RenderLeaderboard("Monthly Leaderboard", flappyLeaderboards.Monthly)
+                            @RenderLeaderboard("All Time Leaderboard", flappyLeaderboards.AllTime, false)
                         }
                     </div>
                 </div>
@@ -376,12 +314,9 @@
     private List<string>? logFiles;
     private string? logContent;
     private bool isAuthorized = false;
-    private bool showSaveSuccess = false;
     private bool isMobile = false;
     private string activeTab = "logs";
     private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
-    private List<CalendarEvent>? calendarEvents;
-    private CalendarEvent newEvent = new();
     private List<ItNewsItem>? itNewsItems;
     private string newItNewsTitle = string.Empty;
     private string newItNewsContent = string.Empty;
@@ -391,16 +326,13 @@
     private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
-    private List<FlappyScore>? flappyTopScores;
+    private FlappyLeaderboardSnapshot? flappyLeaderboards;
     private string currentUserName = "anonymous";
     private int lastFlappyScore = 0;
     private DotNetObjectReference<Admin>? flappyDotNetRef;
     private bool flappyInitialized = false;
     private string? flappyStatusMessage;
     private string signedInUserLogin = "anonymous";
-    private bool canClearFlappyLeaderboard = false;
-    private const string FlappyLeaderboardAdminLogin = "sam.mcmasters@vandaliarental.com";
-    private bool isClearingFlappyLeaderboard = false;
     private List<SowDocumentInfo>? sowDocuments;
     private string? sowUploadStatus;
 
@@ -426,7 +358,6 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             signedInUserLogin = user?.Identity?.Name ?? "anonymous";
-            canClearFlappyLeaderboard = string.Equals(signedInUserLogin, FlappyLeaderboardAdminLogin, StringComparison.OrdinalIgnoreCase);
             currentUserName = GetLeaderboardDisplayName(signedInUserLogin);
 
             if (user.Identity?.IsAuthenticated == true)
@@ -442,9 +373,8 @@
             if (isAuthorized)
             {
                 logFiles = await Logger.GetLogFileNamesAsync();
-                calendarEvents = await CalendarService.LoadCalendarAsync();
                 itNewsItems = await ItNewsService.LoadNewsAsync();
-                flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+                flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
             }
         }
@@ -536,7 +466,7 @@
             var isNewHighScore = score > currentTopScore;
 
             await FlappyLeaderboardService.AddScoreAsync(currentUserName, score);
-            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
+            flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
 
             if (isNewHighScore)
             {
@@ -548,33 +478,52 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ClearFlappyLeaderboard()
+    private RenderFragment RenderLeaderboard(string title, List<FlappyScore> scores, bool addSpacing = true) => builder =>
     {
-        if (!canClearFlappyLeaderboard || isClearingFlappyLeaderboard)
+        var sequence = 0;
+
+        builder.OpenElement(sequence++, "div");
+        if (addSpacing)
         {
-            return;
+            builder.AddAttribute(sequence++, "class", "mb-3");
         }
 
-        isClearingFlappyLeaderboard = true;
-        flappyStatusMessage = null;
+        builder.OpenElement(sequence++, "h6");
+        builder.AddAttribute(sequence++, "class", "mb-2");
+        builder.AddContent(sequence++, title);
+        builder.CloseElement();
 
-        try
+        if (scores.Count == 0)
         {
-            await FlappyLeaderboardService.ClearScoresAsync();
-            flappyTopScores = await FlappyLeaderboardService.GetTopScoresAsync(5);
-            await Logger.LogActivityAsync(signedInUserLogin, "Cleared Flappy Bird leaderboard");
+            builder.OpenElement(sequence++, "p");
+            builder.AddAttribute(sequence++, "class", "text-muted mb-0 small");
+            builder.AddContent(sequence++, "No scores yet.");
+            builder.CloseElement();
         }
-        catch (Exception ex)
+        else
         {
-            flappyStatusMessage = "Unable to clear leaderboard right now. Please try again.";
-            Console.WriteLine($"Error clearing Flappy leaderboard: {ex.Message}");
+            builder.OpenElement(sequence++, "ol");
+            builder.AddAttribute(sequence++, "class", "mb-0 ps-3");
+
+            foreach (var score in scores)
+            {
+                builder.OpenElement(sequence++, "li");
+                builder.AddAttribute(sequence++, "class", "mb-1");
+
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "fw-semibold");
+                builder.AddContent(sequence++, score.UserName);
+                builder.CloseElement();
+
+                builder.AddContent(sequence++, $" — {score.Score}");
+                builder.CloseElement();
+            }
+
+            builder.CloseElement();
         }
-        finally
-        {
-            isClearingFlappyLeaderboard = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
+
+        builder.CloseElement();
+    };
 
     private async Task OnLogSelected(ChangeEventArgs e)
     {
@@ -582,47 +531,6 @@
         if (!string.IsNullOrEmpty(selectedFile))
         {
             logContent = await Logger.ReadLogContentAsync(selectedFile);
-        }
-    }
-
-    private void AddEvent()
-    {
-        if (string.IsNullOrWhiteSpace(newEvent.Title))
-            return;
-
-        calendarEvents?.Add(new CalendarEvent
-            {
-                Date = newEvent.Date,
-                Title = newEvent.Title,
-                Type = newEvent.Type
-            });
-
-        newEvent = new CalendarEvent();
-    }
-
-    private void DeleteEvent(CalendarEvent ev)
-    {
-        calendarEvents?.Remove(ev);
-    }
-
-    private async Task SaveCalendar()
-    {
-        try
-        {
-            if (calendarEvents != null)
-            {
-                await CalendarService.SaveCalendarAsync(calendarEvents);
-                showSaveSuccess = true;
-                StateHasChanged();
-
-                await Task.Delay(4000);
-                showSaveSuccess = false;
-                StateHasChanged();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Error saving calendar: " + ex.Message);
         }
     }
 

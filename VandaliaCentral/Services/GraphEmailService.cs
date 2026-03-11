@@ -284,6 +284,75 @@ namespace VandaliaCentral.Services
             }
         }
 
+        public async Task SendEmailWithAttachmentAsyncStrict(
+            string toEmail,
+            string subject,
+            string bodyText,
+            byte[] fileBytes,
+            string fileName,
+            string? ccEmail = null,
+            CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(toEmail))
+                throw new InvalidOperationException("Destination email is blank.");
+
+            try
+            {
+                var graphClient = await GetGraphClientAsync(ct);
+
+                var message = new Message
+                {
+                    Subject = subject,
+                    Body = new ItemBody
+                    {
+                        ContentType = BodyType.Text,
+                        Content = bodyText
+                    },
+                    ToRecipients = new List<Recipient>
+                    {
+                        new Recipient
+                        {
+                            EmailAddress = new EmailAddress { Address = toEmail }
+                        }
+                    },
+                    Attachments = new MessageAttachmentsCollectionPage
+                    {
+                        new FileAttachment
+                        {
+                            Name = fileName,
+                            ContentBytes = fileBytes,
+                            ContentType = "application/pdf"
+                        }
+                    }
+                };
+
+                if (!string.IsNullOrWhiteSpace(ccEmail))
+                {
+                    message.CcRecipients = new List<Recipient>
+                    {
+                        new Recipient
+                        {
+                            EmailAddress = new EmailAddress { Address = ccEmail }
+                        }
+                    };
+                }
+
+                await ExecuteWithRetryAsync(async () =>
+                {
+                    await graphClient.Me.SendMail(message, true)
+                        .Request()
+                        .PostAsync(ct);
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SendEmailWithAttachmentAsyncStrict failed. To={To}, Subject={Subject}, Cc={Cc}, File={FileName}",
+                    toEmail, subject, ccEmail, fileName);
+                _consentHandler.HandleException(ex);
+                throw;
+            }
+        }
+
         // =========================
         // Internals
         // =========================

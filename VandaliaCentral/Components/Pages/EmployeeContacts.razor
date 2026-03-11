@@ -15,6 +15,68 @@
             <h3>Employee Contacts</h3>
             <input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
                    @bind="searchTerm" @bind:event="oninput" />
+            <div class="d-flex flex-wrap align-items-start gap-2 mb-3">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        District
+                    </button>
+                    <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; min-width: 220px;">
+                        @foreach (var district in DistrictOptions)
+                        {
+                            <li>
+                                <label class="dropdown-item d-flex align-items-center gap-2 mb-0">
+                                    <input type="checkbox"
+                                           checked="@selectedDistricts.Contains(district)"
+                                           @onchange="(e) => ToggleFilter(selectedDistricts, district, e.Value)" />
+                                    <span>@district</span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Office Location
+                    </button>
+                    <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; min-width: 220px;">
+                        @foreach (var officeLocation in OfficeLocationOptions)
+                        {
+                            <li>
+                                <label class="dropdown-item d-flex align-items-center gap-2 mb-0">
+                                    <input type="checkbox"
+                                           checked="@selectedOfficeLocations.Contains(officeLocation)"
+                                           @onchange="(e) => ToggleFilter(selectedOfficeLocations, officeLocation, e.Value)" />
+                                    <span>@officeLocation</span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Job Title
+                    </button>
+                    <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; min-width: 260px;">
+                        @foreach (var jobTitle in JobTitleOptions)
+                        {
+                            <li>
+                                <label class="dropdown-item d-flex align-items-center gap-2 mb-0">
+                                    <input type="checkbox"
+                                           checked="@selectedJobTitles.Contains(jobTitle)"
+                                           @onchange="(e) => ToggleFilter(selectedJobTitles, jobTitle, e.Value)" />
+                                    <span>@jobTitle</span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <button class="btn btn-outline-danger btn-sm" @onclick="ClearFilters" disabled="@(!HasActiveFilters)">
+                    Clear Filters
+                </button>
+            </div>
 
             <div>
                 @if (isLoading)
@@ -39,7 +101,7 @@
                                 <th class="d-none d-md-table-cell" width="15%">Job Title</th>
                                 <th class="d-none d-lg-table-cell" width="20%">Email</th>
                                 <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
-                                <th class="d-none d-xl-table-cell" width="15%">IP Phone</th>
+                                <th class="d-none d-xl-table-cell" width="15%">Extension</th>
                                 
                             </tr>
                         </thead>
@@ -85,6 +147,32 @@
     private string searchTerm = "";
     private bool isLoading = true;
     private bool failure = false;
+    private readonly HashSet<string> selectedDistricts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> selectedOfficeLocations = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> selectedJobTitles = new(StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<string> DistrictOptions =>
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreDistrictFilter: true),
+            GetDistrict,
+            selectedDistricts);
+
+    private IEnumerable<string> OfficeLocationOptions =>
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreOfficeLocationFilter: true),
+            user => user.OfficeLocation ?? string.Empty,
+            selectedOfficeLocations);
+
+    private IEnumerable<string> JobTitleOptions =>
+        BuildFilterOptions(
+            EmployeesFilteredBySelections(ignoreJobTitleFilter: true),
+            user => user.JobTitle ?? string.Empty,
+            selectedJobTitles);
+
+    private bool HasActiveFilters =>
+        selectedDistricts.Count > 0 ||
+        selectedOfficeLocations.Count > 0 ||
+        selectedJobTitles.Count > 0;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -160,11 +248,55 @@
 
     //Search functionality 
     private IEnumerable<User> FilteredEmployees =>
-        string.IsNullOrWhiteSpace(searchTerm)
-            ? employees
-            : employees.Where(u =>
-                (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
-            );
+        EmployeesFilteredBySelections().Where(u =>
+            string.IsNullOrWhiteSpace(searchTerm) ||
+            (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+
+    private IEnumerable<User> EmployeesFilteredBySelections(
+        bool ignoreDistrictFilter = false,
+        bool ignoreOfficeLocationFilter = false,
+        bool ignoreJobTitleFilter = false)
+    {
+        return employees.Where(user =>
+            (ignoreDistrictFilter || selectedDistricts.Count == 0 || selectedDistricts.Contains(GetDistrict(user))) &&
+            (ignoreOfficeLocationFilter || selectedOfficeLocations.Count == 0 || selectedOfficeLocations.Contains(user.OfficeLocation ?? string.Empty)) &&
+            (ignoreJobTitleFilter || selectedJobTitles.Count == 0 || selectedJobTitles.Contains(user.JobTitle ?? string.Empty))
+        );
+    }
+
+    private static IEnumerable<string> BuildFilterOptions(
+        IEnumerable<User> source,
+        Func<User, string> selector,
+        IEnumerable<string> selectedValues)
+    {
+        return source
+            .Select(selector)
+            .Concat(selectedValues)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value);
+    }
+
+    private static string GetDistrict(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute1 ?? string.Empty;
+
+    private void ToggleFilter(HashSet<string> selectedValues, string value, object? isChecked)
+    {
+        if (bool.TryParse(isChecked?.ToString(), out var parsed) && parsed)
+        {
+            selectedValues.Add(value);
+            return;
+        }
+
+        selectedValues.Remove(value);
+    }
+
+    private void ClearFilters()
+    {
+        selectedDistricts.Clear();
+        selectedOfficeLocations.Clear();
+        selectedJobTitles.Clear();
+    }
 }

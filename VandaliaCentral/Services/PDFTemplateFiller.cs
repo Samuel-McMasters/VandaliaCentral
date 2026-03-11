@@ -56,31 +56,36 @@ namespace VandaliaCentral.Services
 
         public static byte[] FillChange(ChangeFormModel model)
         {
-            var templatePath = Path.Combine("wwwroot", "forms", "EmployeeChangeTemplate.pdf");
+            var templatePath = Path.Combine("wwwroot", "forms", "EmployeeChangeCrossTrainTemplate.pdf");
             using var reader = new PdfReader(templatePath);
             using var output = new MemoryStream();
             using var stamper = new PdfStamper(reader, output);
 
             var fields = stamper.AcroFields;
 
-            fields.SetField("FirstName", model.FirstName);
-            fields.SetField("LastName", model.LastName);
+            fields.SetField("first_name", model.FirstName);
+            fields.SetField("last_name", model.LastName);
+            // Support both known field-name spellings seen across template revisions.
+            fields.SetField("preivous_job_title", model.PreviousJobTitle);
+            fields.SetField("previous_job_title", model.PreviousJobTitle);
             fields.SetField("PreviousJobTitle", model.PreviousJobTitle);
-            fields.SetField("BranchNumber", model.BranchNumber);
-            fields.SetField("BranchName", model.BranchName);
-            fields.SetField("ManagerName", model.ManagerName);
-            fields.SetField("EffectiveDate", model.EffectiveDate.ToString("MM/dd/yyyy"));
-            fields.SetField("NewPosition", model.NewPosition);
-            fields.SetField("JobTitle", model.JobTitle);
-            fields.SetField("FullTime", model.FullTime ? "Yes" : "Off");
-            fields.SetField("PartTime", model.PartTime ? "Yes" : "Off");
-            fields.SetField("Hourly", model.Hourly ? "Yes" : "Off");
-            fields.SetField("Salary", model.Salary ? "Yes" : "Off");
-            fields.SetField("NewLocBranchNumber", model.NewLocBranchNumber);
-            fields.SetField("NewLocBranchName", model.NewLocBranchName);
-            fields.SetField("NewLocManagerName", model.NewLocManagerName);
-
-            fields.SetField("AdditionalNotes", model.AdditionalNotes);
+            fields.SetField("branch_number", model.BranchNumber);
+            fields.SetField("branch_name", model.BranchName);
+            fields.SetField("manager_name", model.ManagerName);
+            fields.SetField("effective_date", model.EffectiveDate.ToString("MM/dd/yyyy"));
+            fields.SetField("new_position", model.NewPosition);
+            fields.SetField("job_title", model.JobTitle);
+            fields.SetField("for_cross_training_only", model.ForCrossTrainingOnly ? "Yes" : "Off");
+            fields.SetField("full_time", model.FullTime ? "Yes" : "Off");
+            fields.SetField("part_time", model.PartTime ? "Yes" : "Off");
+            fields.SetField("hourly", model.Hourly ? "Yes" : "Off");
+            fields.SetField("salary", model.Salary ? "Yes" : "Off");
+            fields.SetField("new_branch_number", model.NewLocBranchNumber);
+            fields.SetField("new_branch_name", model.NewLocBranchName);
+            fields.SetField("new_manager_name", model.NewLocManagerName);
+            fields.SetField("cross_training_current_position", model.CrossTrainingCurrentPosition);
+            fields.SetField("cross_training_target_position", model.CrossTrainingTargetPosition);
+            fields.SetField("additional_notes", model.AdditionalNotes);
             
 
             // Optional: flatten the form so fields can't be edited after filling

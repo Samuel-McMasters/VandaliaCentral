@@ -3,12 +3,17 @@
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Options
+@using Microsoft.Graph
 @inject GraphEmailService EmailService
+@inject GraphUserService UserService
 @inject LoggingService Logger
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject IOptions<BranchLocationsOptions> BranchLocations
+@inject IOptions<EmployeeTerminationEmailOptions> EmailOptions
 
 @attribute [Authorize]
-@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "GroupMember.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">
     <h3>Employee Termination Form</h3>
@@ -37,17 +42,64 @@
                 <div class="row">
                     <div class="col-12 col-md-4 d-flex flex-column mb-2">
                         <label>Employee Name:</label>
-                        <InputText @bind-Value="formModel.EmployeeName" class="form-control" />
+                        <div class="position-relative">
+                            <button type="button"
+                                    class="form-control text-start"
+                                    @onclick="ToggleEmployeeDropdown"
+                                    disabled="@isEmployeeListLoading">
+                                @GetEmployeeSelectionText()
+                            </button>
+
+                            @if (showEmployeeDropdown)
+                            {
+                                <div class="position-fixed top-0 start-0 w-100 h-100"
+                                     style="z-index: 1040;"
+                                     @onclick="CloseEmployeeDropdown"></div>
+                                <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
+                                     style="z-index: 1050;"
+                                     @onclick:stopPropagation="true">
+                                    <input class="form-control mb-2"
+                                           placeholder="Search employees..."
+                                           @bind="employeeSearchTerm"
+                                           @bind:event="oninput" />
+                                    <div style="max-height: 240px; overflow-y: auto;">
+                                        @if (!FilteredEmployees.Any())
+                                        {
+                                            <div class="text-muted small px-2 py-1">No employees found.</div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var employee in FilteredEmployees)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-link text-decoration-none text-start w-100 px-2 py-1"
+                                                        @onclick="() => SelectEmployee(employee)">
+                                                    @employee.DisplayName
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <ValidationMessage For="@(() => formModel.EmployeeName)" />
                     </div>
                     <div class="col-12 col-md-4 mb-2">
                         <label>Employee #:</label>
-                        <InputText @bind-Value="formModel.EmployeeNumber" class="form-control" />
+                        <InputText @bind-Value="formModel.EmployeeNumber" class="form-control" readonly="@isEmployeeNumberReadOnly" />
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-12 col-md-4 mb-2">
                         <label>Location:</label>
-                        <InputText @bind-Value="formModel.Location" class="form-control" />
+                        <InputSelect @bind-Value="formModel.Location" class="form-select">
+                            <option value="">-- Select --</option>
+                            @foreach (var loc in BranchLocations.Value.Items)
+                            {
+                                var display = $"{loc.Code} - {loc.Name}";
+                                <option value="@display">@display</option>
+                            }
+                        </InputSelect>
                     </div>
                     <div class="col-12 col-md-4 mb-2">
                         <label>Last Date of Employment:</label>
@@ -174,6 +226,11 @@
     private bool success = false;
     private bool failure = false;
     private bool isAuthorized = false;
+    private bool isEmployeeListLoading = true;
+    private bool showEmployeeDropdown = false;
+    private bool isEmployeeNumberReadOnly = false;
+    private string employeeSearchTerm = string.Empty;
+    private List<User> employees = new();
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ITokenAcquisition TokenAcquisition { get; set; } = default!;
@@ -186,25 +243,84 @@
             // Attempt to get token when page loads
             var token = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
             isAuthorized = true;
+
+            var users = await UserService.GetUsersAsync();
+            employees = users
+                .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName))
+                .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            isEmployeeListLoading = false;
         }
         catch (Exception ex)
         {
             ConsentHandler.HandleException(ex);
+            isEmployeeListLoading = false;
         }
+    }
+
+    private IEnumerable<User> FilteredEmployees =>
+        employees.Where(u =>
+            string.IsNullOrWhiteSpace(employeeSearchTerm) ||
+            (u.DisplayName?.Contains(employeeSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private string GetEmployeeSelectionText()
+    {
+        if (isEmployeeListLoading)
+        {
+            return "Loading employees...";
+        }
+
+        return string.IsNullOrWhiteSpace(formModel.EmployeeName)
+            ? "Select employee"
+            : formModel.EmployeeName;
+    }
+
+    private void ToggleEmployeeDropdown()
+    {
+        showEmployeeDropdown = !showEmployeeDropdown;
+    }
+
+    private void CloseEmployeeDropdown()
+    {
+        showEmployeeDropdown = false;
+    }
+
+    private void SelectEmployee(User employee)
+    {
+        formModel.EmployeeName = employee.DisplayName ?? string.Empty;
+
+        var employeeNumber = employee.OnPremisesExtensionAttributes?.ExtensionAttribute2;
+        if (string.IsNullOrWhiteSpace(employeeNumber))
+        {
+            formModel.EmployeeNumber = string.Empty;
+            isEmployeeNumberReadOnly = false;
+        }
+        else
+        {
+            formModel.EmployeeNumber = employeeNumber;
+            isEmployeeNumberReadOnly = true;
+        }
+
+        showEmployeeDropdown = false;
+        employeeSearchTerm = string.Empty;
     }
 
     private async Task HandleValidSubmit()
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(EmailOptions.Value.To))
+                throw new InvalidOperationException("TODO: Configure EmployeeTerminationEmail:To in appsettings / Azure App Settings.");
+
             var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
 
-            await EmailService.SendEmailWithAttachmentAsync(
-                toEmail: "sam.mcmasters@vandaliarental.com",
+            await EmailService.SendEmailWithAttachmentAsyncStrict(
+                toEmail: EmailOptions.Value.To,
                 subject: $"Termination Form: {formModel.EmployeeName}",
                 bodyText: $"Attached is the termination form for {formModel.EmployeeName}.",
-                pdfBytes: pdfBytes,
-                pdfFileName: $"{formModel.EmployeeName}_termination.pdf"
+                fileBytes: pdfBytes,
+                fileName: $"{formModel.EmployeeName}_termination.pdf",
+                ccEmail: string.IsNullOrWhiteSpace(EmailOptions.Value.Cc) ? null : EmailOptions.Value.Cc
             );
 
             // Get current user identity
