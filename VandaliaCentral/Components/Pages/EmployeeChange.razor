@@ -217,22 +217,21 @@
                 throw new InvalidOperationException("TODO: Configure EmployeeChangeEmail:To in appsettings / Azure App Settings.");
 
             var pdfBytes = PDFTemplateFiller.FillChange(formModel);
-<<<<<<< codex/update-employee-change-form-mappings-ml4qhn
+
 
             var fileSafeName = fullName.Replace(" ", "_");
-=======
->>>>>>> chatGPT
+
 
             await EmailService.SendEmailWithAttachmentAsyncStrict(
                 toEmail: opts.To,
                 subject: $"Employee Change Form: {fullName}",
                 bodyText: $"Attached is the employee change form for {fullName}.",
                 fileBytes: pdfBytes,
-<<<<<<< codex/update-employee-change-form-mappings-ml4qhn
+
                 fileName: $"{fileSafeName}_employee_change.pdf",
-=======
+
                 fileName: $"{fullName.Replace(" ", "_")}_employee_change.pdf",
->>>>>>> chatGPT
+
                 ccEmail: string.IsNullOrWhiteSpace(opts.Cc) ? null : opts.Cc);
 
             await Logger.LogActivityAsync(userName, $"Submitted Employee Change Form For: '{fullName}'");
