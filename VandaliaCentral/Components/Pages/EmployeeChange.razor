@@ -110,7 +110,7 @@
                 <div class="row">
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch #:</strong></label>
-                        <InputSelect class="form-select" Value="selectedCurrentBranch" ValueChanged="HandleCurrentBranchChanged" ValueExpression="() => selectedCurrentBranch">
+                        <InputSelect class="form-select" @bind-Value="SelectedCurrentBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
                             {
@@ -175,7 +175,7 @@
                 <div class="row">
                     <div class="col-12 col-md-6 d-flex flex-column mb-2">
                         <label><strong>Branch Number:</strong></label>
-                        <InputSelect class="form-select" Value="selectedNewLocationBranch" ValueChanged="HandleNewLocationBranchChanged" ValueExpression="() => selectedNewLocationBranch">
+                        <InputSelect class="form-select" @bind-Value="SelectedNewLocationBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
                             {
@@ -234,7 +234,30 @@
     private string? errorDetails;
     private string employeeSearchTerm = string.Empty;
     private string selectedCurrentBranch = string.Empty;
+    private string SelectedCurrentBranch
+    {
+        get => selectedCurrentBranch;
+        set
+        {
+            selectedCurrentBranch = value ?? string.Empty;
+            var (number, name) = ParseBranchSelection(selectedCurrentBranch);
+            formModel.BranchNumber = number;
+            formModel.BranchName = name;
+        }
+    }
+
     private string selectedNewLocationBranch = string.Empty;
+    private string SelectedNewLocationBranch
+    {
+        get => selectedNewLocationBranch;
+        set
+        {
+            selectedNewLocationBranch = value ?? string.Empty;
+            var (number, name) = ParseBranchSelection(selectedNewLocationBranch);
+            formModel.NewLocBranchNumber = number;
+            formModel.NewLocBranchName = name;
+        }
+    }
     private List<User> employees = new();
 
     protected override async Task OnInitializedAsync()
@@ -259,6 +282,96 @@
             ConsentHandler.HandleException(ex);
             isEmployeeListLoading = false;
         }
+    }
+
+    private IEnumerable<User> FilteredEmployees =>
+        employees.Where(u =>
+            string.IsNullOrWhiteSpace(employeeSearchTerm) ||
+            (u.DisplayName?.Contains(employeeSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private string GetEmployeeSelectionText()
+    {
+        if (isEmployeeListLoading)
+        {
+            return "Loading employees...";
+        }
+
+        var fullName = GetEmployeeFullName();
+        return string.IsNullOrWhiteSpace(fullName)
+            ? "Select employee"
+            : fullName;
+    }
+
+    private static string GetBranchDisplay(BranchLocationItem branch)
+    {
+        return $"{FormatBranchCode(branch.Code)} - {branch.Name}";
+    }
+
+    private static string GetBranchSelectionValue(BranchLocationItem branch)
+    {
+        return $"{branch.Code}|{branch.Name}";
+    }
+
+    private static string FormatBranchCode(string? branchCode)
+    {
+        return (branchCode ?? string.Empty).PadLeft(4, '0');
+    }
+
+    private static (string Number, string Name) ParseBranchSelection(string? branchSelection)
+    {
+        if (string.IsNullOrWhiteSpace(branchSelection))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var parts = branchSelection.Split('|', 2, StringSplitOptions.TrimEntries);
+        var number = parts.Length > 0 ? FormatBranchCode(parts[0]) : string.Empty;
+        var name = parts.Length > 1 ? parts[1] : string.Empty;
+
+        return (number, name);
+    }
+
+    private string GetEmployeeFullName()
+    {
+        return $"{formModel.FirstName} {formModel.LastName}".Trim();
+    }
+
+    private void ToggleEmployeeDropdown()
+    {
+        showEmployeeDropdown = !showEmployeeDropdown;
+    }
+
+    private void CloseEmployeeDropdown()
+    {
+        showEmployeeDropdown = false;
+    }
+
+    private void SelectEmployee(User employee)
+    {
+        var (firstName, lastName) = ParseEmployeeName(employee.DisplayName);
+        formModel.FirstName = firstName;
+        formModel.LastName = lastName;
+
+        showEmployeeDropdown = false;
+        employeeSearchTerm = string.Empty;
+    }
+
+    private static (string FirstName, string LastName) ParseEmployeeName(string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var nameParts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (nameParts.Length == 1)
+        {
+            return (nameParts[0], string.Empty);
+        }
+
+        return (nameParts[0], string.Join(' ', nameParts.Skip(1)));
     }
 
     private IEnumerable<User> FilteredEmployees =>
