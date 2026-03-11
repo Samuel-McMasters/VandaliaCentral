@@ -29,6 +29,6 @@ public class TrainingDocumentsController : ControllerBase
             ? "application/octet-stream"
             : download.Details.ContentType;
 
-        return File(download.Content, contentType, Path.GetFileName(fileName));
+        return File(download.Content, contentType);
     }
 }

@@ -70,7 +70,31 @@
 
                                         @if (!activeStep.Content.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
                                         {
-                                            <a class="btn btn-primary" href="@GetCourseContentUrl(activeStep.Content.BlobPath)" target="_blank" rel="noopener noreferrer">Open Step Content</a>
+                                            @if (IsVideoPath(activeStep.Content.BlobPath))
+                                            {
+                                                <video class="w-100 rounded border"
+                                                controls
+                                                style="max-height: 70vh;">
+                                                    <source src="@GetCourseContentUrl(activeStep.Content.BlobPath)" type="@(activeStep.Content.ContentType ?? "video/mp4")" />
+                                                </video>
+                                            }
+                                            else if (IsPdfPath(activeStep.Content.BlobPath))
+                                            {
+                                                <iframe class="w-100 border rounded bg-white mb-2" style="height: 70vh;" src="@GetCourseContentUrl(activeStep.Content.BlobPath)"></iframe>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-primary" href="@GetCourseContentUrl(activeStep.Content.BlobPath)" target="_blank" rel="noopener noreferrer">Open Step Content</a>
+                                            }
+
+                                            <div class="mt-3">
+                                                <button class="btn btn-success btn-sm"
+                                                type="button"
+                                                disabled="@isCompletingCourseStep"
+                                                @onclick="MarkLaunchedCourseStepCompleteAsync">
+                                                    @(isCompletingCourseStep ? "Completing..." : "Mark Complete")
+                                                </button>
+                                            </div>
                                         }
                                         else
                                         {
@@ -210,6 +234,15 @@
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         {
                             <iframe class="w-100 border rounded bg-white" style="height: 80vh;" src="@GetCourseContentUrl(launchedAssignment.BlobPath)"></iframe>
+
+                            <div class="mt-3">
+                                <button class="btn btn-success"
+                                type="button"
+                                disabled="@isCompletingLaunchedDocument"
+                                @onclick="MarkLaunchedDocumentCompleteAsync">
+                                    @(isCompletingLaunchedDocument ? "Completing..." : "Mark Complete")
+                                </button>
+                            </div>
                         }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && !launchedAssignment.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
                         {
@@ -958,6 +991,8 @@
     private string examResultModalMessage = string.Empty;
     private bool showAssignLearningModal;
     private bool isCompletingLaunchedVideo;
+    private bool isCompletingLaunchedDocument;
+    private bool isCompletingCourseStep;
     // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
     private bool launchedVideoWatcherInitialized;
     private IDisposable? launchedVideoWatcherReference;
@@ -1009,6 +1044,7 @@
         public string? ContentType { get; set; }
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
+        public List<string> CompletedCourseStepIds { get; set; } = new();
     }
 
     private class AssignableLearningItem
@@ -1731,6 +1767,8 @@
     private void ResetLaunchedVideoCompletionState()
     {
         isCompletingLaunchedVideo = false;
+        isCompletingLaunchedDocument = false;
+        isCompletingCourseStep = false;
     }
 
     [JSInvokable]
@@ -1746,6 +1784,55 @@
         return launchedAssignment != null
             && !string.IsNullOrWhiteSpace(launchedAssignment.BlobPath)
             && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsLaunchedDocumentAssignment()
+    {
+        return launchedAssignment != null
+            && !string.IsNullOrWhiteSpace(launchedAssignment.BlobPath)
+            && IsPdfPath(launchedAssignment.BlobPath);
+    }
+
+    private async Task MarkLaunchedDocumentCompleteAsync()
+    {
+        if (!IsLaunchedDocumentAssignment() || isCompletingLaunchedDocument)
+        {
+            return;
+        }
+
+        isCompletingLaunchedDocument = true;
+
+        try
+        {
+            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment!);
+            if (!completed)
+            {
+                SetCourseStatus("Could not mark this document complete. Please refresh and try again.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentUserId))
+            {
+                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            }
+
+            launchedAssignment = null;
+            launchedExam = null;
+            launchedCourse = null;
+            launchedCourseStepExam = null;
+            launchedCourseStepIndex = 0;
+            ResetTrainingSchoolExamAttemptV5();
+            NavigationManager.NavigateTo("/training-school", forceLoad: false);
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Could not complete document assignment: {ex.Message}");
+        }
+        finally
+        {
+            isCompletingLaunchedDocument = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task MarkLaunchedVideoCompleteAsync()
@@ -1853,6 +1940,77 @@
         }
 
         return await TrainingDocumentService.GetExamAsync(examId);
+    }
+
+    private async Task MarkLaunchedCourseStepCompleteAsync()
+    {
+        if (launchedAssignment == null || launchedCourse == null || isCompletingCourseStep)
+        {
+            return;
+        }
+
+        var orderedSteps = launchedCourse.Steps
+            .OrderBy(s => s.Order)
+            .Where(s => s.Required)
+            .ToList();
+
+        if (!orderedSteps.Any())
+        {
+            return;
+        }
+
+        var currentStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+        isCompletingCourseStep = true;
+
+        try
+        {
+            var completion = await TrainingDocumentService.CompleteCourseStepForUserAsync(
+                currentUserId ?? string.Empty,
+                launchedAssignment.AssignmentId,
+                currentStep.Id,
+                orderedSteps.Count);
+
+            if (!completion.Success)
+            {
+                SetCourseStatus("Could not mark this course step complete. Please refresh and try again.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentUserId))
+            {
+                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            }
+
+            if (completion.AssignmentCompleted)
+            {
+                launchedAssignment = null;
+                launchedCourse = null;
+                launchedCourseStepExam = null;
+                launchedCourseStepIndex = 0;
+                ResetTrainingSchoolExamAttemptV5();
+                NavigationManager.NavigateTo("/training-school", forceLoad: false);
+                return;
+            }
+
+            var nextIndex = orderedSteps.FindIndex(step =>
+                !completion.CompletedStepIds.Contains(step.Id, StringComparer.OrdinalIgnoreCase));
+
+            if (nextIndex >= 0)
+            {
+                launchedCourseStepIndex = nextIndex;
+            }
+
+            await LoadTrainingSchoolActiveExamStepV5Async();
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Could not complete course step: {ex.Message}");
+        }
+        finally
+        {
+            isCompletingCourseStep = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadTrainingSchoolActiveExamStepV5Async()
@@ -1988,7 +2146,7 @@
 
         if (examResultPassed)
         {
-            await CompleteTrainingSchoolAssignmentIfEligibleV5Async();
+            await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam);
             examResultModalTitle = "Congratulations!";
             examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
         }
@@ -2013,23 +2171,64 @@
         return expectedOneBased.SequenceEqual(selectedAnswers);
     }
 
-    private async Task CompleteTrainingSchoolAssignmentIfEligibleV5Async()
+    private async Task CompleteTrainingSchoolAssignmentIfEligibleV5Async(TrainingExam exam)
     {
-        if (launchedAssignment == null
-            || !launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(currentUserId)
-            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        if (launchedAssignment == null || string.IsNullOrWhiteSpace(currentUserId))
         {
             return;
         }
 
-        var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment.AssignmentId);
-        if (!completed)
+        if (launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        {
+            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment.AssignmentId);
+            if (completed)
+            {
+                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            }
+
+            return;
+        }
+
+        if (!launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase) || launchedCourse == null)
+        {
+            return;
+        }
+
+        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).Where(s => s.Required).ToList();
+        if (!orderedSteps.Any())
+        {
+            return;
+        }
+
+        var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+
+        var completion = await TrainingDocumentService.CompleteCourseStepForUserAsync(
+            currentUserId,
+            launchedAssignment.AssignmentId,
+            activeStep.Id,
+            orderedSteps.Count);
+
+        if (!completion.Success)
         {
             return;
         }
 
         myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+
+        if (completion.AssignmentCompleted)
+        {
+            return;
+        }
+
+        var nextIndex = orderedSteps.FindIndex(step =>
+            !completion.CompletedStepIds.Contains(step.Id, StringComparer.OrdinalIgnoreCase));
+
+        if (nextIndex >= 0)
+        {
+            launchedCourseStepIndex = nextIndex;
+            await LoadTrainingSchoolActiveExamStepV5Async();
+        }
     }
 
 
@@ -2387,7 +2586,8 @@
                 BlobPath = ReadStringProperty(item, "BlobPath") ?? string.Empty,
                 ContentType = ReadStringProperty(item, "ContentType"),
                 AssignedAtUtc = ReadDateTimeOffsetProperty(item, "AssignedAtUtc"),
-                CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc")
+                CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc"),
+                CompletedCourseStepIds = ReadStringListProperty(item, "CompletedCourseStepIds")
             });
         }
 
@@ -2409,6 +2609,28 @@
         }
 
         return itemType;
+    }
+
+    private static bool IsPdfPath(string blobPath)
+    {
+        return !string.IsNullOrWhiteSpace(blobPath)
+            && blobPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsVideoPath(string blobPath)
+    {
+        if (string.IsNullOrWhiteSpace(blobPath))
+        {
+            return false;
+        }
+
+        var extension = Path.GetExtension(blobPath);
+        return extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webm", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".m4v", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".avi", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".wmv", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDocumentFileName(string fileName)
@@ -2433,6 +2655,27 @@
 
     private static string? ReadStringProperty(object source, string propertyName)
         => source.GetType().GetProperty(propertyName)?.GetValue(source)?.ToString();
+
+    private static List<string> ReadStringListProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        if (value is not System.Collections.IEnumerable enumerable)
+        {
+            return new List<string>();
+        }
+
+        var result = new List<string>();
+        foreach (var item in enumerable)
+        {
+            var entry = item?.ToString();
+            if (!string.IsNullOrWhiteSpace(entry))
+            {
+                result.Add(entry);
+            }
+        }
+
+        return result;
+    }
 
     private static DateTimeOffset ReadDateTimeOffsetProperty(object source, string propertyName)
     {
