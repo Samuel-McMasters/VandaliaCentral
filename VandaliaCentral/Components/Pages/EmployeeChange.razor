@@ -172,7 +172,6 @@
                 <div class="row">
                     <div class="col-12 col-md-6 d-flex flex-column mb-2">
                         <label><strong>Branch Location:</strong></label>
-                        <label><strong>Branch Location:</strong></label>
                         <InputSelect class="form-select" @bind-Value="SelectedNewLocationBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
@@ -365,15 +364,8 @@
             return (nameParts[0], string.Empty);
         }
 
-        }
+        
 
-        var nameParts = displayName
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (nameParts.Length == 1)
-        {
-            return (nameParts[0], string.Empty);
-        }
 
         return (nameParts[0], string.Join(' ', nameParts.Skip(1)));
     }
