@@ -44,7 +44,15 @@ namespace VandaliaCentral.Models
 
         public string CrossTrainingCurrentPosition { get; set; } = string.Empty;
 
+<<<<<<< codex/update-employee-change-form-mappings-ml4qhn
         public string CrossTrainingTargetPosition { get; set; } = string.Empty;
+=======
+        public string CrossTrainingCurrentPosition { get; set; }
+
+        public string CrossTrainingTargetPosition { get; set; }
+
+        public string AdditionalNotes { get; set; } 
+>>>>>>> chatGPT
 
         public string AdditionalNotes { get; set; } = string.Empty;
     }
