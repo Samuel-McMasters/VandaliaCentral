@@ -59,7 +59,7 @@
                         <div class="position-relative">
                             <button type="button"
                                     class="form-control text-start"
-                                    @onclick="@(() => ToggleEmployeeDropdown())"
+                                    @onclick="ToggleEmployeeDropdown"
                                     disabled="@isEmployeeListLoading">
                                 @GetEmployeeSelectionText()
                             </button>
@@ -68,7 +68,7 @@
                             {
                                 <div class="position-fixed top-0 start-0 w-100 h-100"
                                      style="z-index: 1040;"
-                                     @onclick="@(() => CloseEmployeeDropdown())"></div>
+                                     @onclick="CloseEmployeeDropdown"></div>
                                 <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
                                      style="z-index: 1050;"
                                      @onclick:stopPropagation="true">
@@ -109,11 +109,8 @@
                 </div>
                 <div class="row">
                     <div class="col-12 col-md-6 mb-2">
-<<<<<<< codex/update-employeechange-ui-with-dropdowns-jd71iy
                         <label><strong>Branch Location:</strong></label>
-=======
-                        <label><strong>Branch #:</strong></label>
->>>>>>> chatGPT
+                        <label><strong>Branch Location:</strong></label>
                         <InputSelect class="form-select" @bind-Value="SelectedCurrentBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
@@ -121,13 +118,6 @@
                                 <option value="@GetBranchSelectionValue(branch)">@GetBranchDisplay(branch)</option>
                             }
                         </InputSelect>
-<<<<<<< codex/update-employeechange-ui-with-dropdowns-jd71iy
-=======
-                    </div>
-                    <div class="col-12 col-md-6 mb-2">
-                        <label><strong>Branch Name:</strong></label>
-                        <InputText @bind-Value="formModel.BranchName" class="form-control" readonly />
->>>>>>> chatGPT
                     </div>
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Manager Name:</strong></label>
@@ -181,11 +171,8 @@
                 <p class="pb-3">(If No Branch Change DO NOT Complete)</p>
                 <div class="row">
                     <div class="col-12 col-md-6 d-flex flex-column mb-2">
-<<<<<<< codex/update-employeechange-ui-with-dropdowns-jd71iy
                         <label><strong>Branch Location:</strong></label>
-=======
-                        <label><strong>Branch Number:</strong></label>
->>>>>>> chatGPT
+                        <label><strong>Branch Location:</strong></label>
                         <InputSelect class="form-select" @bind-Value="SelectedNewLocationBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
@@ -193,13 +180,6 @@
                                 <option value="@GetBranchSelectionValue(branch)">@GetBranchDisplay(branch)</option>
                             }
                         </InputSelect>
-<<<<<<< codex/update-employeechange-ui-with-dropdowns-jd71iy
-=======
-                    </div>
-                    <div class="col-12 col-md-6 mb-2">
-                        <label><strong>Branch Name:</strong></label>
-                        <InputText @bind-Value="formModel.NewLocBranchName" class="form-control" readonly />
->>>>>>> chatGPT
                     </div>
                 </div>
                 <div class="row">
@@ -375,7 +355,6 @@
         if (string.IsNullOrWhiteSpace(displayName))
         {
             return (string.Empty, string.Empty);
-<<<<<<< codex/update-employeechange-ui-with-dropdowns-jd71iy
         }
 
         var nameParts = displayName
@@ -386,7 +365,6 @@
             return (nameParts[0], string.Empty);
         }
 
-=======
         }
 
         var nameParts = displayName
@@ -397,7 +375,6 @@
             return (nameParts[0], string.Empty);
         }
 
->>>>>>> chatGPT
         return (nameParts[0], string.Join(' ', nameParts.Skip(1)));
     }
 
