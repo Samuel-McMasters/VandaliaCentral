@@ -47,7 +47,7 @@
     }
     else
     {
-        <EditForm Model="@formModel" OnValidSubmit="HandleValidSubmit">
+        <EditForm Model="@formModel" OnValidSubmit="@(async () => await HandleValidSubmit())">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -110,6 +110,7 @@
                 <div class="row">
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch Location:</strong></label>
+                        <label><strong>Branch Location:</strong></label>
                         <InputSelect class="form-select" @bind-Value="SelectedCurrentBranch">
                             <option value="">-- Select --</option>
                             @foreach (var branch in BranchLocations.Value.Items)
@@ -170,6 +171,7 @@
                 <p class="pb-3">(If No Branch Change DO NOT Complete)</p>
                 <div class="row">
                     <div class="col-12 col-md-6 d-flex flex-column mb-2">
+                        <label><strong>Branch Location:</strong></label>
                         <label><strong>Branch Location:</strong></label>
                         <InputSelect class="form-select" @bind-Value="SelectedNewLocationBranch">
                             <option value="">-- Select --</option>
@@ -353,6 +355,16 @@
         if (string.IsNullOrWhiteSpace(displayName))
         {
             return (string.Empty, string.Empty);
+        }
+
+        var nameParts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (nameParts.Length == 1)
+        {
+            return (nameParts[0], string.Empty);
+        }
+
         }
 
         var nameParts = displayName
