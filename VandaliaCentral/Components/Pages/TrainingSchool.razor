@@ -217,6 +217,7 @@
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
                         {
                             <video class="w-100 rounded border"
+                            @ref="launchedVideoElement"
                             controls
                             style="max-height: 80vh;">
                                 <source src="@GetCourseContentUrl(launchedAssignment.BlobPath)" type="@(launchedAssignment.ContentType ?? "video/mp4")" />
@@ -1150,10 +1151,17 @@
             return;
         }
 
-        launchedVideoWatcherReference?.Dispose();
-        launchedVideoWatcherReference = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("trainingSchoolVideo.watchForNearEnd", launchedVideoElement, launchedVideoWatcherReference, 10);
-        launchedVideoWatcherInitialized = true;
+        try
+        {
+            launchedVideoWatcherReference?.Dispose();
+            launchedVideoWatcherReference = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("trainingSchoolVideo.watchForNearEnd", launchedVideoElement, launchedVideoWatcherReference, 10);
+            launchedVideoWatcherInitialized = true;
+        }
+        catch
+        {
+            launchedVideoWatcherInitialized = true;
+        }
     }
 
     private void SetActiveTab(string tab)
