@@ -43,6 +43,10 @@ namespace VandaliaCentral.Models
 
         public string NewLocManagerName { get; set; }
 
+        public string CrossTrainingCurrentPosition { get; set; }
+
+        public string CrossTrainingTargetPosition { get; set; }
+
         public string AdditionalNotes { get; set; } 
 
     }
