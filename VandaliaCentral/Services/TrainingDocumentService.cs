@@ -319,6 +319,40 @@ namespace VandaliaCentral.Services
             return true;
         }
 
+        public async Task<bool> UnassignLearningFromUserAsync(string userId, string assignmentId, string? blobPath = null, DateTimeOffset? assignedAtUtc = null)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(userId);
+            if (string.IsNullOrWhiteSpace(safeUserId))
+            {
+                return false;
+            }
+
+            var profile = await GetUserTrainingProfileAsync(safeUserId);
+            profile.UserId = safeUserId;
+
+            var assignment = profile.ActiveAssignedLearning.FirstOrDefault(a =>
+                !string.IsNullOrWhiteSpace(assignmentId)
+                && string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase));
+
+            if (assignment == null
+                && !string.IsNullOrWhiteSpace(blobPath)
+                && assignedAtUtc.HasValue)
+            {
+                assignment = profile.ActiveAssignedLearning.FirstOrDefault(a =>
+                    string.Equals(a.BlobPath, blobPath, StringComparison.OrdinalIgnoreCase)
+                    && a.AssignedAtUtc.UtcTicks == assignedAtUtc.Value.UtcTicks);
+            }
+
+            if (assignment == null)
+            {
+                return false;
+            }
+
+            profile.ActiveAssignedLearning.Remove(assignment);
+            await SaveUserTrainingProfileAsync(profile);
+            return true;
+        }
+
         public async Task<CompleteCourseStepResult> CompleteCourseStepForUserAsync(string userId, string assignmentId, string stepId, int totalRequiredSteps)
         {
             var result = new CompleteCourseStepResult();
