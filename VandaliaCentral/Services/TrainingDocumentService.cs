@@ -261,6 +261,46 @@ namespace VandaliaCentral.Services
             }
         }
 
+        public async Task<List<string>> GetUserIdsWithActiveAssignedLearningAsync()
+        {
+            var userIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            await foreach (var profileBlob in _containerClient.GetBlobsAsync(prefix: UserTrainingProfilePrefix))
+            {
+                var profileBlobClient = _containerClient.GetBlobClient(profileBlob.Name);
+
+                UserTrainingProfile? profile;
+                try
+                {
+                    var download = await profileBlobClient.DownloadContentAsync();
+                    profile = download.Value.Content.ToObjectFromJson<UserTrainingProfile>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (profile?.ActiveAssignedLearning == null || profile.ActiveAssignedLearning.Count == 0)
+                {
+                    continue;
+                }
+
+                var safeUserId = Path.GetFileNameWithoutExtension(profile.UserId);
+                if (string.IsNullOrWhiteSpace(safeUserId))
+                {
+                    var fileName = Path.GetFileName(profileBlob.Name);
+                    safeUserId = Path.GetFileNameWithoutExtension(fileName);
+                }
+
+                if (!string.IsNullOrWhiteSpace(safeUserId))
+                {
+                    userIds.Add(safeUserId);
+                }
+            }
+
+            return userIds.ToList();
+        }
+
         public async Task AssignLearningToUserAsync(AssignLearningRequest request)
         {
             var safeUserId = Path.GetFileNameWithoutExtension(request.UserId);
