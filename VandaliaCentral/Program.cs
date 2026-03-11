@@ -63,6 +63,13 @@ builder.Services
     .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeChangeEmail:To is required.")
     .ValidateOnStart();
 
+// Employee Termination Form
+builder.Services
+    .AddOptions<EmployeeTerminationEmailOptions>()
+    .Bind(builder.Configuration.GetSection("EmployeeTerminationEmail"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeTerminationEmail:To is required.")
+    .ValidateOnStart();
+
 // ===============================
 // Hard-coded locations list
 // ===============================
