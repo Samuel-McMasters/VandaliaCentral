@@ -46,8 +46,6 @@ namespace VandaliaCentral.Models
 
         public string CrossTrainingTargetPosition { get; set; } = string.Empty;
 
-        public string AdditionalNotes { get; set; } 
-
-
+        public string AdditionalNotes { get; set; } = string.Empty;
     }
 }

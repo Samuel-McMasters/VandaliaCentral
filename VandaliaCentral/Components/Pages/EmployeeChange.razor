@@ -218,20 +218,14 @@
 
             var pdfBytes = PDFTemplateFiller.FillChange(formModel);
 
-
             var fileSafeName = fullName.Replace(" ", "_");
-
 
             await EmailService.SendEmailWithAttachmentAsyncStrict(
                 toEmail: opts.To,
                 subject: $"Employee Change Form: {fullName}",
                 bodyText: $"Attached is the employee change form for {fullName}.",
                 fileBytes: pdfBytes,
-
-                
-
-                fileName: $"{fullName.Replace(" ", "_")}_employee_change.pdf",
-
+                fileName: $"{fileSafeName}_employee_change.pdf",
                 ccEmail: string.IsNullOrWhiteSpace(opts.Cc) ? null : opts.Cc);
 
             await Logger.LogActivityAsync(userName, $"Submitted Employee Change Form For: '{fullName}'");

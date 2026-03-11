@@ -65,7 +65,10 @@ namespace VandaliaCentral.Services
 
             fields.SetField("first_name", model.FirstName);
             fields.SetField("last_name", model.LastName);
+            // Support both known field-name spellings seen across template revisions.
             fields.SetField("preivous_job_title", model.PreviousJobTitle);
+            fields.SetField("previous_job_title", model.PreviousJobTitle);
+            fields.SetField("PreviousJobTitle", model.PreviousJobTitle);
             fields.SetField("branch_number", model.BranchNumber);
             fields.SetField("branch_name", model.BranchName);
             fields.SetField("manager_name", model.ManagerName);
