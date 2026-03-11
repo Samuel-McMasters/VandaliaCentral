@@ -52,8 +52,19 @@
                             else
                             {
                                 var activeStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+                                var completedStepIds = GetCompletedStepIdSet(launchedAssignment);
 
                                 <div class="border rounded p-3 mb-3 bg-white">
+                                    <div class="course-step-trail mb-3">
+                                        @for (var stepIndex = 0; stepIndex < orderedSteps.Count; stepIndex++)
+                                        {
+                                            var step = orderedSteps[stepIndex];
+                                            var isCompletedStep = completedStepIds.Contains(step.Id);
+
+                                            <span class="course-step-trail-item @(isCompletedStep ? "completed" : string.Empty)">@(stepIndex + 1)</span>
+                                        }
+                                    </div>
+
                                     <div class="small text-muted mb-1">Step @activeStep.Order of @orderedSteps.Count</div>
                                     <h5 class="mb-2">@activeStep.Title</h5>
 
@@ -353,10 +364,22 @@
                                 <ul class="list-group" style="max-width: 1000px;">
                                     @foreach (var assignment in myTrainingProfile.ActiveAssignedLearning.OrderByDescending(a => a.AssignedAtUtc))
                                     {
+                                        var completionPercent = GetCourseCompletionPercent(assignment);
                                         <li class="list-group-item">
-                                            <div class="fw-semibold text-break">@assignment.Title</div>
-                                            <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
-                                            <button class="btn btn-sm btn-primary mt-2" type="button" @onclick='() => BeginAssignment(assignment)'>Begin</button>
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                                <div>
+                                                    <div class="fw-semibold text-break">@assignment.Title</div>
+                                                    <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
+                                                    <button class="btn btn-sm btn-primary mt-2" type="button" @onclick='() => BeginAssignment(assignment)'>Begin</button>
+                                                </div>
+
+                                                @if (assignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <div class="course-progress-donut" style="@BuildCourseDonutStyle(completionPercent)" title="Course progress">
+                                                        <span>@completionPercent%</span>
+                                                    </div>
+                                                }
+                                            </div>
                                         </li>
                                     }
                                 </ul>
@@ -1117,6 +1140,7 @@
     private UserTrainingProfileViewModel? selectedUserTrainingProfile;
     private bool isLoadingSelectedUserProfile;
     private UserTrainingProfileViewModel? myTrainingProfile;
+    private readonly Dictionary<string, int> courseStepCounts = new(StringComparer.OrdinalIgnoreCase);
     private string? currentUserId;
     private UserLearningAssignmentViewModel? launchedAssignment;
     private Course? launchedCourse;
@@ -1289,7 +1313,7 @@
         currentUserId = GetCurrentUserId(user);
         if (!string.IsNullOrWhiteSpace(currentUserId))
         {
-            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            await RefreshMyTrainingProfileAsync();
         }
         else
         {
@@ -1425,6 +1449,91 @@
         }
 
         await LoadActiveAssignedUserIdsAsync();
+    }
+
+    private async Task RefreshMyTrainingProfileAsync()
+    {
+        if (string.IsNullOrWhiteSpace(currentUserId))
+        {
+            myTrainingProfile = new UserTrainingProfileViewModel();
+            return;
+        }
+
+        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        await EnsureCourseStepCountsAsync(myTrainingProfile);
+    }
+
+    private async Task EnsureCourseStepCountsAsync(UserTrainingProfileViewModel? profile)
+    {
+        if (profile == null)
+        {
+            return;
+        }
+
+        var courseIds = profile.ActiveAssignedLearning
+            .Where(a => a.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+            .Select(a => Path.GetFileNameWithoutExtension(a.BlobPath))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var courseId in courseIds)
+        {
+            if (courseStepCounts.ContainsKey(courseId!))
+            {
+                continue;
+            }
+
+            var course = await CourseStorageService.GetCourseAsync(courseId!);
+            courseStepCounts[courseId!] = course?.Steps?.Count ?? 0;
+        }
+    }
+
+    private static HashSet<string> GetCompletedStepIdSet(UserLearningAssignmentViewModel? assignment)
+    {
+        return new HashSet<string>(assignment?.CompletedCourseStepIds ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private int GetCourseCompletionPercent(UserLearningAssignmentViewModel assignment)
+    {
+        if (!assignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var courseId = Path.GetFileNameWithoutExtension(assignment.BlobPath);
+        if (string.IsNullOrWhiteSpace(courseId)
+            || !courseStepCounts.TryGetValue(courseId, out var totalSteps)
+            || totalSteps <= 0)
+        {
+            return 0;
+        }
+
+        var completedSteps = GetCompletedStepIdSet(assignment).Count;
+        var percent = (int)Math.Round((double)completedSteps / totalSteps * 100d, MidpointRounding.AwayFromZero);
+        return Math.Clamp(percent, 0, 100);
+    }
+
+    private static string BuildCourseDonutStyle(int completionPercent)
+    {
+        var normalizedPercent = Math.Clamp(completionPercent, 0, 100);
+        return $"background: conic-gradient(#198754 0 {normalizedPercent}%, #dee2e6 {normalizedPercent}% 100%);";
+    }
+
+    private void SyncLaunchedAssignmentProgressFromProfile()
+    {
+        if (launchedAssignment == null || myTrainingProfile == null)
+        {
+            return;
+        }
+
+        var refreshedAssignment = myTrainingProfile.ActiveAssignedLearning.FirstOrDefault(a =>
+            string.Equals(a.AssignmentId, launchedAssignment.AssignmentId, StringComparison.OrdinalIgnoreCase));
+
+        if (refreshedAssignment != null)
+        {
+            launchedAssignment = refreshedAssignment;
+        }
     }
 
 
@@ -1889,7 +1998,7 @@
         if (!string.IsNullOrWhiteSpace(currentUserId)
             && string.Equals(currentUserId, selectedUserProfile.Id, StringComparison.OrdinalIgnoreCase))
         {
-            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            await RefreshMyTrainingProfileAsync();
         }
 
         SetCourseStatus($"Assigned '{selectedAssignableItem.Title}' to {(selectedUserProfile.DisplayName ?? "user")}.");
@@ -2034,6 +2143,18 @@
             if (!string.IsNullOrWhiteSpace(courseId))
             {
                 launchedCourse = await CourseStorageService.GetCourseAsync(courseId);
+
+                if (launchedCourse != null)
+                {
+                    var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+                    var completedSteps = GetCompletedStepIdSet(matchingAssignment);
+                    var nextStepIndex = orderedSteps.FindIndex(step => !completedSteps.Contains(step.Id));
+
+                    launchedCourseStepIndex = nextStepIndex >= 0
+                        ? nextStepIndex
+                        : Math.Max(0, orderedSteps.Count - 1);
+                }
+
                 await LoadTrainingSchoolActiveExamStepV5Async();
             }
         }
@@ -2098,10 +2219,7 @@
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(currentUserId))
-            {
-                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
-            }
+            await RefreshMyTrainingProfileAsync();
 
             launchedAssignment = null;
             launchedExam = null;
@@ -2140,10 +2258,7 @@
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(currentUserId))
-            {
-                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
-            }
+            await RefreshMyTrainingProfileAsync();
 
             launchedAssignment = null;
             launchedExam = null;
@@ -2238,7 +2353,6 @@
 
         var orderedSteps = launchedCourse.Steps
             .OrderBy(s => s.Order)
-            .Where(s => s.Required)
             .ToList();
 
         if (!orderedSteps.Any())
@@ -2263,10 +2377,8 @@
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(currentUserId))
-            {
-                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
-            }
+            await RefreshMyTrainingProfileAsync();
+            SyncLaunchedAssignmentProgressFromProfile();
 
             await RefreshActiveUsersIfTrainerAsync();
 
@@ -2473,7 +2585,7 @@
             var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment.AssignmentId);
             if (completed)
             {
-                myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+                await RefreshMyTrainingProfileAsync();
                 await RefreshActiveUsersIfTrainerAsync();
             }
 
@@ -2485,7 +2597,7 @@
             return;
         }
 
-        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).Where(s => s.Required).ToList();
+        var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
         if (!orderedSteps.Any())
         {
             return;
@@ -2504,7 +2616,8 @@
             return;
         }
 
-        myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        await RefreshMyTrainingProfileAsync();
+        SyncLaunchedAssignmentProgressFromProfile();
         await RefreshActiveUsersIfTrainerAsync();
 
         if (completion.AssignmentCompleted)
@@ -3065,7 +3178,7 @@
 
         if (!string.IsNullOrWhiteSpace(currentUserId))
         {
-            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+            await RefreshMyTrainingProfileAsync();
         }
 
         if (selectedUserProfile != null && !string.IsNullOrWhiteSpace(selectedUserProfile.Id))
