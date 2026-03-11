@@ -2281,7 +2281,11 @@
                     var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
                     if (taskObj is Task<bool> boolTask)
                     {
-                        return await boolTask;
+                        var completedByAssignmentId = await boolTask;
+                        if (completedByAssignmentId)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
