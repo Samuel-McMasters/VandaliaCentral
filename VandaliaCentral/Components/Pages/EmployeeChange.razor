@@ -1,7 +1,5 @@
 ﻿@page "/employeechange"
 
-@using System.Net
-@using System.Text
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @using Microsoft.Identity.Web
@@ -145,6 +143,17 @@
                     </div>
                 </div>
                 <div class="row pt-4">
+                    <h5 class="pt-3">Cross Training</h5>
+                    <div class="col-12 col-md-6 d-flex flex-column mb-2">
+                        <label><strong>Current Position:</strong></label>
+                        <InputText @bind-Value="formModel.CrossTrainingCurrentPosition" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-6 mb-2">
+                        <label><strong>Position to Be Cross-Trained In:</strong></label>
+                        <InputText @bind-Value="formModel.CrossTrainingTargetPosition" class="form-control" />
+                    </div>
+                </div>
+                <div class="row pt-4">
                     <div class="col-12 col-md-6 mb-2">
                         <label class="form-check-label pb-1">Additional Notes</label>
                         <InputTextArea @bind-Value="formModel.AdditionalNotes"
@@ -207,12 +216,16 @@
             if (string.IsNullOrWhiteSpace(opts.To))
                 throw new InvalidOperationException("TODO: Configure EmployeeChangeEmail:To in appsettings / Azure App Settings.");
 
-            var htmlBody = BuildEmailHtml(formModel, submittedBy: userName);
+            var pdfBytes = PDFTemplateFiller.FillChange(formModel);
 
-            await EmailService.SendEmailHtmlAsyncStrict(
+            var fileSafeName = fullName.Replace(" ", "_");
+
+            await EmailService.SendEmailWithAttachmentAsyncStrict(
                 toEmail: opts.To,
                 subject: $"Employee Change Form: {fullName}",
-                bodyHtml: htmlBody,
+                bodyText: $"Attached is the employee change form for {fullName}.",
+                fileBytes: pdfBytes,
+                fileName: $"{fileSafeName}_employee_change.pdf",
                 ccEmail: string.IsNullOrWhiteSpace(opts.Cc) ? null : opts.Cc);
 
             await Logger.LogActivityAsync(userName, $"Submitted Employee Change Form For: '{fullName}'");
@@ -238,52 +251,5 @@
         {
             isSubmitting = false;
         }
-    }
-
-    private static string BuildEmailHtml(ChangeFormModel m, string submittedBy)
-    {
-        static string E(string? s) => WebUtility.HtmlEncode(s ?? "");
-        static string YesNo(bool v) => v ? "Yes" : "No";
-
-        // Encode notes first, then convert line breaks to <br/>
-        var notesEncoded = WebUtility.HtmlEncode(m.AdditionalNotes ?? string.Empty)
-            .Replace("\r\n", "<br/>")
-            .Replace("\n", "<br/>");
-
-        var sb = new StringBuilder();
-        sb.AppendLine("<div style='font-family:Segoe UI, Arial, sans-serif; font-size:14px;'>");
-        sb.AppendLine("<h2 style='margin:0 0 12px 0;'>Employee Change Form</h2>");
-        sb.AppendLine($"<div style='margin-bottom:14px; color:#666;'><b>Submitted By:</b> {E(submittedBy)}</div>");
-
-        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Employee Information</h3>");
-        sb.AppendLine($"<div><b>First Name:</b> {E(m.FirstName)}</div>");
-        sb.AppendLine($"<div><b>Last Name:</b> {E(m.LastName)}</div>");
-        sb.AppendLine($"<div><b>Previous Job Title:</b> {E(m.PreviousJobTitle)}</div>");
-        sb.AppendLine($"<div><b>Branch #:</b> {E(m.BranchNumber)}</div>");
-        sb.AppendLine($"<div><b>Branch Name:</b> {E(m.BranchName)}</div>");
-        sb.AppendLine($"<div><b>Manager Name:</b> {E(m.ManagerName)}</div>");
-
-        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Change Employee Position To</h3>");
-        sb.AppendLine($"<div><b>Effective Date:</b> {E(m.EffectiveDate.ToString("MM/dd/yyyy"))}</div>");
-        sb.AppendLine($"<div><b>New Position:</b> {E(m.NewPosition)}</div>");
-        sb.AppendLine($"<div><b>Job Title:</b> {E(m.JobTitle)}</div>");
-
-        sb.AppendLine("<div style='margin-top:10px;'><b>Employment Type</b></div>");
-        sb.AppendLine("<ul style='margin:6px 0 0 18px;'>");
-        sb.AppendLine($"<li>Full Time: {YesNo(m.FullTime)}</li>");
-        sb.AppendLine($"<li>Part Time: {YesNo(m.PartTime)}</li>");
-        sb.AppendLine($"<li>Hourly: {YesNo(m.Hourly)}</li>");
-        sb.AppendLine($"<li>Salary: {YesNo(m.Salary)}</li>");
-        sb.AppendLine("</ul>");
-
-        sb.AppendLine("<h3 style='margin:18px 0 8px 0;'>Change Employee Branch Location To</h3>");
-        sb.AppendLine("<div style='color:#666; margin-bottom:6px;'>(If No Branch Change DO NOT Complete)</div>");
-        sb.AppendLine($"<div><b>Branch Number:</b> {E(m.NewLocBranchNumber)}</div>");
-        sb.AppendLine($"<div><b>Branch Name:</b> {E(m.NewLocBranchName)}</div>");
-        sb.AppendLine($"<div><b>Manager Name:</b> {E(m.NewLocManagerName)}</div>");
-        sb.AppendLine($"<div style='margin-top:10px;'><b>Additional Notes:</b><br/>{notesEncoded}</div>");
-
-        sb.AppendLine("</div>");
-        return sb.ToString();
     }
 }
