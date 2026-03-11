@@ -4,6 +4,8 @@ namespace VandaliaCentral.Models
 {
     public class ChangeFormModel
     {
+        public bool ForCrossTrainingOnly { get; set; }
+
         [Required]
         public string FirstName { get; set; } = string.Empty;
 

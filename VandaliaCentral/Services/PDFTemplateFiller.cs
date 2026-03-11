@@ -75,6 +75,7 @@ namespace VandaliaCentral.Services
             fields.SetField("effective_date", model.EffectiveDate.ToString("MM/dd/yyyy"));
             fields.SetField("new_position", model.NewPosition);
             fields.SetField("job_title", model.JobTitle);
+            fields.SetField("for_cross_training_only", model.ForCrossTrainingOnly ? "Yes" : "Off");
             fields.SetField("full_time", model.FullTime ? "Yes" : "Off");
             fields.SetField("part_time", model.PartTime ? "Yes" : "Off");
             fields.SetField("hourly", model.Hourly ? "Yes" : "Off");
