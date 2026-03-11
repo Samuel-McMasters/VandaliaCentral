@@ -6,14 +6,17 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
+@using Microsoft.Graph
 
 @inject GraphEmailService EmailService
+@inject GraphUserService UserService
 @inject LoggingService Logger
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ITokenAcquisition TokenAcquisition
 @inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 @inject IOptions<EmployeeChangeEmailOptions> EmailOptions
+@inject IOptions<BranchLocationsOptions> BranchLocations
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
@@ -51,13 +54,50 @@
             <!-- Employee Information Block -->
             <div class="row py-5">
                 <div class="row">
-                    <div class="col-12 col-md-6 d-flex flex-column mb-2">
-                        <label><strong>First Name:</strong></label>
-                        <InputText @bind-Value="formModel.FirstName" class="form-control" />
-                    </div>
-                    <div class="col-12 col-md-6 mb-2">
-                        <label><strong>Last Name:</strong></label>
-                        <InputText @bind-Value="formModel.LastName" class="form-control" />
+                    <div class="col-12 col-md-12 d-flex flex-column mb-2">
+                        <label><strong>Employee Name:</strong></label>
+                        <div class="position-relative">
+                            <button type="button"
+                                    class="form-control text-start"
+                                    @onclick="ToggleEmployeeDropdown"
+                                    disabled="@isEmployeeListLoading">
+                                @GetEmployeeSelectionText()
+                            </button>
+
+                            @if (showEmployeeDropdown)
+                            {
+                                <div class="position-fixed top-0 start-0 w-100 h-100"
+                                     style="z-index: 1040;"
+                                     @onclick="CloseEmployeeDropdown"></div>
+                                <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
+                                     style="z-index: 1050;"
+                                     @onclick:stopPropagation="true">
+                                    <input class="form-control mb-2"
+                                           placeholder="Search employees..."
+                                           @bind="employeeSearchTerm"
+                                           @bind:event="oninput" />
+                                    <div style="max-height: 240px; overflow-y: auto;">
+                                        @if (!FilteredEmployees.Any())
+                                        {
+                                            <div class="text-muted small px-2 py-1">No employees found.</div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var employee in FilteredEmployees)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-link text-decoration-none text-start w-100 px-2 py-1"
+                                                        @onclick="() => SelectEmployee(employee)">
+                                                    @employee.DisplayName
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <ValidationMessage For="@(() => formModel.FirstName)" />
+                        <ValidationMessage For="@(() => formModel.LastName)" />
                     </div>
                 </div>
                 <div class="row">
@@ -70,11 +110,17 @@
                 <div class="row">
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch #:</strong></label>
-                        <InputText @bind-Value="formModel.BranchNumber" class="form-control" />
+                        <InputSelect class="form-select" @bind-Value="SelectedCurrentBranch">
+                            <option value="">-- Select --</option>
+                            @foreach (var branch in BranchLocations.Value.Items)
+                            {
+                                <option value="@GetBranchSelectionValue(branch)">@GetBranchDisplay(branch)</option>
+                            }
+                        </InputSelect>
                     </div>
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch Name:</strong></label>
-                        <InputText @bind-Value="formModel.BranchName" class="form-control" />
+                        <InputText @bind-Value="formModel.BranchName" class="form-control" readonly />
                     </div>
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Manager Name:</strong></label>
@@ -129,11 +175,17 @@
                 <div class="row">
                     <div class="col-12 col-md-6 d-flex flex-column mb-2">
                         <label><strong>Branch Number:</strong></label>
-                        <InputText @bind-Value="formModel.NewLocBranchNumber" class="form-control" />
+                        <InputSelect class="form-select" @bind-Value="SelectedNewLocationBranch">
+                            <option value="">-- Select --</option>
+                            @foreach (var branch in BranchLocations.Value.Items)
+                            {
+                                <option value="@GetBranchSelectionValue(branch)">@GetBranchDisplay(branch)</option>
+                            }
+                        </InputSelect>
                     </div>
                     <div class="col-12 col-md-6 mb-2">
                         <label><strong>Branch Name:</strong></label>
-                        <InputText @bind-Value="formModel.NewLocBranchName" class="form-control" />
+                        <InputText @bind-Value="formModel.NewLocBranchName" class="form-control" readonly />
                     </div>
                 </div>
                 <div class="row">
@@ -177,7 +229,36 @@
     private bool failure = false;
     private bool isAuthorized = false;
     private bool isSubmitting = false;
+    private bool isEmployeeListLoading = true;
+    private bool showEmployeeDropdown = false;
     private string? errorDetails;
+    private string employeeSearchTerm = string.Empty;
+    private string selectedCurrentBranch = string.Empty;
+    private string SelectedCurrentBranch
+    {
+        get => selectedCurrentBranch;
+        set
+        {
+            selectedCurrentBranch = value ?? string.Empty;
+            var (number, name) = ParseBranchSelection(selectedCurrentBranch);
+            formModel.BranchNumber = number;
+            formModel.BranchName = name;
+        }
+    }
+
+    private string selectedNewLocationBranch = string.Empty;
+    private string SelectedNewLocationBranch
+    {
+        get => selectedNewLocationBranch;
+        set
+        {
+            selectedNewLocationBranch = value ?? string.Empty;
+            var (number, name) = ParseBranchSelection(selectedNewLocationBranch);
+            formModel.NewLocBranchNumber = number;
+            formModel.NewLocBranchName = name;
+        }
+    }
+    private List<User> employees = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -188,11 +269,109 @@
         {
             _ = await TokenAcquisition.GetAccessTokenForUserAsync(new[] { "Mail.Send" });
             isAuthorized = true;
+
+            var users = await UserService.GetUsersAsync();
+            employees = users
+                .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName))
+                .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            isEmployeeListLoading = false;
         }
         catch (Exception ex)
         {
             ConsentHandler.HandleException(ex);
+            isEmployeeListLoading = false;
         }
+    }
+
+    private IEnumerable<User> FilteredEmployees =>
+        employees.Where(u =>
+            string.IsNullOrWhiteSpace(employeeSearchTerm) ||
+            (u.DisplayName?.Contains(employeeSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private string GetEmployeeSelectionText()
+    {
+        if (isEmployeeListLoading)
+        {
+            return "Loading employees...";
+        }
+
+        var fullName = GetEmployeeFullName();
+        return string.IsNullOrWhiteSpace(fullName)
+            ? "Select employee"
+            : fullName;
+    }
+
+    private static string GetBranchDisplay(BranchLocationItem branch)
+    {
+        return $"{FormatBranchCode(branch.Code)} - {branch.Name}";
+    }
+
+    private static string GetBranchSelectionValue(BranchLocationItem branch)
+    {
+        return $"{branch.Code}|{branch.Name}";
+    }
+
+    private static string FormatBranchCode(string? branchCode)
+    {
+        return (branchCode ?? string.Empty).PadLeft(4, '0');
+    }
+
+    private static (string Number, string Name) ParseBranchSelection(string? branchSelection)
+    {
+        if (string.IsNullOrWhiteSpace(branchSelection))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var parts = branchSelection.Split('|', 2, StringSplitOptions.TrimEntries);
+        var number = parts.Length > 0 ? FormatBranchCode(parts[0]) : string.Empty;
+        var name = parts.Length > 1 ? parts[1] : string.Empty;
+
+        return (number, name);
+    }
+
+    private string GetEmployeeFullName()
+    {
+        return $"{formModel.FirstName} {formModel.LastName}".Trim();
+    }
+
+    private void ToggleEmployeeDropdown()
+    {
+        showEmployeeDropdown = !showEmployeeDropdown;
+    }
+
+    private void CloseEmployeeDropdown()
+    {
+        showEmployeeDropdown = false;
+    }
+
+    private void SelectEmployee(User employee)
+    {
+        var (firstName, lastName) = ParseEmployeeName(employee.DisplayName);
+        formModel.FirstName = firstName;
+        formModel.LastName = lastName;
+
+        showEmployeeDropdown = false;
+        employeeSearchTerm = string.Empty;
+    }
+
+    private static (string FirstName, string LastName) ParseEmployeeName(string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var nameParts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (nameParts.Length == 1)
+        {
+            return (nameParts[0], string.Empty);
+        }
+
+        return (nameParts[0], string.Join(' ', nameParts.Skip(1)));
     }
 
     private async Task HandleValidSubmit()
@@ -202,7 +381,7 @@
         errorDetails = null;
         isSubmitting = true;
 
-        var fullName = $"{formModel.FirstName} {formModel.LastName}";
+        var fullName = GetEmployeeFullName();
         var userName = "anonymous";
 
         try
