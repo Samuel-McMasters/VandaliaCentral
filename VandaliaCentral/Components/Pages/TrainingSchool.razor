@@ -82,6 +82,18 @@
                                             {
                                                 <iframe class="w-100 border rounded bg-white mb-2" style="height: 70vh;" src="@GetCourseContentUrl(activeStep.Content.BlobPath)"></iframe>
                                             }
+                                            else if (activeStep.Content.BlobPath.StartsWith("links/", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                var stepLink = GetLinkByBlobPath(activeStep.Content.BlobPath);
+                                                if (!string.IsNullOrWhiteSpace(stepLink?.Url))
+                                                {
+                                                    <a class="btn btn-primary" href="@stepLink.Url" target="_blank" rel="noopener noreferrer">Open Step Link</a>
+                                                }
+                                                else
+                                                {
+                                                    <p class="text-muted mb-0">This step link is unavailable.</p>
+                                                }
+                                            }
                                             else
                                             {
                                                 <a class="btn btn-primary" href="@GetCourseContentUrl(activeStep.Content.BlobPath)" target="_blank" rel="noopener noreferrer">Open Step Content</a>
@@ -245,6 +257,29 @@
                                 </button>
                             </div>
                         }
+                        else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && launchedAssignment.BlobPath.StartsWith("links/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var launchedLink = GetLinkByBlobPath(launchedAssignment.BlobPath);
+                            var linkUrl = launchedLink?.Url ?? string.Empty;
+
+                            @if (!string.IsNullOrWhiteSpace(linkUrl))
+                            {
+                                <a class="btn btn-primary" href="@linkUrl" target="_blank" rel="noopener noreferrer">Open Link</a>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-2">This link could not be loaded. It may have been deleted.</p>
+                            }
+
+                            <div class="mt-3">
+                                <button class="btn btn-success"
+                                type="button"
+                                disabled="@isCompletingLaunchedDocument"
+                                @onclick="MarkLaunchedDocumentCompleteAsync">
+                                    @(isCompletingLaunchedDocument ? "Completing..." : "Mark Complete")
+                                </button>
+                            </div>
+                        }
                         else if (!string.IsNullOrWhiteSpace(launchedAssignment.BlobPath) && !launchedAssignment.BlobPath.StartsWith("exams/", StringComparison.OrdinalIgnoreCase))
                         {
                             <a class="btn btn-primary" href="@GetCourseContentUrl(launchedAssignment.BlobPath)" target="_blank" rel="noopener noreferrer">Open Assigned Item</a>
@@ -348,6 +383,9 @@
                                 </li>
                                 <li class="nav-item">
                                     <button class='nav-link @(trainerToolTab == "exams" ? "active" : "")' @onclick='() => SetTrainerToolTab("exams")'>Exams</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class='nav-link @(trainerToolTab == "links" ? "active" : "")' @onclick='() => SetTrainerToolTab("links")'>Links</button>
                                 </li>
                                 <li class="nav-item">
                                     <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
@@ -573,6 +611,7 @@
                                                                             <option value="Document">Document</option>
                                                                             <option value="Video">Video</option>
                                                                             <option value="Exam">Exam</option>
+                                                                            <option value="Link">Link</option>
                                                                         </select>
                                                                     </div>
                                                                     <div class="col-12">
@@ -609,6 +648,66 @@
                                         </div>
                                     </div>
                                 </div>
+                            }
+                            else if (trainerToolTab == "links")
+                            {
+                                <div class="d-flex justify-content-start mb-3">
+                                    <button class="btn btn-primary" type="button" @onclick="StartLinkCreation">Add Link</button>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(linkStatusMessage))
+                                {
+                                    <div class="alert alert-info py-2">@linkStatusMessage</div>
+                                }
+
+                                @if (isCreatingLink)
+                                {
+                                    <div class="border rounded bg-white p-3 mb-3" style="max-width: 900px;">
+                                        <h6 class="mb-3">@(isEditingLink ? "Edit Link" : "Add Link")</h6>
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label">Placeholder Text</label>
+                                                <input class="form-control" @bind="linkPlaceholderText" />
+                                            </div>
+                                            <div class="col-12 col-md-7">
+                                                <label class="form-label">Link</label>
+                                                <input class="form-control" @bind="linkUrl" placeholder="https://..." />
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-success" type="button" @onclick="SaveLinkAsync">Save</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="CancelLinkCreation">Cancel</button>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (links == null)
+                                {
+                                    <p>Loading links...</p>
+                                }
+                                else if (!links.Any())
+                                {
+                                    <p class="text-muted mb-0">No links created yet.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group" style="max-width: 1000px;">
+                                        @foreach (var link in links)
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                                <div>
+                                                    <div class="fw-semibold text-break">@link.PlaceholderText</div>
+                                                    <a class="small text-break" href="@link.Url" target="_blank" rel="noopener noreferrer">@link.Url</a>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-sm btn-outline-primary" type="button" @onclick='() => BeginEditLink(link.Id)'>Edit</button>
+                                                    <button class="btn btn-sm btn-outline-danger" type="button" @onclick='() => DeleteLinkAsync(link.Id)'>Delete</button>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
                             }
                             else if (trainerToolTab == "users")
                             {
@@ -769,10 +868,10 @@
                                                 <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAssignLearningWindow"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <p class="text-muted">Select an item from Courses, Documents, or Exams to assign to <strong>@(selectedUserProfile?.DisplayName ?? "selected user")</strong>.</p>
+                                                <p class="text-muted">Select an item from Courses, Documents, Exams, or Links to assign to <strong>@(selectedUserProfile?.DisplayName ?? "selected user")</strong>.</p>
 
                                                 <div class="row g-3">
-                                                    <div class="col-12 col-lg-4">
+                                                    <div class="col-12 col-lg-3">
                                                         <h6>Courses</h6>
                                                         <input class="form-control form-control-sm mb-2" type="search" placeholder="Search courses..." @bind="assignCourseSearchTerm" @bind:event="oninput" />
                                                         <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
@@ -785,7 +884,7 @@
                                                         </ul>
                                                     </div>
 
-                                                    <div class="col-12 col-lg-4">
+                                                    <div class="col-12 col-lg-3">
                                                         <h6>Documents</h6>
                                                         <input class="form-control form-control-sm mb-2" type="search" placeholder="Search documents..." @bind="assignDocumentSearchTerm" @bind:event="oninput" />
                                                         <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
@@ -798,11 +897,24 @@
                                                         </ul>
                                                     </div>
 
-                                                    <div class="col-12 col-lg-4">
+                                                    <div class="col-12 col-lg-3">
                                                         <h6>Exams</h6>
                                                         <input class="form-control form-control-sm mb-2" type="search" placeholder="Search exams..." @bind="assignExamSearchTerm" @bind:event="oninput" />
                                                         <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
                                                             @foreach (var item in FilteredAssignableExams)
+                                                            {
+                                                                <li class='list-group-item list-group-item-action @(selectedAssignableItem?.BlobPath == item.BlobPath ? "active" : "")' style="cursor:pointer;" @onclick='() => SelectAssignableItem(item)'>
+                                                                    <div class="fw-semibold text-break">@item.Title</div>
+                                                                </li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+
+                                                    <div class="col-12 col-lg-3">
+                                                        <h6>Links</h6>
+                                                        <input class="form-control form-control-sm mb-2" type="search" placeholder="Search links..." @bind="assignLinkSearchTerm" @bind:event="oninput" />
+                                                        <ul class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                                            @foreach (var item in FilteredAssignableLinks)
                                                             {
                                                                 <li class='list-group-item list-group-item-action @(selectedAssignableItem?.BlobPath == item.BlobPath ? "active" : "")' style="cursor:pointer;" @onclick='() => SelectAssignableItem(item)'>
                                                                     <div class="fw-semibold text-break">@item.Title</div>
@@ -1029,6 +1141,7 @@
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
     private string assignExamSearchTerm = string.Empty;
+    private string assignLinkSearchTerm = string.Empty;
     private AssignableLearningItem? selectedAssignableItem;
     private string? assignmentPendingUnassignId;
     private bool isLoadingCourses;
@@ -1039,9 +1152,11 @@
     private List<BlobItemInfo> courseDocumentBlobs = new();
     private List<BlobItemInfo> courseVideoBlobs = new();
     private List<CourseExamSummary> courseExamOptions = new();
+    private List<BlobItemInfo> courseLinkOptions = new();
     private string? courseStatusMessage;
     private CancellationTokenSource? courseStatusCts;
     private List<TrainingExamSummary>? exams;
+    private List<TrainingLink>? links;
     private bool isCreatingExam;
     private bool isEditingExam;
     private string? editingExamId;
@@ -1057,6 +1172,13 @@
     private readonly List<TrainingExamQuestion> draftQuestions = new();
     private string? examStatusMessage;
     private CancellationTokenSource? examStatusCts;
+    private bool isCreatingLink;
+    private bool isEditingLink;
+    private string? editingLinkId;
+    private string linkPlaceholderText = string.Empty;
+    private string linkUrl = string.Empty;
+    private string? linkStatusMessage;
+    private CancellationTokenSource? linkStatusCts;
 
     private class UserTrainingProfileViewModel
     {
@@ -1142,6 +1264,20 @@
                 ContentType = "application/json"
             });
 
+
+    private IEnumerable<AssignableLearningItem> FilteredAssignableLinks =>
+        (links ?? new List<TrainingLink>())
+            .Where(l => string.IsNullOrWhiteSpace(assignLinkSearchTerm)
+                || l.PlaceholderText.Contains(assignLinkSearchTerm, StringComparison.OrdinalIgnoreCase)
+                || l.Url.Contains(assignLinkSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .Select(l => new AssignableLearningItem
+            {
+                Title = l.PlaceholderText,
+                ItemType = "Link",
+                BlobPath = $"links/{l.Id}.json",
+                ContentType = "application/json"
+            });
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -1159,6 +1295,8 @@
         {
             myTrainingProfile = new UserTrainingProfileViewModel();
         }
+
+        await LoadLinksAsync();
 
         if (IsTrainer)
         {
@@ -1295,6 +1433,11 @@
         exams = await TrainingDocumentService.ListExamsAsync();
     }
 
+    private async Task LoadLinksAsync()
+    {
+        links = await TrainingDocumentService.ListLinksAsync();
+    }
+
     private async Task LoadCoursesAsync()
     {
         isLoadingCourses = true;
@@ -1320,6 +1463,7 @@
             courseDocumentBlobs = await CourseStorageService.ListDocumentBlobsAsync();
             courseVideoBlobs = await CourseStorageService.ListVideoBlobsAsync();
             courseExamOptions = await CourseStorageService.ListExamsAsync();
+            courseLinkOptions = await CourseStorageService.ListLinksAsync();
         }
         catch (Exception ex)
         {
@@ -1586,6 +1730,11 @@
                 .ToList();
         }
 
+        if (stepType.Equals("Link", StringComparison.OrdinalIgnoreCase))
+        {
+            return courseLinkOptions;
+        }
+
         return courseDocumentBlobs;
     }
 
@@ -1696,11 +1845,13 @@
 
         await LoadCoursesAsync();
         await LoadTrainingDocumentsAsync();
+        await LoadLinksAsync();
         await LoadCoursePickerDataAsync();
 
         assignCourseSearchTerm = string.Empty;
         assignDocumentSearchTerm = string.Empty;
         assignExamSearchTerm = string.Empty;
+        assignLinkSearchTerm = string.Empty;
         selectedAssignableItem = null;
         showAssignLearningModal = true;
     }
@@ -1925,7 +2076,8 @@
     {
         return launchedAssignment != null
             && !string.IsNullOrWhiteSpace(launchedAssignment.BlobPath)
-            && IsPdfPath(launchedAssignment.BlobPath);
+            && (IsPdfPath(launchedAssignment.BlobPath)
+                || launchedAssignment.BlobPath.StartsWith("links/", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task MarkLaunchedDocumentCompleteAsync()
@@ -2762,6 +2914,17 @@
             && blobPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
     }
 
+    private TrainingLink? GetLinkByBlobPath(string blobPath)
+    {
+        if (links == null || string.IsNullOrWhiteSpace(blobPath) || !blobPath.StartsWith("links/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var linkId = Path.GetFileNameWithoutExtension(blobPath);
+        return links.FirstOrDefault(l => string.Equals(l.Id, linkId, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool IsVideoPath(string blobPath)
     {
         if (string.IsNullOrWhiteSpace(blobPath))
@@ -2832,6 +2995,119 @@
     {
         var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
         return value is DateTimeOffset dto ? dto : null;
+    }
+
+
+    private void StartLinkCreation()
+    {
+        isCreatingLink = true;
+        isEditingLink = false;
+        editingLinkId = null;
+        linkPlaceholderText = string.Empty;
+        linkUrl = string.Empty;
+        SetLinkStatus(null);
+    }
+
+    private void CancelLinkCreation()
+    {
+        isCreatingLink = false;
+        isEditingLink = false;
+        editingLinkId = null;
+        linkPlaceholderText = string.Empty;
+        linkUrl = string.Empty;
+    }
+
+    private void BeginEditLink(string linkId)
+    {
+        var link = links?.FirstOrDefault(l => string.Equals(l.Id, linkId, StringComparison.OrdinalIgnoreCase));
+        if (link == null)
+        {
+            SetLinkStatus("Could not find link to edit.");
+            return;
+        }
+
+        isCreatingLink = true;
+        isEditingLink = true;
+        editingLinkId = link.Id;
+        linkPlaceholderText = link.PlaceholderText;
+        linkUrl = link.Url;
+    }
+
+    private async Task SaveLinkAsync()
+    {
+        try
+        {
+            var linkToSave = new TrainingLink
+            {
+                Id = isEditingLink ? (editingLinkId ?? string.Empty) : Guid.NewGuid().ToString("N"),
+                PlaceholderText = linkPlaceholderText,
+                Url = linkUrl
+            };
+
+            await TrainingDocumentService.SaveLinkAsync(linkToSave);
+            await LoadLinksAsync();
+            await LoadCoursePickerDataAsync();
+
+            SetLinkStatus(isEditingLink ? "Link updated." : "Link saved.");
+            CancelLinkCreation();
+        }
+        catch (Exception ex)
+        {
+            SetLinkStatus($"Could not save link: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteLinkAsync(string linkId)
+    {
+        await TrainingDocumentService.DeleteLinkAsync(linkId);
+        await LoadLinksAsync();
+        await LoadActiveAssignedUserIdsAsync();
+
+        if (!string.IsNullOrWhiteSpace(currentUserId))
+        {
+            myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        }
+
+        if (selectedUserProfile != null && !string.IsNullOrWhiteSpace(selectedUserProfile.Id))
+        {
+            selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(selectedUserProfile.Id);
+        }
+
+        await LoadCoursePickerDataAsync();
+        SetLinkStatus("Link deleted.");
+    }
+
+    private void SetLinkStatus(string? message)
+    {
+        linkStatusMessage = message;
+
+        linkStatusCts?.Cancel();
+        linkStatusCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            linkStatusCts = null;
+            return;
+        }
+
+        linkStatusCts = new CancellationTokenSource();
+        _ = AutoClearLinkStatusAsync(linkStatusCts.Token);
+    }
+
+    private async Task AutoClearLinkStatusAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), token);
+            await InvokeAsync(() =>
+            {
+                linkStatusMessage = null;
+                StateHasChanged();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+        }
     }
 
     private void StartExamCreation()
@@ -3234,6 +3510,8 @@
         examStatusCts?.Dispose();
         courseStatusCts?.Cancel();
         courseStatusCts?.Dispose();
+        linkStatusCts?.Cancel();
+        linkStatusCts?.Dispose();
         launchedVideoWatcherReference?.Dispose();
     }
 

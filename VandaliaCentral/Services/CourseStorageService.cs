@@ -113,6 +113,7 @@ public class CourseStorageService
     private const string CourseIndexPath = "courses/index.json";
     private const string ExamsPrefix = "exams/";
     private const string UserProfilesPrefix = "user-training-profiles/";
+    private const string LinksPrefix = "links/";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -263,9 +264,51 @@ public class CourseStorageService
         return exams.OrderBy(e => e.Title).ToList();
     }
 
+    public async Task<List<BlobItemInfo>> ListLinksAsync()
+    {
+        var links = new List<BlobItemInfo>();
+
+        await foreach (var blob in _containerClient.GetBlobsAsync(prefix: LinksPrefix))
+        {
+            if (!blob.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var blobClient = _containerClient.GetBlobClient(blob.Name);
+
+            try
+            {
+                var content = await blobClient.DownloadContentAsync();
+                var trainingLink = content.Value.Content.ToObjectFromJson<TrainingLink>(SerializerOptions);
+                if (trainingLink == null)
+                {
+                    continue;
+                }
+
+                var displayName = string.IsNullOrWhiteSpace(trainingLink.PlaceholderText)
+                    ? Path.GetFileNameWithoutExtension(blob.Name)
+                    : trainingLink.PlaceholderText;
+
+                links.Add(new BlobItemInfo
+                {
+                    BlobPath = blob.Name,
+                    DisplayName = displayName,
+                    ContentType = "application/json"
+                });
+            }
+            catch
+            {
+                // Skip malformed link blobs.
+            }
+        }
+
+        return links.OrderBy(l => l.DisplayName).ToList();
+    }
+
     private async Task<List<BlobItemInfo>> ListAssetsByExtensionAsync(HashSet<string> allowedExtensions)
     {
-        var excludedPrefixes = new[] { ExamsPrefix, CoursesPrefix, UserProfilesPrefix };
+        var excludedPrefixes = new[] { ExamsPrefix, CoursesPrefix, UserProfilesPrefix, LinksPrefix };
         var blobs = new List<BlobItemInfo>();
 
         await foreach (var blob in _containerClient.GetBlobsAsync())
@@ -321,7 +364,7 @@ public class CourseStorageService
             }
 
             if (string.IsNullOrWhiteSpace(step.Type)
-                || !new[] { "Document", "Video", "Exam" }.Contains(step.Type, StringComparer.OrdinalIgnoreCase))
+                || !new[] { "Document", "Video", "Exam", "Link" }.Contains(step.Type, StringComparer.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Step {step.Order} has an invalid type.");
             }
@@ -347,6 +390,12 @@ public class CourseStorageService
                 && step.Content.BlobPath.StartsWith(ExamsPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Step {step.Order} is a video and cannot reference an exam blob.");
+            }
+
+            if (step.Type.Equals("Link", StringComparison.OrdinalIgnoreCase)
+                && !step.Content.BlobPath.StartsWith(LinksPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Step {step.Order} is a link and must reference a links/ blob.");
             }
         }
 

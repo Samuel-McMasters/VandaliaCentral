@@ -42,6 +42,14 @@ namespace VandaliaCentral.Services
         public DateTimeOffset CreatedAtUtc { get; set; }
     }
 
+    public class TrainingLink
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public string PlaceholderText { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+        public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    }
+
     public class UserLearningAssignment
     {
         public string AssignmentId { get; set; } = Guid.NewGuid().ToString("N");
@@ -83,6 +91,7 @@ namespace VandaliaCentral.Services
         private const string ExamFolderPrefix = "exams/";
         private const string UserTrainingProfilePrefix = "user-training-profiles/";
         private const string CourseFolderPrefix = "courses/";
+        private const string LinkFolderPrefix = "links/";
         private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -112,7 +121,8 @@ namespace VandaliaCentral.Services
             {
                 if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase)
-                    || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase))
+                    || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(LinkFolderPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -203,6 +213,105 @@ namespace VandaliaCentral.Services
 
             await _containerClient.DeleteBlobIfExistsAsync(examBlobPath);
             await RemoveActiveAssignmentsByBlobPathAsync(examBlobPath);
+        }
+
+
+        public async Task<List<TrainingLink>> ListLinksAsync()
+        {
+            var links = new List<TrainingLink>();
+
+            await foreach (var blob in _containerClient.GetBlobsAsync(prefix: LinkFolderPrefix))
+            {
+                var blobClient = _containerClient.GetBlobClient(blob.Name);
+
+                try
+                {
+                    var download = await blobClient.DownloadContentAsync();
+                    var link = download.Value.Content.ToObjectFromJson<TrainingLink>();
+                    if (link == null || string.IsNullOrWhiteSpace(link.Id))
+                    {
+                        continue;
+                    }
+
+                    links.Add(link);
+                }
+                catch
+                {
+                    // Skip malformed link files.
+                }
+            }
+
+            return links
+                .OrderBy(l => l.PlaceholderText)
+                .ToList();
+        }
+
+        public async Task<TrainingLink?> GetLinkAsync(string linkId)
+        {
+            var safeLinkId = Path.GetFileNameWithoutExtension(linkId);
+            if (string.IsNullOrWhiteSpace(safeLinkId))
+            {
+                return null;
+            }
+
+            var blobClient = _containerClient.GetBlobClient($"{LinkFolderPrefix}{safeLinkId}.json");
+
+            try
+            {
+                var download = await blobClient.DownloadContentAsync();
+                return download.Value.Content.ToObjectFromJson<TrainingLink>();
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
+        }
+
+        public async Task SaveLinkAsync(TrainingLink link)
+        {
+            if (string.IsNullOrWhiteSpace(link.PlaceholderText))
+            {
+                throw new InvalidOperationException("Placeholder text is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(link.Url)
+                || !Uri.TryCreate(link.Url.Trim(), UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new InvalidOperationException("A valid http(s) URL is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(link.Id))
+            {
+                link.Id = Guid.NewGuid().ToString("N");
+            }
+
+            link.PlaceholderText = link.PlaceholderText.Trim();
+            link.Url = uri.ToString();
+            link.CreatedAtUtc = DateTimeOffset.UtcNow;
+
+            var blobName = $"{LinkFolderPrefix}{link.Id}.json";
+            var blobClient = _containerClient.GetBlobClient(blobName);
+
+            var json = JsonSerializer.Serialize(link, SerializerOptions);
+            await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+
+            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
+        }
+
+        public async Task DeleteLinkAsync(string linkId)
+        {
+            var safeLinkId = Path.GetFileNameWithoutExtension(linkId);
+            if (string.IsNullOrWhiteSpace(safeLinkId))
+            {
+                return;
+            }
+
+            var linkBlobPath = $"{LinkFolderPrefix}{safeLinkId}.json";
+
+            await _containerClient.DeleteBlobIfExistsAsync(linkBlobPath);
+            await RemoveActiveAssignmentsByBlobPathAsync(linkBlobPath);
         }
 
         public async Task SaveExamAsync(TrainingExam exam)
