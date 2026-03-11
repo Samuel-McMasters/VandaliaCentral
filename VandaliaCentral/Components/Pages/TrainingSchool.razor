@@ -1278,6 +1278,19 @@
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
+<<<<<<< codex/add-active-users-logic-in-trainer-tools-etqirc
+    private async Task RefreshActiveUsersIfTrainerAsync()
+    {
+        if (!IsTrainer)
+        {
+            return;
+        }
+
+        await LoadActiveAssignedUserIdsAsync();
+    }
+
+=======
+>>>>>>> training-school
     private async Task LoadExamsAsync()
     {
         exams = await TrainingDocumentService.ListExamsAsync();
@@ -2104,6 +2117,8 @@
                 myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
             }
 
+            await RefreshActiveUsersIfTrainerAsync();
+
             if (completion.AssignmentCompleted)
             {
                 launchedAssignment = null;
@@ -2308,6 +2323,7 @@
             if (completed)
             {
                 myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+                await RefreshActiveUsersIfTrainerAsync();
             }
 
             return;
@@ -2338,6 +2354,7 @@
         }
 
         myTrainingProfile = await GetUserTrainingProfileDataAsync(currentUserId);
+        await RefreshActiveUsersIfTrainerAsync();
 
         if (completion.AssignmentCompleted)
         {
@@ -2407,6 +2424,7 @@
                         var completedByAssignmentId = await boolTask;
                         if (completedByAssignmentId)
                         {
+                            await RefreshActiveUsersIfTrainerAsync();
                             return true;
                         }
                     }
@@ -2488,6 +2506,7 @@
             }
 
             await saveTask;
+            await RefreshActiveUsersIfTrainerAsync();
             return true;
         }
         catch
