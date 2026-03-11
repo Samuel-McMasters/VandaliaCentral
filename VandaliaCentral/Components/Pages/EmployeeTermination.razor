@@ -52,6 +52,9 @@
 
                             @if (showEmployeeDropdown)
                             {
+                                <div class="position-fixed top-0 start-0 w-100 h-100"
+                                     style="z-index: 1040;"
+                                     @onclick="CloseEmployeeDropdown"></div>
                                 <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
                                      style="z-index: 1050;"
                                      @onclick:stopPropagation="true">
@@ -275,6 +278,11 @@
     private void ToggleEmployeeDropdown()
     {
         showEmployeeDropdown = !showEmployeeDropdown;
+    }
+
+    private void CloseEmployeeDropdown()
+    {
+        showEmployeeDropdown = false;
     }
 
     private void SelectEmployee(User employee)
