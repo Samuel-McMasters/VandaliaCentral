@@ -49,8 +49,16 @@ namespace VandaliaCentral.Services
         public string ItemType { get; set; } = string.Empty;
         public string BlobPath { get; set; } = string.Empty;
         public string? ContentType { get; set; }
+        public List<string> CompletedCourseStepIds { get; set; } = new();
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
+    }
+
+    public class CompleteCourseStepResult
+    {
+        public bool Success { get; set; }
+        public bool AssignmentCompleted { get; set; }
+        public List<string> CompletedStepIds { get; set; } = new();
     }
 
     public class UserTrainingProfile
@@ -309,6 +317,54 @@ namespace VandaliaCentral.Services
 
             await SaveUserTrainingProfileAsync(profile);
             return true;
+        }
+
+        public async Task<CompleteCourseStepResult> CompleteCourseStepForUserAsync(string userId, string assignmentId, string stepId, int totalRequiredSteps)
+        {
+            var result = new CompleteCourseStepResult();
+            var safeUserId = Path.GetFileNameWithoutExtension(userId);
+            var safeStepId = Path.GetFileNameWithoutExtension(stepId);
+
+            if (string.IsNullOrWhiteSpace(safeUserId)
+                || string.IsNullOrWhiteSpace(assignmentId)
+                || string.IsNullOrWhiteSpace(safeStepId)
+                || totalRequiredSteps <= 0)
+            {
+                return result;
+            }
+
+            var profile = await GetUserTrainingProfileAsync(safeUserId);
+            profile.UserId = safeUserId;
+
+            var assignment = profile.ActiveAssignedLearning.FirstOrDefault(a =>
+                string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(a.ItemType, "Course", StringComparison.OrdinalIgnoreCase));
+
+            if (assignment == null)
+            {
+                return result;
+            }
+
+            assignment.CompletedCourseStepIds ??= new List<string>();
+
+            if (!assignment.CompletedCourseStepIds.Contains(safeStepId, StringComparer.OrdinalIgnoreCase))
+            {
+                assignment.CompletedCourseStepIds.Add(safeStepId);
+            }
+
+            result.CompletedStepIds = assignment.CompletedCourseStepIds.ToList();
+
+            if (assignment.CompletedCourseStepIds.Count >= totalRequiredSteps)
+            {
+                profile.ActiveAssignedLearning.Remove(assignment);
+                assignment.CompletedAtUtc = DateTimeOffset.UtcNow;
+                profile.LearningHistory.Add(assignment);
+                result.AssignmentCompleted = true;
+            }
+
+            await SaveUserTrainingProfileAsync(profile);
+            result.Success = true;
+            return result;
         }
 
         public async Task SaveUserTrainingProfileAsync(UserTrainingProfile profile)
