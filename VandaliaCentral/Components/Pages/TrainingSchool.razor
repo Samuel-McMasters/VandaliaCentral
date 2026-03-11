@@ -811,18 +811,29 @@
                                                         <ul class="list-group">
                                                             @foreach (var assignment in selectedUserTrainingProfile.ActiveAssignedLearning)
                                                             {
+                                                                var completionPercent = GetCourseCompletionPercent(assignment);
                                                                 <li class="list-group-item">
                                                                     <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
                                                                         <div>
                                                                             <div class="fw-semibold text-break">@assignment.Title</div>
                                                                             <div class="small text-muted">@GetAssignmentTypeLabel(assignment.ItemType) • Assigned @assignment.AssignedAtUtc.LocalDateTime.ToString("g")</div>
                                                                         </div>
-                                                                        <button class="btn btn-sm btn-outline-danger"
-                                                                                type="button"
-                                                                                disabled="@(assignment.AssignmentId == assignmentPendingUnassignId)"
-                                                                                @onclick='() => UnassignSelectedUserLearningAsync(assignment)'>
-                                                                            @(assignment.AssignmentId == assignmentPendingUnassignId ? "Deleting..." : "Delete")
-                                                                        </button>
+
+                                                                        <div class="d-flex align-items-center gap-2 ms-auto">
+                                                                            @if (assignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+                                                                            {
+                                                                                <div class="course-progress-donut" style="@BuildCourseDonutStyle(completionPercent)" title="Course progress">
+                                                                                    <span>@completionPercent%</span>
+                                                                                </div>
+                                                                            }
+
+                                                                            <button class="btn btn-sm btn-outline-danger"
+                                                                                    type="button"
+                                                                                    disabled="@(assignment.AssignmentId == assignmentPendingUnassignId)"
+                                                                                    @onclick='() => UnassignSelectedUserLearningAsync(assignment)'>
+                                                                                @(assignment.AssignmentId == assignmentPendingUnassignId ? "Deleting..." : "Delete")
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </li>
                                                             }
@@ -1922,6 +1933,7 @@
         {
             selectedUserProfile = await GetGraphUserProfileAsync(user) ?? user;
             selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(user.Id);
+            await EnsureCourseStepCountsAsync(selectedUserTrainingProfile);
         }
         catch (Exception ex)
         {
@@ -1993,6 +2005,7 @@
         });
 
         selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(selectedUserProfile.Id);
+        await EnsureCourseStepCountsAsync(selectedUserTrainingProfile);
         await LoadActiveAssignedUserIdsAsync();
 
         if (!string.IsNullOrWhiteSpace(currentUserId)
@@ -3184,6 +3197,7 @@
         if (selectedUserProfile != null && !string.IsNullOrWhiteSpace(selectedUserProfile.Id))
         {
             selectedUserTrainingProfile = await GetUserTrainingProfileDataAsync(selectedUserProfile.Id);
+            await EnsureCourseStepCountsAsync(selectedUserTrainingProfile);
         }
 
         await LoadCoursePickerDataAsync();
