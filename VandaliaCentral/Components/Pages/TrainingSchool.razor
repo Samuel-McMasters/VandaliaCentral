@@ -1778,7 +1778,7 @@
 
             var subject = $"Course Access Request: {course.Title}";
             var trainingSchoolUrl = NavigationManager.ToAbsoluteUri("/training-school").ToString();
-            var body = $"<p>I am requesting access to {System.Net.WebUtility.HtmlEncode(course.Title)}.</p><p><a href="{trainingSchoolUrl}">Open Training School</a></p>";
+            var body = $"<p>I am requesting access to {System.Net.WebUtility.HtmlEncode(course.Title)}.</p><p><a href=\"{trainingSchoolUrl}\">Open Training School</a></p>";
 
             foreach (var recipient in recipients)
             {
@@ -1854,7 +1854,7 @@
                 var message = approved
                     ? $"Your request for {System.Net.WebUtility.HtmlEncode(request.CourseName)} has been approved"
                     : $"Your request for {System.Net.WebUtility.HtmlEncode(request.CourseName)} has been denied";
-                var body = $"<p>{message}</p><p><a href="{trainingSchoolUrl}">Open Training School</a></p>";
+                var body = $"<p>{message}</p><p><a href=\"{trainingSchoolUrl}\">Open Training School</a></p>";
 
                 await GraphEmailService.SendEmailHtmlAsyncStrict(toEmail, subject, body);
             }
