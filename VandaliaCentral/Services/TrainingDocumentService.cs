@@ -86,6 +86,17 @@ namespace VandaliaCentral.Services
         public string? ContentType { get; set; }
     }
 
+    public class CourseAccessRequest
+    {
+        public string RequestId { get; set; } = Guid.NewGuid().ToString("N");
+        public string CourseId { get; set; } = string.Empty;
+        public string CourseName { get; set; } = string.Empty;
+        public string RequestedByUserId { get; set; } = string.Empty;
+        public string RequestedByDisplayName { get; set; } = string.Empty;
+        public string RequestedByEmail { get; set; } = string.Empty;
+        public DateTimeOffset RequestedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    }
+
     public class TrainingDocumentService
     {
         private const string ContainerName = "training-school";
@@ -93,6 +104,7 @@ namespace VandaliaCentral.Services
         private const string UserTrainingProfilePrefix = "user-training-profiles/";
         private const string CourseFolderPrefix = "courses/";
         private const string LinkFolderPrefix = "links/";
+        private const string CourseAccessRequestsPath = "course-access-requests/requests.json";
         private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -566,6 +578,77 @@ namespace VandaliaCentral.Services
             var json = JsonSerializer.Serialize(profile, SerializerOptions);
             await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
+            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
+        }
+
+        public async Task<List<CourseAccessRequest>> ListCourseAccessRequestsAsync()
+        {
+            var blobClient = _containerClient.GetBlobClient(CourseAccessRequestsPath);
+
+            try
+            {
+                var download = await blobClient.DownloadContentAsync();
+                var requests = download.Value.Content.ToObjectFromJson<List<CourseAccessRequest>>()
+                    ?? new List<CourseAccessRequest>();
+
+                return requests
+                    .Where(r => !string.IsNullOrWhiteSpace(r.RequestId)
+                        && !string.IsNullOrWhiteSpace(r.CourseId)
+                        && !string.IsNullOrWhiteSpace(r.RequestedByUserId))
+                    .OrderByDescending(r => r.RequestedAtUtc)
+                    .ToList();
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                return new List<CourseAccessRequest>();
+            }
+        }
+
+        public async Task AddCourseAccessRequestAsync(CourseAccessRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.CourseId)
+                || string.IsNullOrWhiteSpace(request.CourseName)
+                || string.IsNullOrWhiteSpace(request.RequestedByUserId))
+            {
+                throw new InvalidOperationException("Course request is missing required fields.");
+            }
+
+            request.RequestId = string.IsNullOrWhiteSpace(request.RequestId)
+                ? Guid.NewGuid().ToString("N")
+                : request.RequestId;
+            request.RequestedAtUtc = DateTimeOffset.UtcNow;
+
+            var existing = await ListCourseAccessRequestsAsync();
+            existing.Add(request);
+            await SaveCourseAccessRequestsAsync(existing);
+        }
+
+        public async Task<bool> RemoveCourseAccessRequestAsync(string requestId)
+        {
+            var safeRequestId = Path.GetFileNameWithoutExtension(requestId);
+            if (string.IsNullOrWhiteSpace(safeRequestId))
+            {
+                return false;
+            }
+
+            var existing = await ListCourseAccessRequestsAsync();
+            var removedCount = existing.RemoveAll(r => string.Equals(r.RequestId, safeRequestId, StringComparison.OrdinalIgnoreCase));
+            if (removedCount == 0)
+            {
+                return false;
+            }
+
+            await SaveCourseAccessRequestsAsync(existing);
+            return true;
+        }
+
+        private async Task SaveCourseAccessRequestsAsync(List<CourseAccessRequest> requests)
+        {
+            var blobClient = _containerClient.GetBlobClient(CourseAccessRequestsPath);
+            var json = JsonSerializer.Serialize(requests, SerializerOptions);
+
+            await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
             await blobClient.UploadAsync(stream, overwrite: true);
             await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = "application/json" });
         }

@@ -111,6 +111,54 @@ namespace VandaliaCentral.Services
             }
         }
 
+
+
+        public async Task<IEnumerable<User>> GetGroupUsersAsync(string groupId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(groupId))
+                {
+                    return Enumerable.Empty<User>();
+                }
+
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All", "GroupMember.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                var users = new List<User>();
+
+                var page = await graphClient.Groups[groupId].Members
+                    .Request()
+                    .Select("id,displayName,mail,userPrincipalName")
+                    .Top(100)
+                    .GetAsync();
+
+                while (page != null)
+                {
+                    users.AddRange(page.CurrentPage.OfType<User>());
+
+                    if (page.NextPageRequest != null)
+                    {
+                        page = await page.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                return users;
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return Enumerable.Empty<User>();
+            }
+        }
+
         public async Task<User?> GetUserProfileAsync(string userId)
         {
             try
