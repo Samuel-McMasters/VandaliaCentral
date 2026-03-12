@@ -391,7 +391,28 @@
                         }
                         else if (activeTab == "course-history")
                         {
-                            <p class="mb-0">Course History content is coming soon.</p>
+                            <h5 class="mb-3">Course History</h5>
+
+                            @if (myTrainingProfile == null)
+                            {
+                                <p class="text-muted mb-0">Loading your learning history...</p>
+                            }
+                            else if (!myTrainingProfile.LearningHistory.Any())
+                            {
+                                <p class="text-muted mb-0">No completed learning history.</p>
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var history in myTrainingProfile.LearningHistory)
+                                    {
+                                        <li class="list-group-item">
+                                            <div class="fw-semibold text-break">@history.Title</div>
+                                            <div class="small text-muted">@BuildLearningHistoryDetail(history)</div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
                         }
                         else if (activeTab == "trainer-tools" && IsTrainer)
                         {
@@ -854,7 +875,7 @@
                                                             {
                                                                 <li class="list-group-item">
                                                                     <div class="fw-semibold text-break">@history.Title</div>
-                                                                    <div class="small text-muted">@GetAssignmentTypeLabel(history.ItemType) • Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")@(history.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase) && history.ExamScorePercent.HasValue ? $" • Score {history.ExamScorePercent.Value}%" : string.Empty)</div>
+                                                                    <div class="small text-muted">@BuildLearningHistoryDetail(history)</div>
                                                                 </li>
                                                             }
                                                         </ul>
@@ -3040,6 +3061,18 @@
         }
 
         return itemType;
+    }
+
+    private static string BuildLearningHistoryDetail(UserLearningAssignmentViewModel history)
+    {
+        var detail = $"{GetAssignmentTypeLabel(history.ItemType)} • Completed {(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")}";
+
+        if (history.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase) && history.ExamScorePercent.HasValue)
+        {
+            detail += $" • Score {history.ExamScorePercent.Value}%";
+        }
+
+        return detail;
     }
 
     private static bool IsPdfPath(string blobPath)
