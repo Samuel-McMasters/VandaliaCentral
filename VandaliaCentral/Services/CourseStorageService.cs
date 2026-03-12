@@ -364,14 +364,23 @@ public class CourseStorageService
             }
 
             if (string.IsNullOrWhiteSpace(step.Type)
-                || !new[] { "Document", "Video", "Exam", "Link" }.Contains(step.Type, StringComparer.OrdinalIgnoreCase))
+                || !new[] { "Document", "Video", "Exam", "Link", "Text" }.Contains(step.Type, StringComparer.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Step {step.Order} has an invalid type.");
             }
 
-            if (string.IsNullOrWhiteSpace(step.Content?.BlobPath))
+            if (!step.Type.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(step.Content?.BlobPath))
             {
                 throw new InvalidOperationException($"Step {step.Order} must include content.");
+            }
+
+            if (step.Type.Equals("Text", StringComparison.OrdinalIgnoreCase))
+            {
+                step.Content ??= new CourseContentReference();
+                step.Content.BlobPath = string.Empty;
+                step.Content.ContentType = null;
+                continue;
             }
 
             if (step.Type.Equals("Exam", StringComparison.OrdinalIgnoreCase)
