@@ -801,17 +801,19 @@
                                         }
                                         else
                                         {
-                                            <ul class="list-group" style="max-width: 1000px;">
-                                                @foreach (var user in FilteredEntraUsers)
-                                                {
-                                                    <li class='list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")'
-                                                    style="cursor: pointer;"
-                                                    @onclick='async () => await SelectUserAsync(user)'>
-                                                        <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
-                                                        <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
-                                                    </li>
-                                                }
-                                            </ul>
+                                            <div style="max-width: 1000px; max-height: 560px; overflow-y: auto;">
+                                                <ul class="list-group">
+                                                    @foreach (var user in FilteredEntraUsers)
+                                                    {
+                                                        <li class='list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")'
+                                                        style="cursor: pointer;"
+                                                        @onclick='async () => await SelectUserAsync(user)'>
+                                                            <div class="fw-semibold text-break">@(user.DisplayName ?? "Unknown")</div>
+                                                            <div class="small text-muted text-break">@(user.Mail ?? user.UserPrincipalName ?? "No email")</div>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
                                         }
                                     </div>
 
