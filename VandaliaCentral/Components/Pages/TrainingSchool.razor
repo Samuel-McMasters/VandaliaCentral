@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Graph
 @using Microsoft.JSInterop
+@using Microsoft.Identity.Web
 @using System.IO
 @using System.Linq
 @using System.Threading
@@ -16,11 +17,13 @@
 @inject TrainingDocumentService TrainingDocumentService
 @inject CourseStorageService CourseStorageService
 @inject GraphUserService GraphUserService
+@inject GraphEmailService GraphEmailService
 @inject LoggingService Logger
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
 @attribute [Authorize]
+@attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "GroupMember.Read.All", "Mail.Send" })]
 @implements IDisposable
 
 <PageTitle>VR Academy</PageTitle>
@@ -397,7 +400,49 @@
                         }
                         else if (activeTab == "all-courses")
                         {
-                            <p class="mb-0">All Courses content is coming soon.</p>
+                            <h5 class="mb-3">All Courses</h5>
+
+                            @if (!string.IsNullOrWhiteSpace(allCoursesStatusMessage))
+                            {
+                                <div class="alert alert-info py-2">@allCoursesStatusMessage</div>
+                            }
+
+                            @if (isLoadingCourses)
+                            {
+                                <p class="text-muted mb-0">Loading courses...</p>
+                            }
+                            else if (!courses.Any())
+                            {
+                                <p class="text-muted mb-0">No courses are available yet.</p>
+                            }
+                            else
+                            {
+                                <ul class="list-group" style="max-width: 1000px;">
+                                    @foreach (var course in courses.OrderBy(c => c.Title))
+                                    {
+                                        var hasAccess = HasCourseInMyLearning(course.Id);
+                                        var hasPendingRequest = HasPendingCourseRequestForCurrentUser(course.Id);
+
+                                        <li class="list-group-item">
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                                <div>
+                                                    <div class="fw-semibold text-break">@course.Title</div>
+                                                    @if (!string.IsNullOrWhiteSpace(course.Description))
+                                                    {
+                                                        <div class="small text-muted text-break">@course.Description</div>
+                                                    }
+                                                </div>
+                                                <button class="btn btn-primary btn-sm"
+                                                        type="button"
+                                                        disabled="@hasAccess || hasPendingRequest"
+                                                        @onclick='() => RequestCourseAccessAsync(course)'>
+                                                    @(hasAccess ? "Already in My Learning" : hasPendingRequest ? "Request Pending" : "Request Access")
+                                                </button>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
                         }
                         else if (activeTab == "course-history")
                         {
@@ -443,6 +488,9 @@
                                 </li>
                                 <li class="nav-item">
                                     <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class='nav-link @(trainerToolTab == "requests" ? "active" : "")' @onclick='() => SetTrainerToolTab("requests")'>Requests</button>
                                 </li>
                             </ul>
 
@@ -1021,6 +1069,33 @@
                                 <div class="modal-backdrop fade @((showUserTrainingProfileModal || showAssignLearningModal) ? "show" : "")"
                                 style="@((showUserTrainingProfileModal || showAssignLearningModal) ? "display:block;" : "display:none;")"></div>
                             }
+                            else if (trainerToolTab == "requests")
+                            {
+                                <h6 class="mb-3">Course Access Requests</h6>
+
+                                @if (!courseAccessRequests.Any())
+                                {
+                                    <p class="text-muted mb-0">No course access requests pending.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group" style="max-width: 1000px;">
+                                        @foreach (var request in courseAccessRequests.OrderByDescending(r => r.RequestedAtUtc))
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                                <div>
+                                                    <div class="fw-semibold text-break">@request.CourseName</div>
+                                                    <div class="small text-muted text-break">Requested By: @request.RequestedByDisplayName</div>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-success btn-sm" type="button" @onclick='() => ApproveCourseRequestAsync(request)'>Approve</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button" @onclick='() => DenyCourseRequestAsync(request)'>Deny</button>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            }
                             else if (trainerToolTab == "exams")
                             {
                                 <div class="d-flex justify-content-start mb-2">
@@ -1179,6 +1254,26 @@
                         }
                     </div>
                 }
+                @if (showCourseRequestSentModal)
+                {
+                    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Success</h5>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="mb-0">Access request successfully sent!</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn btn-primary" type="button" @onclick="HandleCourseRequestSentOk">Ok</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-backdrop fade show"></div>
+                }
+
             </div>
         </div>
     </div>
@@ -1271,6 +1366,9 @@
     private string linkUrl = string.Empty;
     private string? linkStatusMessage;
     private CancellationTokenSource? linkStatusCts;
+    private string? allCoursesStatusMessage;
+    private bool showCourseRequestSentModal;
+    private List<CourseAccessRequest> courseAccessRequests = new();
 
     private class UserTrainingProfileViewModel
     {
@@ -1392,6 +1490,7 @@
         }
 
         await LoadLinksAsync();
+        await LoadCoursesAsync();
 
         if (HasTrainerToolsAccess)
         {
@@ -1399,8 +1498,8 @@
             await LoadEntraUsersAsync();
             await LoadActiveAssignedUserIdsAsync();
             await LoadExamsAsync();
-            await LoadCoursesAsync();
             await LoadCoursePickerDataAsync();
+            await LoadCourseAccessRequestsAsync();
         }
 
         await TryActivateLaunchFromQueryAsync();
@@ -1607,6 +1706,174 @@
         }
     }
 
+
+
+    private bool HasCourseInMyLearning(string courseId)
+    {
+        if (myTrainingProfile == null || string.IsNullOrWhiteSpace(courseId))
+        {
+            return false;
+        }
+
+        var courseBlobPath = $"courses/{courseId}.json";
+        return myTrainingProfile.ActiveAssignedLearning.Any(a =>
+            a.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a.BlobPath, courseBlobPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool HasPendingCourseRequestForCurrentUser(string courseId)
+    {
+        if (string.IsNullOrWhiteSpace(currentUserId) || string.IsNullOrWhiteSpace(courseId))
+        {
+            return false;
+        }
+
+        return courseAccessRequests.Any(r =>
+            string.Equals(r.CourseId, courseId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.RequestedByUserId, currentUserId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task LoadCourseAccessRequestsAsync()
+    {
+        courseAccessRequests = await TrainingDocumentService.ListCourseAccessRequestsAsync();
+    }
+
+    private async Task RequestCourseAccessAsync(CourseSummary course)
+    {
+        if (string.IsNullOrWhiteSpace(currentUserId))
+        {
+            SetAllCoursesStatus("Unable to determine your user profile.");
+            return;
+        }
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var displayName = user.Identity?.Name ?? "Unknown user";
+            var requesterEmail = user.FindFirst(ClaimTypes.Email)?.Value
+                ?? user.FindFirst("preferred_username")?.Value
+                ?? string.Empty;
+
+            await TrainingDocumentService.AddCourseAccessRequestAsync(new CourseAccessRequest
+            {
+                CourseId = course.Id,
+                CourseName = course.Title,
+                RequestedByUserId = currentUserId,
+                RequestedByDisplayName = displayName,
+                RequestedByEmail = requesterEmail
+            });
+
+            var trainerUsers = await GraphUserService.GetGroupUsersAsync(TrainerGroupId);
+            var recipients = trainerUsers
+                .Select(u => string.IsNullOrWhiteSpace(u.Mail) ? u.UserPrincipalName : u.Mail)
+                .Where(email => !string.IsNullOrWhiteSpace(email))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (!recipients.Any())
+            {
+                throw new InvalidOperationException("No trainer recipients were found for this request.");
+            }
+
+            var subject = $"Course Access Request: {course.Title}";
+            var trainingSchoolUrl = NavigationManager.ToAbsoluteUri("/training-school").ToString();
+            var body = $"<p>I am requesting access to {System.Net.WebUtility.HtmlEncode(course.Title)}.</p><p><a href="{trainingSchoolUrl}">Open Training School</a></p>";
+
+            foreach (var recipient in recipients)
+            {
+                await GraphEmailService.SendEmailHtmlAsyncStrict(recipient!, subject, body);
+            }
+
+            await LoadCourseAccessRequestsAsync();
+            showCourseRequestSentModal = true;
+        }
+        catch (Exception ex)
+        {
+            SetAllCoursesStatus($"Unable to send access request: {ex.Message}");
+        }
+    }
+
+    private void HandleCourseRequestSentOk()
+    {
+        showCourseRequestSentModal = false;
+        NavigationManager.NavigateTo("/training-school", forceLoad: true);
+    }
+
+    private async Task ApproveCourseRequestAsync(CourseAccessRequest request)
+    {
+        await ResolveCourseRequestAsync(request, approved: true);
+    }
+
+    private async Task DenyCourseRequestAsync(CourseAccessRequest request)
+    {
+        await ResolveCourseRequestAsync(request, approved: false);
+    }
+
+    private async Task ResolveCourseRequestAsync(CourseAccessRequest request, bool approved)
+    {
+        try
+        {
+            if (approved)
+            {
+                var profile = await TrainingDocumentService.GetUserTrainingProfileAsync(request.RequestedByUserId);
+                var courseBlobPath = $"courses/{request.CourseId}.json";
+                var hasCourse = profile.ActiveAssignedLearning.Any(a =>
+                    a.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(a.BlobPath, courseBlobPath, StringComparison.OrdinalIgnoreCase));
+
+                if (!hasCourse)
+                {
+                    await TrainingDocumentService.AssignLearningToUserAsync(new AssignLearningRequest
+                    {
+                        UserId = request.RequestedByUserId,
+                        Title = request.CourseName,
+                        ItemType = "Course",
+                        BlobPath = courseBlobPath,
+                        ContentType = "application/json"
+                    });
+                }
+            }
+
+            await TrainingDocumentService.RemoveCourseAccessRequestAsync(request.RequestId);
+            await LoadCourseAccessRequestsAsync();
+
+            var toEmail = request.RequestedByEmail;
+            if (string.IsNullOrWhiteSpace(toEmail))
+            {
+                var user = await GraphUserService.GetUserProfileAsync(request.RequestedByUserId);
+                toEmail = user?.Mail ?? user?.UserPrincipalName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(toEmail))
+            {
+                var trainingSchoolUrl = NavigationManager.ToAbsoluteUri("/training-school").ToString();
+                var subject = approved
+                    ? $"Course Access Approved: {request.CourseName}"
+                    : $"Course Access Denied: {request.CourseName}";
+                var message = approved
+                    ? $"Your request for {System.Net.WebUtility.HtmlEncode(request.CourseName)} has been approved"
+                    : $"Your request for {System.Net.WebUtility.HtmlEncode(request.CourseName)} has been denied";
+                var body = $"<p>{message}</p><p><a href="{trainingSchoolUrl}">Open Training School</a></p>";
+
+                await GraphEmailService.SendEmailHtmlAsyncStrict(toEmail, subject, body);
+            }
+
+            if (string.Equals(currentUserId, request.RequestedByUserId, StringComparison.OrdinalIgnoreCase))
+            {
+                await RefreshMyTrainingProfileAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SetCourseStatus($"Unable to process request: {ex.Message}");
+        }
+    }
+
+    private void SetAllCoursesStatus(string message)
+    {
+        allCoursesStatusMessage = message;
+    }
 
     private async Task LoadExamsAsync()
     {
