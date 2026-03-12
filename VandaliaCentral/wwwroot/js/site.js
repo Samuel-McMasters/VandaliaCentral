@@ -279,7 +279,7 @@ window.adminFlappyBird = (() => {
     };
 })();
 
-// Training School video helper: keeps backward compatibility for code paths
+// VR Academy video helper: keeps backward compatibility for code paths
 // that still call trainingSchoolVideo.watchForNearEnd/stopWatching.
 window.trainingSchoolVideo = window.trainingSchoolVideo || (() => {
     const listeners = new WeakMap();

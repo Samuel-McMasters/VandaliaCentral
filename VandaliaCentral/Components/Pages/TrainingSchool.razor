@@ -23,20 +23,20 @@
 @attribute [Authorize]
 @implements IDisposable
 
-<PageTitle>Training School</PageTitle>
+<PageTitle>VR Academy</PageTitle>
 
 <div class="container-fluid px-3 px-md-4 px-xl-5 py-5">
     <div class="row justify-content-center">
         <div class="col-12 col-xxl-11">
             <div class="bg-white border rounded shadow-sm p-4 p-md-5">
-                <h3 class="text-center mb-4">Training School</h3>
+                <h3 class="text-center mb-4">VR Academy</h3>
 
                 @if (launchedAssignment != null)
                 {
                     <div class="border rounded p-4 bg-light-subtle">
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                             <h4 class="mb-0">@launchedAssignment.Title</h4>
-                            <a class="btn btn-outline-secondary btn-sm" href="/training-school" @onclick="ExitLaunchedAssignment">Back to Training School</a>
+                            <a class="btn btn-outline-secondary btn-sm" href="/training-school" @onclick="ExitLaunchedAssignment">Back to VR Academy</a>
                         </div>
 
                         <div class="text-muted small mb-3">@GetAssignmentTypeLabel(launchedAssignment.ItemType)</div>
@@ -330,10 +330,10 @@
                 {
                     <ul class="nav nav-pills nav-fill flex-column flex-md-row gap-2 justify-content-center mb-4">
                         <li class="nav-item">
-                            <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Courses</button>
+                            <button class="nav-link @(activeTab == "my-courses" ? "active" : "")" @onclick='() => SetActiveTab("my-courses")'>My Learning</button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Course History</button>
+                            <button class="nav-link @(activeTab == "course-history" ? "active" : "")" @onclick='() => SetActiveTab("course-history")'>Learning History</button>
                         </li>
                         <li class="nav-item">
                             <button class="nav-link @(activeTab == "all-courses" ? "active" : "")" @onclick='() => SetActiveTab("all-courses")'>All Courses</button>
@@ -391,7 +391,7 @@
                         }
                         else if (activeTab == "course-history")
                         {
-                            <h5 class="mb-3">Course History</h5>
+                            <h5 class="mb-3">Learning History</h5>
 
                             @if (myTrainingProfile == null)
                             {
