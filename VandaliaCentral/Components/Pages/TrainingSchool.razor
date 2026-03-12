@@ -434,7 +434,7 @@
                                                 </div>
                                                 <button class="btn btn-primary btn-sm"
                                                         type="button"
-                                                        disabled="@hasAccess || hasPendingRequest"
+                                                        disabled="@(hasAccess || hasPendingRequest)"
                                                         @onclick='() => RequestCourseAccessAsync(course)'>
                                                     @(hasAccess ? "Already in My Learning" : hasPendingRequest ? "Request Pending" : "Request Access")
                                                 </button>
