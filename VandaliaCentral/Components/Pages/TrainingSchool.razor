@@ -348,7 +348,7 @@
                         <li class="nav-item">
                             <button class="nav-link @(activeTab == "all-courses" ? "active" : "")" @onclick='() => SetActiveTab("all-courses")'>All Courses</button>
                         </li>
-                        @if (IsTrainer)
+                        @if (HasTrainerToolsAccess)
                         {
                             <li class="nav-item">
                                 <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
@@ -424,7 +424,7 @@
                                 </ul>
                             }
                         }
-                        else if (activeTab == "trainer-tools" && IsTrainer)
+                        else if (activeTab == "trainer-tools" && HasTrainerToolsAccess)
                         {
                             <h5 class="mb-3">Trainer Tools</h5>
 
@@ -1189,7 +1189,10 @@
     public string? AssignmentLaunchId { get; set; }
 
     private const string TrainerGroupId = "4cdf9c87-afca-460d-a807-edaa90221d84";
+    private const string AdminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
     private bool IsTrainer;
+    private bool IsAdmin;
+    private bool HasTrainerToolsAccess => IsTrainer || IsAdmin;
     private string activeTab = "my-courses";
     private string trainerToolTab = "documents";
     private string? uploadStatus;
@@ -1375,6 +1378,8 @@
 
         IsTrainer = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == TrainerGroupId);
+        IsAdmin = user.Claims.Any(c =>
+            c.Type == "groups" && c.Value == AdminGroupId);
 
         currentUserId = GetCurrentUserId(user);
         if (!string.IsNullOrWhiteSpace(currentUserId))
@@ -1388,7 +1393,7 @@
 
         await LoadLinksAsync();
 
-        if (IsTrainer)
+        if (HasTrainerToolsAccess)
         {
             await LoadTrainingDocumentsAsync();
             await LoadEntraUsersAsync();
@@ -1430,7 +1435,7 @@
 
     private void SetActiveTab(string tab)
     {
-        if (tab == "trainer-tools" && !IsTrainer)
+        if (tab == "trainer-tools" && !HasTrainerToolsAccess)
         {
             return;
         }
@@ -1509,7 +1514,7 @@
 
     private async Task RefreshActiveUsersIfTrainerAsync()
     {
-        if (!IsTrainer)
+        if (!HasTrainerToolsAccess)
         {
             return;
         }
