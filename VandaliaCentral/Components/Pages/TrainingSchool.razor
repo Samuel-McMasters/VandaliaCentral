@@ -854,7 +854,7 @@
                                                             {
                                                                 <li class="list-group-item">
                                                                     <div class="fw-semibold text-break">@history.Title</div>
-                                                                    <div class="small text-muted">@GetAssignmentTypeLabel(history.ItemType) • Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")</div>
+                                                                    <div class="small text-muted">@GetAssignmentTypeLabel(history.ItemType) • Completed @(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")@(history.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase) && history.ExamScorePercent.HasValue ? $" • Score {history.ExamScorePercent.Value}%" : string.Empty)</div>
                                                                 </li>
                                                             }
                                                         </ul>
@@ -1231,6 +1231,7 @@
         public string? ContentType { get; set; }
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
+        public int? ExamScorePercent { get; set; }
         public List<string> CompletedCourseStepIds { get; set; } = new();
     }
 
@@ -2560,7 +2561,7 @@
 
         if (examResultPassed)
         {
-            await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam);
+            await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam, scorePercent);
             examResultModalTitle = "Congratulations!";
             examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
         }
@@ -2585,7 +2586,7 @@
         return expectedOneBased.SequenceEqual(selectedAnswers);
     }
 
-    private async Task CompleteTrainingSchoolAssignmentIfEligibleV5Async(TrainingExam exam)
+    private async Task CompleteTrainingSchoolAssignmentIfEligibleV5Async(TrainingExam exam, int scorePercent)
     {
         if (launchedAssignment == null || string.IsNullOrWhiteSpace(currentUserId))
         {
@@ -2595,7 +2596,7 @@
         if (launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
         {
-            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment.AssignmentId);
+            var completed = await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(launchedAssignment.AssignmentId, scorePercent);
             if (completed)
             {
                 await RefreshMyTrainingProfileAsync();
@@ -2649,7 +2650,7 @@
     }
 
 
-    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId)
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId, int? examScorePercent = null)
     {
         var launchId = string.Empty;
 
@@ -2665,10 +2666,10 @@
 
             
         }
-        return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(assignmentId, launchId);
+        return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(assignmentId, launchId, examScorePercent);
     }
 
-    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(UserLearningAssignmentViewModel assignment)
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(UserLearningAssignmentViewModel assignment, int? examScorePercent = null)
     {
         if (assignment == null)
         {
@@ -2677,10 +2678,11 @@
 
         return await TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(
             assignment.AssignmentId,
-            GetAssignmentLaunchId(assignment));
+            GetAssignmentLaunchId(assignment),
+            examScorePercent);
     }
 
-    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId, string assignmentLaunchId)
+    private async Task<bool> TryCompleteTrainingSchoolAssignmentForCurrentUserV5Async(string assignmentId, string assignmentLaunchId, int? examScorePercent = null)
     {
         try
         {
@@ -2695,7 +2697,12 @@
                 var completeMethod = TrainingDocumentService.GetType().GetMethod("CompleteAssignmentForUserAsync");
                 if (completeMethod != null)
                 {
-                    var taskObj = completeMethod.Invoke(TrainingDocumentService, new object[] { currentUserId, assignmentId });
+                    var parameters = completeMethod.GetParameters();
+                    var invokeArgs = parameters.Length >= 3
+                        ? new object?[] { currentUserId, assignmentId, examScorePercent }
+                        : new object?[] { currentUserId, assignmentId };
+
+                    var taskObj = completeMethod.Invoke(TrainingDocumentService, invokeArgs);
                     if (taskObj is Task<bool> boolTask)
                     {
                         var completedByAssignmentId = await boolTask;
@@ -3010,6 +3017,7 @@
                 ContentType = ReadStringProperty(item, "ContentType"),
                 AssignedAtUtc = ReadDateTimeOffsetProperty(item, "AssignedAtUtc"),
                 CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc"),
+                ExamScorePercent = ReadNullableIntProperty(item, "ExamScorePercent"),
                 CompletedCourseStepIds = ReadStringListProperty(item, "CompletedCourseStepIds")
             });
         }
@@ -3123,6 +3131,33 @@
         return value is DateTimeOffset dto ? dto : null;
     }
 
+
+
+    private static int? ReadNullableIntProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        if (value is int intValue)
+        {
+            return intValue;
+        }
+
+        if (value is long longValue && longValue >= int.MinValue && longValue <= int.MaxValue)
+        {
+            return (int)longValue;
+        }
+
+        if (value is short shortValue)
+        {
+            return shortValue;
+        }
+
+        if (value is byte byteValue)
+        {
+            return byteValue;
+        }
+
+        return int.TryParse(value?.ToString(), out var parsed) ? parsed : null;
+    }
 
     private void StartLinkCreation()
     {
