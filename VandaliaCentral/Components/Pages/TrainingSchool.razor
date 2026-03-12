@@ -179,6 +179,16 @@
                                             }
                                         }
                                     }
+                                    else if (activeStep.Type.Equals("Text", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <p class="text-muted mb-2">This is a text-only step.</p>
+                                        <button class="btn btn-success btn-sm"
+                                        type="button"
+                                        disabled="@isCompletingCourseStep"
+                                        @onclick="MarkLaunchedCourseStepCompleteAsync">
+                                            @(isCompletingCourseStep ? "Completing..." : "Mark Complete")
+                                        </button>
+                                    }
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center gap-2">
@@ -656,6 +666,7 @@
                                                                             <option value="Video">Video</option>
                                                                             <option value="Exam">Exam</option>
                                                                             <option value="Link">Link</option>
+                                                                            <option value="Text">Text</option>
                                                                         </select>
                                                                     </div>
                                                                     <div class="col-12">
@@ -664,13 +675,20 @@
                                                                     </div>
                                                                     <div class="col-12">
                                                                         <label class="form-label">Content</label>
-                                                                        <select class="form-select" value="@currentStep.Content.BlobPath" @onchange='(e) => OnStepContentChanged(currentStep, e.Value?.ToString())'>
-                                                                            <option value="">Select content...</option>
-                                                                            @foreach (var option in GetStepContentOptions(currentStep.Type))
-                                                                            {
-                                                                                <option value="@option.BlobPath">@option.DisplayName</option>
-                                                                            }
-                                                                        </select>
+                                                                        @if (StepTypeRequiresContent(currentStep.Type))
+                                                                        {
+                                                                            <select class="form-select" value="@currentStep.Content.BlobPath" @onchange='(e) => OnStepContentChanged(currentStep, e.Value?.ToString())'>
+                                                                                <option value="">Select content...</option>
+                                                                                @foreach (var option in GetStepContentOptions(currentStep.Type))
+                                                                                {
+                                                                                    <option value="@option.BlobPath">@option.DisplayName</option>
+                                                                                }
+                                                                            </select>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <input class="form-control" value="No content selection required for Text steps." disabled />
+                                                                        }
                                                                     </div>
                                                                     <div class="col-12">
                                                                         <div class="form-check">
@@ -1853,8 +1871,16 @@
         editingCourse.Steps = ordered;
     }
 
+    private static bool StepTypeRequiresContent(string stepType)
+        => !stepType.Equals("Text", StringComparison.OrdinalIgnoreCase);
+
     private IReadOnlyList<BlobItemInfo> GetStepContentOptions(string stepType)
     {
+        if (stepType.Equals("Text", StringComparison.OrdinalIgnoreCase))
+        {
+            return Array.Empty<BlobItemInfo>();
+        }
+
         if (stepType.Equals("Video", StringComparison.OrdinalIgnoreCase))
         {
             return courseVideoBlobs;
@@ -1888,6 +1914,14 @@
         }
 
         step.Type = newType;
+
+        if (!StepTypeRequiresContent(step.Type))
+        {
+            step.Content.BlobPath = string.Empty;
+            step.Content.ContentType = null;
+            return;
+        }
+
         var firstOption = GetStepContentOptions(step.Type).FirstOrDefault();
         step.Content.BlobPath = firstOption?.BlobPath ?? string.Empty;
         step.Content.ContentType = firstOption?.ContentType;
