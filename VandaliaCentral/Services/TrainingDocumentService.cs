@@ -60,6 +60,7 @@ namespace VandaliaCentral.Services
         public List<string> CompletedCourseStepIds { get; set; } = new();
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
+        public int? ExamScorePercent { get; set; }
     }
 
     public class CompleteCourseStepResult
@@ -441,7 +442,7 @@ namespace VandaliaCentral.Services
             await SaveUserTrainingProfileAsync(profile);
         }
 
-        public async Task<bool> CompleteAssignmentForUserAsync(string userId, string assignmentId)
+        public async Task<bool> CompleteAssignmentForUserAsync(string userId, string assignmentId, int? examScorePercent = null)
         {
             var safeUserId = Path.GetFileNameWithoutExtension(userId);
             if (string.IsNullOrWhiteSpace(safeUserId) || string.IsNullOrWhiteSpace(assignmentId))
@@ -462,6 +463,7 @@ namespace VandaliaCentral.Services
 
             profile.ActiveAssignedLearning.Remove(assignment);
             assignment.CompletedAtUtc = DateTimeOffset.UtcNow;
+            assignment.ExamScorePercent = examScorePercent;
             profile.LearningHistory.Add(assignment);
 
             await SaveUserTrainingProfileAsync(profile);
