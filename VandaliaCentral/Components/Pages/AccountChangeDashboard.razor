@@ -1,0 +1,136 @@
+@page "/account-change-dashboard"
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send" })]
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+
+@inject IAmAccountChangeDashboardService DashboardService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LoggingService Logger
+
+<h3 class="mb-3">Account Change Dashboard</h3>
+
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert alert-success">@_successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+@if (_items.Count == 0)
+{
+    <div class="alert alert-info">No pending open-contract account changes.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Submitted</th>
+                    <th>Submitted By</th>
+                    <th>Acct#</th>
+                    <th>Company</th>
+                    <th>Executive/DM/DSM</th>
+                    <th>Current AM</th>
+                    <th>New AM</th>
+                    <th style="width: 190px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _items)
+                {
+                    <tr>
+                        <td>@item.SubmittedAtUtc.LocalDateTime.ToString("g")</td>
+                        <td>@item.SubmittedByName</td>
+                        <td>@item.AccountNumber</td>
+                        <td>@item.CompanyName</td>
+                        <td>@item.ExecutiveName</td>
+                        <td>@item.CurrentAmName (@item.CurrentAmSalesRepNumber)</td>
+                        <td>@item.NewAmName (@item.NewAmSalesRepNumber)</td>
+                        <td class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm"
+                                    disabled="@_isProcessing"
+                                    @onclick="() => ApproveAsync(item.Id)">
+                                Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm"
+                                    disabled="@_isProcessing"
+                                    @onclick="() => DenyAsync(item.Id)">
+                                Deny
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<AmAccountChangeDashboardItem> _items = new();
+    private bool _isProcessing;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+    }
+
+    private async Task ApproveAsync(string id)
+    {
+        await ProcessAsync(id, isApprove: true);
+    }
+
+    private async Task DenyAsync(string id)
+    {
+        await ProcessAsync(id, isApprove: false);
+    }
+
+    private async Task ProcessAsync(string id, bool isApprove)
+    {
+        _successMessage = null;
+        _errorMessage = null;
+        _isProcessing = true;
+
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userName = auth.User?.Identity?.Name ?? "anonymous";
+
+        try
+        {
+            if (isApprove)
+            {
+                await DashboardService.ApproveAsync(id, userName);
+                _successMessage = "Account approved and forwarded.";
+                await Logger.LogActivityAsync(userName, "Account Change Dashboard - approved account.");
+            }
+            else
+            {
+                await DashboardService.DenyAsync(id, userName);
+                _successMessage = "Account denied and original submitter notified.";
+                await Logger.LogActivityAsync(userName, "Account Change Dashboard - denied account.");
+            }
+
+            Refresh();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Action failed: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void Refresh()
+    {
+        _items = DashboardService.GetPending().ToList();
+    }
+}
