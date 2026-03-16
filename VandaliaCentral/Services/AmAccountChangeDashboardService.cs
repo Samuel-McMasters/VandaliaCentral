@@ -69,6 +69,14 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
         }
     }
 
+    public int GetPendingCount()
+    {
+        lock (_sync)
+        {
+            return _pending.Count;
+        }
+    }
+
     public async Task ApproveAsync(string itemId, string approvedBy, CancellationToken ct = default)
     {
         var item = GetRequiredItem(itemId);
