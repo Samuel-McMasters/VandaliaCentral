@@ -30,7 +30,18 @@ namespace VandaliaCentral.Services
                 if (!string.IsNullOrWhiteSpace(json))
                 {
                     var items = JsonSerializer.Deserialize<List<ItNewsItem>>(json) ?? new List<ItNewsItem>();
-                    return items.OrderByDescending(i => i.PostedOn).ToList();
+                    var today = DateTime.Today;
+                    var nonExpiredItems = items
+                        .Where(i => !i.ExpirationDate.HasValue || i.ExpirationDate.Value.Date >= today)
+                        .OrderByDescending(i => i.PostedOn)
+                        .ToList();
+
+                    if (nonExpiredItems.Count != items.Count)
+                    {
+                        await SaveNewsAsync(nonExpiredItems);
+                    }
+
+                    return nonExpiredItems;
                 }
             }
 
