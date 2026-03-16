@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using VandaliaCentral.Models;
@@ -9,14 +10,14 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     private readonly List<AmAccountChangeDashboardItem> _pending = new();
     private readonly object _sync = new();
 
-    private readonly GraphEmailService _email;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly AmAssignmentChangeRequestEmailOptions _opts;
 
     public AmAccountChangeDashboardService(
-        GraphEmailService email,
+        IServiceScopeFactory scopeFactory,
         IOptions<AmAssignmentChangeRequestEmailOptions> opts)
     {
-        _email = email;
+        _scopeFactory = scopeFactory;
         _opts = opts.Value;
     }
 
@@ -93,7 +94,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
             submissionId: item.SubmissionId,
             approvedBy: approvedBy);
 
-        await _email.SendEmailHtmlAsyncStrict(_opts.StandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
+        using var scope = _scopeFactory.CreateScope();
+        var email = scope.ServiceProvider.GetRequiredService<GraphEmailService>();
+        await email.SendEmailHtmlAsyncStrict(_opts.StandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
         Remove(itemId);
     }
 
@@ -105,7 +108,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
             throw new InvalidOperationException("Original submitter email is missing.");
 
         var body = AmAssignmentChangeRequestEmailTemplateBuilder.BuildDeniedHtmlBody(item, deniedBy);
-        await _email.SendEmailHtmlAsyncStrict(item.SubmittedByEmail, "AM Assignment Change Request - Denied", body, ccEmail: null, ct);
+        using var scope = _scopeFactory.CreateScope();
+        var email = scope.ServiceProvider.GetRequiredService<GraphEmailService>();
+        await email.SendEmailHtmlAsyncStrict(item.SubmittedByEmail, "AM Assignment Change Request - Denied", body, ccEmail: null, ct);
 
         Remove(itemId);
     }
