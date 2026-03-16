@@ -274,7 +274,7 @@
                 $"AM Assignment Change Request - submit attempt (New AM: {Model.NewAmName}, Accounts: {Model.Accounts.Count})");
 
             // Submission service handles emailing + failure behavior
-            await SubmissionService.SubmitAsync(Model, fromEmail);
+            await SubmissionService.SubmitAsync(Model, fromEmail, userNameForLog);
 
             // Log success
             await SafeLogAsync(userNameForLog,
