@@ -41,6 +41,7 @@ builder.Services.AddSingleton<PdfService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddSingleton<ItNewsService>();
+builder.Services.AddSingleton<ItProjectTrackerService>();
 builder.Services.AddSingleton<FlappyLeaderboardService>();
 builder.Services.AddSingleton<SowDocumentService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
