@@ -22,8 +22,11 @@
 @implements IAsyncDisposable
 
 
-<div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4">
-    <h3 class="pb-5">Admin Dashboard</h3>
+<div class="container-fluid border rounded bg-white shadow-sm col-md-12 py-4 admin-dashboard-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 pb-4 border-bottom mb-4">
+        <div>
+            <h3 class="mb-1">Admin Dashboard</h3>
+        </div>
 
     @if (!isAuthorized)
     {
@@ -32,63 +35,66 @@
     }
     else
     {
-        <div class="ms-auto pb-5">
+        <div class="ms-auto">
             <NavLink href="https://vandaliarental.targit.cloud/#vfs://global/Service/R%20Status%20Priority.xview" class="btn btn-dark" activeClass="active" target="_blank">
 
                 @(isMobile ? "Targit Dashboard" : "My Targit Dashboard")
             </NavLink>
         </div>
+    }
+    </div>
 
-        <!-- Tab Navigation -->
-        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
-                    Logs
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
-                    Company Calendar
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("itnews"))' @onclick='() => SetActiveTab("itnews")' type='button'>
-                    IT News
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("sowdocs"))' @onclick='() => SetActiveTab("sowdocs")' type='button'>
-                    SOW Documents
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
-                    Monday Minute
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
-                    Password Generator
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("projecttracker"))' @onclick='() => SetActiveTab("projecttracker")' type='button'>
-                    IT Project Tracker
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("knowledgebase"))' @onclick='() => SetActiveTab("knowledgebase")' type='button'>
-                    Knowledge Base
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class='nav-link @(IsActiveTab("flappybird"))' @onclick='() => SetActiveTab("flappybird")' type='button'>
-                    Flappy Bird
-                </button>
-            </li>
+    @if (isAuthorized)
+    {
+        <div class="admin-layout">
+            <aside class="admin-nav-panel border rounded bg-light-subtle p-3">
+                <h6 class="text-uppercase text-muted small mb-3">Admin sections</h6>
 
+                <div class="admin-tab-grid" id="adminTabs" role="tablist">
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
+                        <span class="fw-semibold d-block">Logs</span>
+                        <small class="text-muted">Review system logs quickly</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
+                        <span class="fw-semibold d-block">Company Calendar</span>
+                        <small class="text-muted">Publish internal calendar events</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("itnews"))' @onclick='() => SetActiveTab("itnews")' type='button'>
+                        <span class="fw-semibold d-block">IT News</span>
+                        <small class="text-muted">Post and edit IT announcements</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("sowdocs"))' @onclick='() => SetActiveTab("sowdocs")' type='button'>
+                        <span class="fw-semibold d-block">SOW Documents</span>
+                        <small class="text-muted">Upload and curate SOW PDFs</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
+                        <span class="fw-semibold d-block">Monday Minute</span>
+                        <small class="text-muted">Access Monday Minute manager</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
+                        <span class="fw-semibold d-block">Password Generator</span>
+                        <small class="text-muted">Generate quick secure passwords</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("projecttracker"))' @onclick='() => SetActiveTab("projecttracker")' type='button'>
+                        <span class="fw-semibold d-block">IT Project Tracker</span>
+                        <small class="text-muted">Track project milestones</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("knowledgebase"))' @onclick='() => SetActiveTab("knowledgebase")' type='button'>
+                        <span class="fw-semibold d-block">Knowledge Base</span>
+                        <small class="text-muted">Manage folders and articles</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("flappybird"))' @onclick='() => SetActiveTab("flappybird")' type='button'>
+                        <span class="fw-semibold d-block">Flappy Bird</span>
+                        <small class="text-muted">Review challenge leaderboards</small>
+                    </button>
+                </div>
+            </aside>
 
-        </ul>
+            <section class="admin-content-panel border rounded p-3 p-md-4">
+                @if (!string.IsNullOrWhiteSpace(GetTabHeading(activeTab)))
+                {
+                    <h5 class="mb-4">@GetTabHeading(activeTab)</h5>
+                }
 
         @if (activeTab == "logs")
         {
@@ -127,7 +133,6 @@
         @if (activeTab == "itnews")
         {
             <div>
-                <h5>IT News Manager</h5>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 700px;">
                     <h6>Add IT News Item</h6>
@@ -217,7 +222,6 @@
         @if (activeTab == "sowdocs")
         {
             <div>
-                <h5>Scope of Work Documents</h5>
 
                 <div class="pt-2 pb-3 d-flex flex-wrap gap-3 align-items-center">
                     <label class="btn btn-primary text-nowrap">
@@ -268,7 +272,6 @@
         @if (activeTab == "passwords")
         {
             <div>
-                <h5>Password Generator</h5>
                 <p class="text-muted mb-3">
                     2 words (≤ 5 chars each) + a number + a special character
                 </p>
@@ -297,7 +300,6 @@
         @if (activeTab == "projecttracker")
         {
             <div>
-                <h5>IT Project Tracker</h5>
                 <p class="text-muted">Track your personal IT projects and contributions.</p>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 900px;">
@@ -384,7 +386,6 @@
         @if (activeTab == "knowledgebase")
         {
             <div>
-                <h5>Knowledge Base Manager</h5>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 700px;">
                     <h6>Add Folder</h6>
@@ -505,7 +506,6 @@
         @if (activeTab == "flappybird")
         {
             <div>
-                <h5>Flappy Bird Challenge</h5>
                 <p class="text-muted mb-3">
                     Press <strong>Space</strong> to flap and fly through the pipe gaps. Tight gaps, one hit ends the run.
                 </p>
@@ -547,9 +547,48 @@
                 </div>
             </div>
         }
-
+            </section>
+        </div>
     }
 </div>
+
+<style>
+    .admin-layout {
+        display: grid;
+        grid-template-columns: minmax(245px, 320px) minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .admin-tab-grid {
+        display: grid;
+        gap: .5rem;
+    }
+
+    .admin-tab-button {
+        border: 1px solid #d7dde5;
+        background: #fff;
+        border-radius: .6rem;
+        padding: .65rem .75rem;
+        line-height: 1.2;
+    }
+
+    .admin-tab-button:hover {
+        border-color: #8aa7cc;
+        background: #f8fbff;
+    }
+
+    .admin-tab-button.active {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .15);
+        background: #eef5ff;
+    }
+
+    @@media (max-width: 992px) {
+        .admin-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 @code {
     private List<string>? logFiles;
@@ -614,6 +653,20 @@
     }
 
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
+
+    private string GetTabHeading(string tab) => tab switch
+    {
+        "logs" => "System Logs",
+        "calendar" => string.Empty,
+        "itnews" => string.Empty,
+        "sowdocs" => string.Empty,
+        "mondayminute" => "Monday Minute Manager",
+        "passwords" => string.Empty,
+        "projecttracker" => string.Empty,
+        "knowledgebase" => string.Empty,
+        "flappybird" => "Flappy Bird",
+        _ => "Admin Dashboard"
+    };
 
     protected override async Task OnInitializedAsync()
     {
