@@ -3,13 +3,196 @@
 
 <PageTitle>Knowledge Base</PageTitle>
 
-<div class="container-fluid px-3 px-md-4 px-xl-5 py-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-xl-10">
-            <div class="bg-white border rounded shadow-sm p-4 p-md-5">
-                <h3 class="text-center mb-3">Knowledge Base</h3>
-                <p class="text-muted text-center mb-0">Content coming soon.</p>
+<div class="container-fluid px-3 px-md-4 px-xl-5 py-4">
+    <div class="kb-shell bg-white border rounded shadow-sm overflow-hidden">
+        <aside class="kb-sidebar border-end p-3">
+            <h5 class="mb-3">Folders</h5>
+            <div class="list-group list-group-flush">
+                @foreach (var folder in Folders)
+                {
+                    <button type="button"
+                            class="list-group-item list-group-item-action @(SelectedFolder?.Id == folder.Id ? "active" : string.Empty)"
+                            @onclick="() => SelectFolder(folder)">
+                        @folder.Name
+                    </button>
+                }
             </div>
-        </div>
+        </aside>
+
+        <main class="kb-main p-3 p-md-4">
+            @if (SelectedFolder is null)
+            {
+                <div class="text-center text-muted py-5">
+                    <h4 class="mb-2">Knowledge Base</h4>
+                    <p class="mb-0">Select a folder on the left to view available articles.</p>
+                </div>
+            }
+            else if (SelectedArticle is null)
+            {
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">@SelectedFolder.Name</h4>
+                    <span class="text-muted small">@SelectedFolder.Articles.Count article(s)</span>
+                </div>
+
+                <div class="row g-3">
+                    @foreach (var article in SelectedFolder.Articles)
+                    {
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
+                                <div class="fw-semibold">@article.Title</div>
+                                <div class="text-muted small mt-2">Click to open</div>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToTiles">Back</button>
+                    <h5 class="mb-0">@SelectedArticle.Title</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ZoomOut" disabled="@(IframeZoom <= MinZoom)">-</button>
+                        <span class="small text-muted">Zoom @ZoomPercent%</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ZoomIn" disabled="@(IframeZoom >= MaxZoom)">+</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ResetZoom" disabled="@(IframeZoom == DefaultZoom)">Reset</button>
+                    </div>
+                </div>
+
+                <div class="kb-iframe-viewport" style="height:@IframeHeightPx;">
+                    <iframe src="@SelectedArticle.EmbedUrl"
+                            allow="fullscreen"
+                            class="kb-iframe"
+                            style="transform: scale(@IframeZoom); width:@IframeWidthPercent%; height:@IframeHeightPercent%;"></iframe>
+                </div>
+            }
+        </main>
     </div>
 </div>
+
+<style>
+    .kb-shell {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 70vh;
+    }
+
+    .kb-sidebar {
+        background: #f8f9fa;
+    }
+
+    .article-tile {
+        border: 1px solid #dee2e6;
+        background: #fff;
+        border-radius: .5rem;
+        padding: 1rem;
+        transition: box-shadow .15s ease, transform .15s ease;
+    }
+
+        .article-tile:hover {
+            box-shadow: 0 .25rem .75rem rgba(0,0,0,.08);
+            transform: translateY(-1px);
+        }
+
+    .kb-iframe-viewport {
+        width: 100%;
+        overflow: auto;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        background: #fff;
+    }
+
+    .kb-iframe {
+        border: 0;
+        min-height: 640px;
+        transform-origin: top left;
+    }
+
+    @@media (max-width: 991.98px) {
+        .kb-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .kb-sidebar {
+            border-right: 0 !important;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+
+@code {
+    private const decimal MinZoom = 0.75m;
+    private const decimal MaxZoom = 1.5m;
+    private const decimal ZoomStep = 0.1m;
+    private const decimal DefaultZoom = 1.15m;
+
+    private List<KnowledgeFolder> Folders { get; } = new()
+    {
+        new KnowledgeFolder(
+            "it-support",
+            "IT Support",
+            new List<KnowledgeArticle>
+            {
+                new KnowledgeArticle("Create a New User", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
+            }),
+        new KnowledgeFolder(
+            "hr-policies",
+            "HR & Policies",
+            new List<KnowledgeArticle>
+            {
+                new KnowledgeArticle("Employee Onboarding", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA"),
+                new KnowledgeArticle("Time Off Request", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
+            }),
+        new KnowledgeFolder(
+            "software-tools",
+            "Software Tools",
+            new List<KnowledgeArticle>
+            {
+                new KnowledgeArticle("InTempoMX Basics", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
+            })
+    };
+
+    private KnowledgeFolder? SelectedFolder;
+    private KnowledgeArticle? SelectedArticle;
+    private decimal IframeZoom = DefaultZoom;
+
+    private int ZoomPercent => (int)(IframeZoom * 100);
+    private string IframeWidthPercent => $"{100m / IframeZoom:0.##}%";
+    private string IframeHeightPercent => $"{100m / IframeZoom:0.##}%";
+    private string IframeHeightPx => IframeZoom > 1m ? $"{(int)(800 * IframeZoom)}px" : "800px";
+
+    private void SelectFolder(KnowledgeFolder folder)
+    {
+        SelectedFolder = folder;
+        SelectedArticle = null;
+    }
+
+    private void OpenArticle(KnowledgeArticle article)
+    {
+        SelectedArticle = article;
+        IframeZoom = DefaultZoom;
+    }
+
+    private void BackToTiles()
+    {
+        SelectedArticle = null;
+    }
+
+    private void ZoomIn()
+    {
+        IframeZoom = Math.Min(MaxZoom, IframeZoom + ZoomStep);
+    }
+
+    private void ZoomOut()
+    {
+        IframeZoom = Math.Max(MinZoom, IframeZoom - ZoomStep);
+    }
+
+    private void ResetZoom()
+    {
+        IframeZoom = DefaultZoom;
+    }
+
+    private sealed record KnowledgeFolder(string Id, string Name, List<KnowledgeArticle> Articles);
+    private sealed record KnowledgeArticle(string Title, string EmbedUrl);
+}
