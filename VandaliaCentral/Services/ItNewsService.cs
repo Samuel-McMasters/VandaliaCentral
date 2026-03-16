@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using VandaliaCentral.Models;
 
 namespace VandaliaCentral.Services
@@ -29,8 +30,28 @@ namespace VandaliaCentral.Services
 
                 if (!string.IsNullOrWhiteSpace(json))
                 {
-                    var items = JsonSerializer.Deserialize<List<ItNewsItem>>(json) ?? new List<ItNewsItem>();
+                    var serializerOptions = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    };
+
+                    var items = JsonSerializer.Deserialize<List<ItNewsItem>>(json, serializerOptions) ?? new List<ItNewsItem>();
                     var today = DateTime.Today;
+
+                    var expiredItems = items
+                        .Where(i => i.ExpirationDate.HasValue && i.ExpirationDate.Value.Date < today)
+                        .ToList();
+
+                    var archivableExpiredItems = expiredItems
+                        .Where(i => i.Archivable)
+                        .ToList();
+
+                    if (archivableExpiredItems.Count != 0)
+                    {
+                        await ArchiveExpiredNewsItemsAsync(archivableExpiredItems, serializerOptions);
+                    }
+
                     var nonExpiredItems = items
                         .Where(i => !i.ExpirationDate.HasValue || i.ExpirationDate.Value.Date >= today)
                         .OrderByDescending(i => i.PostedOn)
@@ -54,11 +75,31 @@ namespace VandaliaCentral.Services
                 .OrderByDescending(i => i.PostedOn)
                 .ToList();
 
-            var json = JsonSerializer.Serialize(ordered);
+            var serializerOptions = new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+            var json = JsonSerializer.Serialize(ordered, serializerOptions);
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
             var blobClient = _containerClient.GetBlobClient(BlobName);
             await blobClient.UploadAsync(stream, overwrite: true);
         }
+
+
+        private async Task ArchiveExpiredNewsItemsAsync(IEnumerable<ItNewsItem> itemsToArchive, JsonSerializerOptions serializerOptions)
+        {
+            foreach (var item in itemsToArchive)
+            {
+                var archivedBlobName = $"Archived/{DateTime.UtcNow:yyyyMMddHHmmssfff}-{item.Id}.json";
+                var archivedBlobClient = _containerClient.GetBlobClient(archivedBlobName);
+
+                var json = JsonSerializer.Serialize(item, serializerOptions);
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+                await archivedBlobClient.UploadAsync(stream, overwrite: true);
+            }
+        }
+
     }
 }

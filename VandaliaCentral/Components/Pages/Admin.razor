@@ -140,6 +140,11 @@
                     <label class="mt-2">Expiration Date (optional):</label>
                     <InputDate @bind-Value="newItNewsExpirationDate" TValue="DateTime?" class="form-control" />
 
+                    <div class="form-check form-switch mt-3">
+                        <InputCheckbox id="newItNewsArchivable" @bind-Value="newItNewsArchivable" class="form-check-input" />
+                        <label class="form-check-label" for="newItNewsArchivable">Archivable: @(newItNewsArchivable ? "Yes" : "No")</label>
+                    </div>
+
                     <button class="btn btn-success mt-3" @onclick="AddNewsItem">Add News Item</button>
                 </div>
 
@@ -168,6 +173,11 @@
                                     <label class="mt-2">Expiration Date (optional):</label>
                                     <InputDate @bind-Value="editItNewsExpirationDate" TValue="DateTime?" class="form-control" />
 
+                                    <div class="form-check form-switch mt-3">
+                                        <InputCheckbox id="@($"editItNewsArchivable-{item.Id}")" @bind-Value="editItNewsArchivable" class="form-check-input" />
+                                        <label class="form-check-label" for="@($"editItNewsArchivable-{item.Id}")">Archivable: @(editItNewsArchivable ? "Yes" : "No")</label>
+                                    </div>
+
                                     <div class="d-flex gap-2 mt-3">
                                         <button class="btn btn-sm btn-primary" @onclick="SaveEditedNewsItem">Save</button>
                                         <button class="btn btn-sm btn-secondary" @onclick="CancelEditNewsItem">Cancel</button>
@@ -183,6 +193,7 @@
                                             {
                                                 <div class="text-muted small">Expires: @item.ExpirationDate.Value.ToString("MMM d, yyyy")</div>
                                             }
+                                            <div class="text-muted small">Archivable: @(item.Archivable ? "Yes" : "No")</div>
                                             <div style="white-space: pre-wrap;">@item.Content</div>
                                         </div>
                                         <div class="d-flex gap-2">
@@ -551,10 +562,12 @@
     private string newItNewsTitle = string.Empty;
     private string newItNewsContent = string.Empty;
     private DateTime? newItNewsExpirationDate;
+    private bool newItNewsArchivable;
     private Guid? editingItNewsId;
     private string editItNewsTitle = string.Empty;
     private string editItNewsContent = string.Empty;
     private DateTime? editItNewsExpirationDate;
+    private bool editItNewsArchivable;
     private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
@@ -802,7 +815,8 @@
             Title = itemTitle,
             Content = newItNewsContent.Trim(),
             PostedOn = DateTime.UtcNow,
-            ExpirationDate = newItNewsExpirationDate?.Date
+            ExpirationDate = newItNewsExpirationDate?.Date,
+            Archivable = newItNewsArchivable
         });
 
         var userName = await GetCurrentUserNameAsync();
@@ -811,6 +825,7 @@
         newItNewsTitle = string.Empty;
         newItNewsContent = string.Empty;
         newItNewsExpirationDate = null;
+        newItNewsArchivable = false;
         await SaveNewsAndShowStatus();
     }
 
@@ -820,6 +835,7 @@
         editItNewsTitle = item.Title;
         editItNewsContent = item.Content;
         editItNewsExpirationDate = item.ExpirationDate?.Date;
+        editItNewsArchivable = item.Archivable;
     }
 
     private void CancelEditNewsItem()
@@ -828,6 +844,7 @@
         editItNewsTitle = string.Empty;
         editItNewsContent = string.Empty;
         editItNewsExpirationDate = null;
+        editItNewsArchivable = false;
     }
 
     private async Task SaveEditedNewsItem()
@@ -842,6 +859,7 @@
         item.Title = editItNewsTitle.Trim();
         item.Content = editItNewsContent.Trim();
         item.ExpirationDate = editItNewsExpirationDate?.Date;
+        item.Archivable = editItNewsArchivable;
 
         var userName = await GetCurrentUserNameAsync();
         await Logger.LogActivityAsync(userName, $"Edited IT News Item {item.Title}");
