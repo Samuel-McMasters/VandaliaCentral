@@ -18,6 +18,7 @@
 @inject IPasswordGeneratorService PasswordGenerator
 @inject FlappyLeaderboardService FlappyLeaderboardService
 @inject SowDocumentService SowDocumentService
+@inject KnowledgeBaseService KnowledgeBaseService
 @implements IAsyncDisposable
 
 
@@ -73,6 +74,11 @@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("projecttracker"))' @onclick='() => SetActiveTab("projecttracker")' type='button'>
                     IT Project Tracker
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("knowledgebase"))' @onclick='() => SetActiveTab("knowledgebase")' type='button'>
+                    Knowledge Base
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -364,6 +370,127 @@
             </div>
         }
 
+        @if (activeTab == "knowledgebase")
+        {
+            <div>
+                <h5>Knowledge Base Manager</h5>
+
+                <div class="border rounded p-3 mb-4" style="max-width: 700px;">
+                    <h6>Add Folder</h6>
+                    <label class="mt-2">Folder Name:</label>
+                    <InputText @bind-Value="newKnowledgeFolderName" class="form-control" />
+                    <button class="btn btn-success mt-3" @onclick="AddKnowledgeFolder">Add Folder</button>
+                </div>
+
+                <div class="border rounded p-3 mb-4" style="max-width: 900px;">
+                    <h6>Add Article</h6>
+                    <label class="mt-2">Folder:</label>
+                    <select @bind="selectedFolderForNewArticleId" class="form-select">
+                        <option value="">-- Select Folder --</option>
+                        @if (knowledgeBaseFolders != null)
+                        {
+                            @foreach (var folder in knowledgeBaseFolders)
+                            {
+                                <option value="@folder.Id.ToString()">@folder.Name</option>
+                            }
+                        }
+                    </select>
+
+                    <label class="mt-2">Article Title:</label>
+                    <InputText @bind-Value="newKnowledgeArticleTitle" class="form-control" />
+
+                    <label class="mt-2">Scribe Iframe Link:</label>
+                    <InputText @bind-Value="newKnowledgeArticleEmbedUrl" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddKnowledgeArticle">Add Article</button>
+                </div>
+
+                @if (knowledgeBaseFolders == null)
+                {
+                    <p>Loading knowledge base...</p>
+                }
+                else if (!knowledgeBaseFolders.Any())
+                {
+                    <p class="text-muted">No folders have been created yet.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3" style="max-width: 1000px;">
+                        @foreach (var folder in knowledgeBaseFolders)
+                        {
+                            <div class="border rounded p-3">
+                                @if (editingKnowledgeFolderId == folder.Id)
+                                {
+                                    <label>Folder Name:</label>
+                                    <InputText @bind-Value="editKnowledgeFolderName" class="form-control" />
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeFolder">Save</button>
+                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeFolder">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                        <h6 class="mb-0">@folder.Name</h6>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeFolder(folder)">Edit Folder</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeFolder(folder)">Delete Folder</button>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (!folder.Articles.Any())
+                                {
+                                    <p class="text-muted mb-0">No articles in this folder.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group">
+                                        @foreach (var article in folder.Articles)
+                                        {
+                                            <li class="list-group-item">
+                                                @if (editingKnowledgeArticleId == article.Id)
+                                                {
+                                                    <label>Article Title:</label>
+                                                    <InputText @bind-Value="editKnowledgeArticleTitle" class="form-control mb-2" />
+
+                                                    <label>Scribe Iframe Link:</label>
+                                                    <InputText @bind-Value="editKnowledgeArticleEmbedUrl" class="form-control" />
+
+                                                    <div class="d-flex gap-2 mt-3">
+                                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeArticle">Save</button>
+                                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeArticle">Cancel</button>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                                        <div>
+                                                            <strong>@article.Title</strong>
+                                                            <div class="text-muted small" style="word-break: break-all;">@article.EmbedUrl</div>
+                                                        </div>
+                                                        <div class="d-flex gap-2">
+                                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeArticle(folder, article)">Edit</button>
+                                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeArticle(folder, article)">Delete</button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(knowledgeBaseStatusMessage))
+                {
+                    <div class="text-success fw-bold mt-3">✓ @knowledgeBaseStatusMessage</div>
+                }
+            </div>
+        }
+
         @if (activeTab == "flappybird")
         {
             <div>
@@ -449,6 +576,18 @@
     private string editProjectNotes = string.Empty;
     private DateTime? editProjectCompletedDate;
     private bool showProjectSaveSuccess = false;
+    private List<KnowledgeBaseFolderItem>? knowledgeBaseFolders;
+    private string newKnowledgeFolderName = string.Empty;
+    private Guid? editingKnowledgeFolderId;
+    private string editKnowledgeFolderName = string.Empty;
+    private string selectedFolderForNewArticleId = string.Empty;
+    private string newKnowledgeArticleTitle = string.Empty;
+    private string newKnowledgeArticleEmbedUrl = string.Empty;
+    private Guid? editingKnowledgeFolderForArticleId;
+    private Guid? editingKnowledgeArticleId;
+    private string editKnowledgeArticleTitle = string.Empty;
+    private string editKnowledgeArticleEmbedUrl = string.Empty;
+    private string? knowledgeBaseStatusMessage;
 
     private void SetActiveTab(string tab)
     {
@@ -491,6 +630,7 @@
                 flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
                 itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
+                knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
             }
         }
         catch (MsalUiRequiredException ex)
@@ -912,6 +1052,213 @@
         await Task.Delay(2500);
         showProjectSaveSuccess = false;
         StateHasChanged();
+    }
+
+    private async Task AddKnowledgeFolder()
+    {
+        if (knowledgeBaseFolders == null || string.IsNullOrWhiteSpace(newKnowledgeFolderName))
+            return;
+
+        var folderName = newKnowledgeFolderName.Trim();
+        knowledgeBaseFolders.Add(new KnowledgeBaseFolderItem
+        {
+            Id = Guid.NewGuid(),
+            Name = folderName,
+            CreatedOn = DateTime.UtcNow,
+            Articles = new List<KnowledgeBaseArticleItem>()
+        });
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Added Knowledge Base folder {folderName}");
+
+        newKnowledgeFolderName = string.Empty;
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+    }
+
+    private void StartEditKnowledgeFolder(KnowledgeBaseFolderItem folder)
+    {
+        editingKnowledgeFolderId = folder.Id;
+        editKnowledgeFolderName = folder.Name;
+    }
+
+    private void CancelEditKnowledgeFolder()
+    {
+        editingKnowledgeFolderId = null;
+        editKnowledgeFolderName = string.Empty;
+    }
+
+    private async Task SaveEditedKnowledgeFolder()
+    {
+        if (knowledgeBaseFolders == null || editingKnowledgeFolderId == null || string.IsNullOrWhiteSpace(editKnowledgeFolderName))
+            return;
+
+        var folder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == editingKnowledgeFolderId.Value);
+        if (folder == null)
+            return;
+
+        folder.Name = editKnowledgeFolderName.Trim();
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Edited Knowledge Base folder {folder.Name}");
+
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+        CancelEditKnowledgeFolder();
+    }
+
+    private async Task DeleteKnowledgeFolder(KnowledgeBaseFolderItem folder)
+    {
+        if (knowledgeBaseFolders == null)
+            return;
+
+        var folderName = folder.Name;
+        knowledgeBaseFolders.Remove(folder);
+
+        if (editingKnowledgeFolderId == folder.Id)
+        {
+            CancelEditKnowledgeFolder();
+        }
+
+        if (selectedFolderForNewArticleId == folder.Id.ToString())
+        {
+            selectedFolderForNewArticleId = string.Empty;
+        }
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted Knowledge Base folder {folderName}");
+
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+    }
+
+    private async Task AddKnowledgeArticle()
+    {
+        if (knowledgeBaseFolders == null ||
+            string.IsNullOrWhiteSpace(selectedFolderForNewArticleId) ||
+            string.IsNullOrWhiteSpace(newKnowledgeArticleTitle) ||
+            string.IsNullOrWhiteSpace(newKnowledgeArticleEmbedUrl))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(selectedFolderForNewArticleId, out var folderId))
+            return;
+
+        var folder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == folderId);
+        if (folder == null)
+            return;
+
+        var articleTitle = newKnowledgeArticleTitle.Trim();
+        var embedUrl = NormalizeScribeEmbedUrl(newKnowledgeArticleEmbedUrl);
+        if (string.IsNullOrWhiteSpace(embedUrl))
+            return;
+
+        folder.Articles.Add(new KnowledgeBaseArticleItem
+        {
+            Id = Guid.NewGuid(),
+            Title = articleTitle,
+            EmbedUrl = embedUrl,
+            CreatedOn = DateTime.UtcNow
+        });
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Added Knowledge Base article {articleTitle} to folder {folder.Name}");
+
+        newKnowledgeArticleTitle = string.Empty;
+        newKnowledgeArticleEmbedUrl = string.Empty;
+
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+    }
+
+    private void StartEditKnowledgeArticle(KnowledgeBaseFolderItem folder, KnowledgeBaseArticleItem article)
+    {
+        editingKnowledgeFolderForArticleId = folder.Id;
+        editingKnowledgeArticleId = article.Id;
+        editKnowledgeArticleTitle = article.Title;
+        editKnowledgeArticleEmbedUrl = article.EmbedUrl;
+    }
+
+    private void CancelEditKnowledgeArticle()
+    {
+        editingKnowledgeFolderForArticleId = null;
+        editingKnowledgeArticleId = null;
+        editKnowledgeArticleTitle = string.Empty;
+        editKnowledgeArticleEmbedUrl = string.Empty;
+    }
+
+    private async Task SaveEditedKnowledgeArticle()
+    {
+        if (knowledgeBaseFolders == null || editingKnowledgeFolderForArticleId == null || editingKnowledgeArticleId == null ||
+            string.IsNullOrWhiteSpace(editKnowledgeArticleTitle) || string.IsNullOrWhiteSpace(editKnowledgeArticleEmbedUrl))
+            return;
+
+        var folder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == editingKnowledgeFolderForArticleId.Value);
+        var article = folder?.Articles.FirstOrDefault(x => x.Id == editingKnowledgeArticleId.Value);
+        if (article == null || folder == null)
+            return;
+
+        article.Title = editKnowledgeArticleTitle.Trim();
+        article.EmbedUrl = NormalizeScribeEmbedUrl(editKnowledgeArticleEmbedUrl) ?? article.EmbedUrl;
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Edited Knowledge Base article {article.Title} in folder {folder.Name}");
+
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+        CancelEditKnowledgeArticle();
+    }
+
+    private async Task DeleteKnowledgeArticle(KnowledgeBaseFolderItem folder, KnowledgeBaseArticleItem article)
+    {
+        if (knowledgeBaseFolders == null)
+            return;
+
+        var articleTitle = article.Title;
+        folder.Articles.Remove(article);
+
+        if (editingKnowledgeArticleId == article.Id)
+        {
+            CancelEditKnowledgeArticle();
+        }
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted Knowledge Base article {articleTitle} from folder {folder.Name}");
+
+        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
+    }
+
+    private async Task SaveKnowledgeBaseAndShowStatus(string message)
+    {
+        if (knowledgeBaseFolders == null)
+            return;
+
+        await KnowledgeBaseService.SaveFoldersAsync(knowledgeBaseFolders);
+        knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
+
+        knowledgeBaseStatusMessage = message;
+        StateHasChanged();
+
+        await Task.Delay(2500);
+        knowledgeBaseStatusMessage = null;
+        StateHasChanged();
+    }
+
+    private static string? NormalizeScribeEmbedUrl(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return null;
+        }
+
+        var trimmed = input.Trim();
+
+        if (trimmed.Contains("<iframe", StringComparison.OrdinalIgnoreCase))
+        {
+            var srcMatch = System.Text.RegularExpressions.Regex.Match(trimmed, "src\\s*=\\s*\"(?<url>[^\"]+)\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (srcMatch.Success)
+            {
+                trimmed = srcMatch.Groups["url"].Value;
+            }
+        }
+
+        return trimmed;
     }
 
     private void GeneratePassword()
