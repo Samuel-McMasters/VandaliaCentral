@@ -40,7 +40,7 @@
             <div class="row g-3">
                 <div class="col-12 col-lg-6">
                     <label class="form-label">Name</label>
-                    <InputText class="form-control" @bind-Value="Model.ExecutiveName" disabled="@_isSubmitting" />
+                    <InputText class="form-control" @bind-Value="Model.ExecutiveName" readonly="true" disabled="true" />
                     <ValidationMessage For="@(() => Model.ExecutiveName)" />
                 </div>
 
@@ -222,8 +222,41 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await PopulateExecutiveNameAsync();
+
         // Optional but helpful: triggers consent/CA flow early rather than on Submit click
         await GraphEmailService.EnsureMailSendAccessAsync();
+    }
+
+    private async Task PopulateExecutiveNameAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+            return;
+
+        var firstName =
+            user.FindFirstValue(ClaimTypes.GivenName) ??
+            user.FindFirstValue("given_name");
+
+        var lastName =
+            user.FindFirstValue(ClaimTypes.Surname) ??
+            user.FindFirstValue("family_name") ??
+            user.FindFirstValue("surname");
+
+        var fullName = string.Join(" ", new[] { firstName, lastName }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            fullName = user.FindFirstValue("name")?.Trim() ?? user.Identity?.Name?.Trim() ?? string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            Model.ExecutiveName = fullName;
+            _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.ExecutiveName)));
+        }
     }
 
     private void AddAccount()
