@@ -11,7 +11,13 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LoggingService Logger
 
-<h3 class="mb-3">Account Change Dashboard</h3>
+<h3 class="mb-3 d-flex align-items-center gap-2">
+    <span>Account Change Dashboard</span>
+    @if (_items.Count > 0)
+    {
+        <span class="badge rounded-pill bg-danger" title="Pending items">@_items.Count</span>
+    }
+</h3>
 
 @if (!string.IsNullOrWhiteSpace(_successMessage))
 {

@@ -5,6 +5,7 @@
 @inject LoggingService Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@inject IAmAccountChangeDashboardService DashboardService
 
 <div class="sidebar pt-3" style="height: 100%; overflow-y: auto;">
     <div class="menu btn-group-vertical gap-4 align-items-center ">
@@ -41,11 +42,23 @@
         <div class="dropdown w-100">
             <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Sales
+                @if (ShowAccountChangeNotification)
+                {
+                    <span class="badge rounded-pill bg-danger ms-2" title="Pending account change items">@PendingAccountChangeCount</span>
+                }
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="https://rdo.rouseanalytics.com" target="_blank" @onclick='(e) => HandleLinkClick("Rouse")'>Rouse</a></li>
                 <li><a class="dropdown-item" href="/am-assignment-change-request" target="" @onclick='(e) => HandleLinkClick("Am Account Change Form")'>AM Account Change Form</a></li>
-                <li><a class="dropdown-item" href="/account-change-dashboard" target="" @onclick='(e) => HandleLinkClick("Account Change Dashboard")'>Account Change Dashboard</a></li>
+                <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/account-change-dashboard" target="" @onclick='(e) => HandleLinkClick("Account Change Dashboard")'>
+                        <span>Account Change Dashboard</span>
+                        @if (ShowAccountChangeNotification)
+                        {
+                            <span class="badge rounded-pill bg-danger">@PendingAccountChangeCount</span>
+                        }
+                    </a>
+                </li>
             </ul>
         </div>
 
@@ -175,6 +188,9 @@
     
     private bool IsSafetyTrainer = false;
     private bool IsAdmin = false;
+    private int PendingAccountChangeCount;
+    private bool CanAccessAccountChangeDashboard;
+    private bool ShowAccountChangeNotification => CanAccessAccountChangeDashboard && PendingAccountChangeCount > 0;
 
     private async Task HandleLinkClick(string linkName)
     {
@@ -214,6 +230,13 @@
 
         IsAdmin = user.Claims.Any(c =>
             c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
+
+        // Keep notification visibility separate from menu rendering so role-based security can be tightened later.
+        CanAccessAccountChangeDashboard = IsAdmin;
+        if (CanAccessAccountChangeDashboard)
+        {
+            PendingAccountChangeCount = DashboardService.GetPendingCount();
+        }
     }
 
 
