@@ -140,9 +140,10 @@
                     <label class="mt-2">Expiration Date (optional):</label>
                     <InputDate @bind-Value="newItNewsExpirationDate" TValue="DateTime?" class="form-control" />
 
-                    <label class="mt-2 d-block">Archivable</label>
-                    <InputCheckbox @bind-Value="newItNewsArchivable" class="form-check-input" />
-                    <span class="ms-2">@(newItNewsArchivable ? "Yes" : "No")</span>
+                    <div class="form-check form-switch mt-3">
+                        <InputCheckbox id="newItNewsArchivable" @bind-Value="newItNewsArchivable" class="form-check-input" />
+                        <label class="form-check-label" for="newItNewsArchivable">Archivable: @(newItNewsArchivable ? "Yes" : "No")</label>
+                    </div>
 
                     <button class="btn btn-success mt-3" @onclick="AddNewsItem">Add News Item</button>
                 </div>
@@ -172,9 +173,10 @@
                                     <label class="mt-2">Expiration Date (optional):</label>
                                     <InputDate @bind-Value="editItNewsExpirationDate" TValue="DateTime?" class="form-control" />
 
-                                    <label class="mt-2 d-block">Archivable</label>
-                                    <InputCheckbox @bind-Value="editItNewsArchivable" class="form-check-input" />
-                                    <span class="ms-2">@(editItNewsArchivable ? "Yes" : "No")</span>
+                                    <div class="form-check form-switch mt-3">
+                                        <InputCheckbox id="@($"editItNewsArchivable-{item.Id}")" @bind-Value="editItNewsArchivable" class="form-check-input" />
+                                        <label class="form-check-label" for="@($"editItNewsArchivable-{item.Id}")">Archivable: @(editItNewsArchivable ? "Yes" : "No")</label>
+                                    </div>
 
                                     <div class="d-flex gap-2 mt-3">
                                         <button class="btn btn-sm btn-primary" @onclick="SaveEditedNewsItem">Save</button>
