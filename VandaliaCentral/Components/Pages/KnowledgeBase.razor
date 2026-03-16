@@ -1,5 +1,8 @@
 @page "/knowledge-base"
 @layout VandaliaCentral.Components.Layout.TopBarLayout
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject KnowledgeBaseService KnowledgeBaseService
 
 <PageTitle>Knowledge Base</PageTitle>
 
@@ -7,16 +10,23 @@
     <div class="kb-shell bg-white border rounded shadow-sm overflow-hidden">
         <aside class="kb-sidebar border-end p-3">
             <h5 class="mb-3">Folders</h5>
-            <div class="list-group list-group-flush">
-                @foreach (var folder in Folders)
-                {
-                    <button type="button"
-                            class="list-group-item list-group-item-action @(SelectedFolder?.Id == folder.Id ? "active" : string.Empty)"
-                            @onclick="() => SelectFolder(folder)">
-                        @folder.Name
-                    </button>
-                }
-            </div>
+            @if (Folders.Count == 0)
+            {
+                <p class="text-muted mb-0">No folders are available yet.</p>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var folder in Folders)
+                    {
+                        <button type="button"
+                                class="list-group-item list-group-item-action @(SelectedFolder?.Id == folder.Id ? "active" : string.Empty)"
+                                @onclick="() => SelectFolder(folder)">
+                            @folder.Name
+                        </button>
+                    }
+                </div>
+            }
         </aside>
 
         <main class="kb-main p-3 p-md-4">
@@ -34,17 +44,24 @@
                     <span class="text-muted small">@SelectedFolder.Articles.Count article(s)</span>
                 </div>
 
-                <div class="row g-3">
-                    @foreach (var article in SelectedFolder.Articles)
-                    {
-                        <div class="col-12 col-md-6 col-xl-4">
-                            <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
-                                <div class="fw-semibold">@article.Title</div>
-                                <div class="text-muted small mt-2">Click to open</div>
-                            </button>
-                        </div>
-                    }
-                </div>
+                @if (SelectedFolder.Articles.Count == 0)
+                {
+                    <p class="text-muted">No articles have been added to this folder yet.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var article in SelectedFolder.Articles)
+                        {
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
+                                    <div class="fw-semibold">@article.Title</div>
+                                    <div class="text-muted small mt-2">Click to open</div>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
             }
             else
             {
@@ -101,42 +118,22 @@
 </style>
 
 @code {
-    private List<KnowledgeFolder> Folders { get; } = new()
+    private List<KnowledgeBaseFolderItem> Folders { get; set; } = new();
+    private KnowledgeBaseFolderItem? SelectedFolder;
+    private KnowledgeBaseArticleItem? SelectedArticle;
+
+    protected override async Task OnInitializedAsync()
     {
-        new KnowledgeFolder(
-            "it-support",
-            "IT Support",
-            new List<KnowledgeArticle>
-            {
-                new KnowledgeArticle("Create a New User", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
-            }),
-        new KnowledgeFolder(
-            "hr-policies",
-            "HR & Policies",
-            new List<KnowledgeArticle>
-            {
-                new KnowledgeArticle("Employee Onboarding", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA"),
-                new KnowledgeArticle("Time Off Request", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
-            }),
-        new KnowledgeFolder(
-            "software-tools",
-            "Software Tools",
-            new List<KnowledgeArticle>
-            {
-                new KnowledgeArticle("InTempoMX Basics", "https://scribehow.com/page-embed/InTempoMX__Create_a_New_User__KZ420Y0XRHq4S_HfZtb0IA")
-            })
-    };
+        Folders = await KnowledgeBaseService.LoadFoldersAsync();
+    }
 
-    private KnowledgeFolder? SelectedFolder;
-    private KnowledgeArticle? SelectedArticle;
-
-    private void SelectFolder(KnowledgeFolder folder)
+    private void SelectFolder(KnowledgeBaseFolderItem folder)
     {
         SelectedFolder = folder;
         SelectedArticle = null;
     }
 
-    private void OpenArticle(KnowledgeArticle article)
+    private void OpenArticle(KnowledgeBaseArticleItem article)
     {
         SelectedArticle = article;
     }
@@ -145,7 +142,4 @@
     {
         SelectedArticle = null;
     }
-
-    private sealed record KnowledgeFolder(string Id, string Name, List<KnowledgeArticle> Articles);
-    private sealed record KnowledgeArticle(string Title, string EmbedUrl);
 }
