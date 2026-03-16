@@ -26,10 +26,6 @@
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 pb-4 border-bottom mb-4">
         <div>
             <h3 class="mb-1">Admin Dashboard</h3>
-<<<<<<< codex/redesign-admin-dashboard-layout-8zurml
-=======
-            <p class="text-muted mb-0">Manage internal tools, content, and reports in one place.</p>
->>>>>>> chatGPT
         </div>
 
     @if (!isAuthorized)
@@ -47,7 +43,6 @@
         </div>
     }
     </div>
-<<<<<<< codex/redesign-admin-dashboard-layout-8zurml
 
     @if (isAuthorized)
     {
@@ -100,57 +95,9 @@
                 {
                     <h5 class="mb-4">@GetTabHeading(activeTab)</h5>
                 }
-=======
 
-    @if (isAuthorized)
-    {
-        <div class="admin-layout">
-            <aside class="admin-nav-panel border rounded bg-light-subtle p-3">
-                <h6 class="text-uppercase text-muted small mb-3">Admin sections</h6>
 
-                <div class="admin-tab-grid" id="adminTabs" role="tablist">
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
-                        <span class="fw-semibold d-block">Logs</span>
-                        <small class="text-muted">Review system logs quickly</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("calendar"))' @onclick='() => SetActiveTab("calendar")' type='button'>
-                        <span class="fw-semibold d-block">Company Calendar</span>
-                        <small class="text-muted">Publish internal calendar events</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("itnews"))' @onclick='() => SetActiveTab("itnews")' type='button'>
-                        <span class="fw-semibold d-block">IT News</span>
-                        <small class="text-muted">Post and edit IT announcements</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("sowdocs"))' @onclick='() => SetActiveTab("sowdocs")' type='button'>
-                        <span class="fw-semibold d-block">SOW Documents</span>
-                        <small class="text-muted">Upload and curate SOW PDFs</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("mondayminute"))' @onclick='() => SetActiveTab("mondayminute")' type='button'>
-                        <span class="fw-semibold d-block">Monday Minute</span>
-                        <small class="text-muted">Access Monday Minute manager</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
-                        <span class="fw-semibold d-block">Password Generator</span>
-                        <small class="text-muted">Generate quick secure passwords</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("projecttracker"))' @onclick='() => SetActiveTab("projecttracker")' type='button'>
-                        <span class="fw-semibold d-block">IT Project Tracker</span>
-                        <small class="text-muted">Track project milestones</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("knowledgebase"))' @onclick='() => SetActiveTab("knowledgebase")' type='button'>
-                        <span class="fw-semibold d-block">Knowledge Base</span>
-                        <small class="text-muted">Manage folders and articles</small>
-                    </button>
-                    <button class='btn text-start admin-tab-button @(IsActiveTab("flappybird"))' @onclick='() => SetActiveTab("flappybird")' type='button'>
-                        <span class="fw-semibold d-block">Flappy Bird</span>
-                        <small class="text-muted">Review challenge leaderboards</small>
-                    </button>
-                </div>
-            </aside>
 
-            <section class="admin-content-panel border rounded p-3 p-md-4">
-                <h5 class="mb-4">@GetTabHeading(activeTab)</h5>
->>>>>>> chatGPT
 
         @if (activeTab == "logs")
         {
@@ -191,6 +138,7 @@
             <div>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 700px;">
+                    <h5>IT News Manager</h5>
                     <h6>Add IT News Item</h6>
                     <label class="mt-2">Title:</label>
                     <InputText @bind-Value="newItNewsTitle" class="form-control" />
@@ -278,7 +226,7 @@
         @if (activeTab == "sowdocs")
         {
             <div>
-
+                <h5>Scope of Work Documents</h5>
                 <div class="pt-2 pb-3 d-flex flex-wrap gap-3 align-items-center">
                     <label class="btn btn-primary text-nowrap">
                         Upload SOW PDF
@@ -328,6 +276,7 @@
         @if (activeTab == "passwords")
         {
             <div>
+                <h5>Password Generator</h5>
                 <p class="text-muted mb-3">
                     2 words (≤ 5 chars each) + a number + a special character
                 </p>
@@ -356,6 +305,7 @@
         @if (activeTab == "projecttracker")
         {
             <div>
+                <h5>IT Project Tracker</h5>
                 <p class="text-muted">Track your personal IT projects and contributions.</p>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 900px;">
@@ -442,7 +392,7 @@
         @if (activeTab == "knowledgebase")
         {
             <div>
-
+                <h5>Knowledge Base Manager</h5>
                 <div class="border rounded p-3 mb-4" style="max-width: 700px;">
                     <h6>Add Folder</h6>
                     <label class="mt-2">Folder Name:</label>
@@ -713,7 +663,7 @@
     private string GetTabHeading(string tab) => tab switch
     {
         "logs" => "System Logs",
-<<<<<<< codex/redesign-admin-dashboard-layout-8zurml
+
         "calendar" => string.Empty,
         "itnews" => string.Empty,
         "sowdocs" => string.Empty,
@@ -722,16 +672,6 @@
         "projecttracker" => string.Empty,
         "knowledgebase" => string.Empty,
         "flappybird" => "Flappy Bird",
-=======
-        "calendar" => "Company Calendar",
-        "itnews" => "IT News Manager",
-        "sowdocs" => "Scope of Work Documents",
-        "mondayminute" => "Monday Minute Manager",
-        "passwords" => "Password Generator",
-        "projecttracker" => "IT Project Tracker",
-        "knowledgebase" => "Knowledge Base Manager",
-        "flappybird" => "Flappy Bird Challenge",
->>>>>>> chatGPT
         _ => "Admin Dashboard"
     };
 
