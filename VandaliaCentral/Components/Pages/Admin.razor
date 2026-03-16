@@ -271,7 +271,7 @@
         {
             <div>
                 <h5>IT Project Tracker</h5>
-                <p class="text-muted">Track your personal IT projects and contributions.</p>
+                <p class="text-muted">Track your personal IT projects and contributions for review and raise discussions.</p>
 
                 <div class="border rounded p-3 mb-4" style="max-width: 900px;">
                     <h6>Add Project Contribution</h6>
@@ -291,13 +291,23 @@
                 {
                     <p>Loading your project entries...</p>
                 }
-                else if (!itProjectItems.Any())
-                {
-                    <p class="text-muted">You do not have any project entries yet.</p>
-                }
                 else
                 {
-                    <ul class="list-group" style="max-width: 900px;">
+                    <div class="mb-3">
+                        <a class="btn btn-outline-primary"
+                           href="/api/it-project-tracker/download"
+                           download>
+                            Download PDF
+                        </a>
+                    </div>
+
+                    @if (!itProjectItems.Any())
+                    {
+                        <p class="text-muted">You do not have any project entries yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group" style="max-width: 900px;">
                         @foreach (var item in itProjectItems)
                         {
                             <li class="list-group-item">
@@ -333,12 +343,13 @@
                                 }
                             </li>
                         }
-                    </ul>
+                        </ul>
+                    }
                 }
 
                 @if (showProjectSaveSuccess)
                 {
-                    <div class="text-success fw-bold mt-3">✓ Project saved!</div>
+                    <div class="text-success fw-bold mt-3">✓ Project tracker saved!</div>
                 }
             </div>
         }
