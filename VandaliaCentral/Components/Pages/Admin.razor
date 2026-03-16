@@ -8,6 +8,7 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject ItNewsService ItNewsService
+@inject ItProjectTrackerService ItProjectTrackerService
 @inject LoggingService Logger
 @inject GraphUserService GraphUserService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -67,6 +68,11 @@
             <li class="nav-item" role="presentation">
                 <button class='nav-link @(IsActiveTab("passwords"))' @onclick='() => SetActiveTab("passwords")' type='button'>
                     Password Generator
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class='nav-link @(IsActiveTab("projecttracker"))' @onclick='() => SetActiveTab("projecttracker")' type='button'>
+                    IT Project Tracker
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -261,6 +267,93 @@
             </div>
         }
 
+        @if (activeTab == "projecttracker")
+        {
+            <div>
+                <h5>IT Project Tracker</h5>
+                <p class="text-muted">Track your personal IT projects and contributions.</p>
+
+                <div class="border rounded p-3 mb-4" style="max-width: 900px;">
+                    <h6>Add Project Contribution</h6>
+                    <label class="mt-2">Title:</label>
+                    <InputText @bind-Value="newProjectTitle" class="form-control" />
+
+                    <label class="mt-2">Notes:</label>
+                    <InputTextArea @bind-Value="newProjectNotes" rows="4" class="form-control" />
+
+                    <label class="mt-2">Completed Date:</label>
+                    <InputDate @bind-Value="newProjectCompletedDate" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddProjectItem">Add Project</button>
+                </div>
+
+                @if (itProjectItems == null)
+                {
+                    <p>Loading your project entries...</p>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <a class="btn btn-outline-primary"
+                           href="/api/it-project-tracker/download"
+                           download>
+                            Download PDF
+                        </a>
+                    </div>
+
+                    @if (!itProjectItems.Any())
+                    {
+                        <p class="text-muted">You do not have any project entries yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group" style="max-width: 900px;">
+                        @foreach (var item in itProjectItems)
+                        {
+                            <li class="list-group-item">
+                                @if (editingProjectId == item.Id)
+                                {
+                                    <label>Title:</label>
+                                    <InputText @bind-Value="editProjectTitle" class="form-control mb-2" />
+
+                                    <label>Notes:</label>
+                                    <InputTextArea @bind-Value="editProjectNotes" rows="4" class="form-control mb-2" />
+
+                                    <label>Completed Date:</label>
+                                    <InputDate @bind-Value="editProjectCompletedDate" class="form-control" />
+
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedProjectItem">Save</button>
+                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditProjectItem">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <strong>@item.Title</strong>
+                                            <div class="text-muted small">Completed: @(item.CompletedDate.HasValue ? item.CompletedDate.Value.ToString("MMM d, yyyy") : "Not set")</div>
+                                            <div style="white-space: pre-wrap;">@item.Notes</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditProjectItem(item)">Edit</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteProjectItem(item)">Delete</button>
+                                        </div>
+                                    </div>
+                                }
+                            </li>
+                        }
+                        </ul>
+                    }
+                }
+
+                @if (showProjectSaveSuccess)
+                {
+                    <div class="text-success fw-bold mt-3">✓ Project tracker saved!</div>
+                }
+            </div>
+        }
+
         @if (activeTab == "flappybird")
         {
             <div>
@@ -335,6 +428,15 @@
     private string signedInUserLogin = "anonymous";
     private List<SowDocumentInfo>? sowDocuments;
     private string? sowUploadStatus;
+    private List<ItProjectTrackerItem>? itProjectItems;
+    private string newProjectTitle = string.Empty;
+    private string newProjectNotes = string.Empty;
+    private DateTime? newProjectCompletedDate;
+    private Guid? editingProjectId;
+    private string editProjectTitle = string.Empty;
+    private string editProjectNotes = string.Empty;
+    private DateTime? editProjectCompletedDate;
+    private bool showProjectSaveSuccess = false;
 
     private void SetActiveTab(string tab)
     {
@@ -376,6 +478,7 @@
                 itNewsItems = await ItNewsService.LoadNewsAsync();
                 flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
+                itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
             }
         }
         catch (MsalUiRequiredException ex)
@@ -694,6 +797,104 @@
 
         var firstName = emailLocalPart.Split('.')[0];
         return string.IsNullOrWhiteSpace(firstName) ? "anonymous" : firstName.Trim().ToLowerInvariant();
+    }
+
+    private async Task AddProjectItem()
+    {
+        if (itProjectItems == null || string.IsNullOrWhiteSpace(newProjectTitle))
+            return;
+
+        var trimmedTitle = newProjectTitle.Trim();
+
+        itProjectItems.Add(new ItProjectTrackerItem
+        {
+            Id = Guid.NewGuid(),
+            Title = trimmedTitle,
+            Notes = newProjectNotes.Trim(),
+            CompletedDate = newProjectCompletedDate,
+            LastUpdatedOn = DateTime.UtcNow
+        });
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Added IT project tracker item {trimmedTitle}");
+
+        newProjectTitle = string.Empty;
+        newProjectNotes = string.Empty;
+        newProjectCompletedDate = null;
+
+        await SaveProjectsAndShowStatus();
+    }
+
+    private void StartEditProjectItem(ItProjectTrackerItem item)
+    {
+        editingProjectId = item.Id;
+        editProjectTitle = item.Title;
+        editProjectNotes = item.Notes;
+        editProjectCompletedDate = item.CompletedDate;
+    }
+
+    private void CancelEditProjectItem()
+    {
+        editingProjectId = null;
+        editProjectTitle = string.Empty;
+        editProjectNotes = string.Empty;
+        editProjectCompletedDate = null;
+    }
+
+    private async Task SaveEditedProjectItem()
+    {
+        if (itProjectItems == null || editingProjectId == null || string.IsNullOrWhiteSpace(editProjectTitle))
+            return;
+
+        var item = itProjectItems.FirstOrDefault(x => x.Id == editingProjectId.Value);
+        if (item == null)
+            return;
+
+        item.Title = editProjectTitle.Trim();
+        item.Notes = editProjectNotes.Trim();
+        item.CompletedDate = editProjectCompletedDate;
+        item.LastUpdatedOn = DateTime.UtcNow;
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Edited IT project tracker item {item.Title}");
+
+        await SaveProjectsAndShowStatus();
+        CancelEditProjectItem();
+    }
+
+    private async Task DeleteProjectItem(ItProjectTrackerItem item)
+    {
+        if (itProjectItems == null)
+            return;
+
+        var itemTitle = item.Title;
+        itProjectItems.Remove(item);
+
+        if (editingProjectId == item.Id)
+        {
+            CancelEditProjectItem();
+        }
+
+        var userName = await GetCurrentUserNameAsync();
+        await Logger.LogActivityAsync(userName, $"Deleted IT project tracker item {itemTitle}");
+
+        await SaveProjectsAndShowStatus();
+    }
+
+    private async Task SaveProjectsAndShowStatus()
+    {
+        if (itProjectItems == null)
+            return;
+
+        await ItProjectTrackerService.SaveItemsAsync(signedInUserLogin, itProjectItems);
+        itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
+
+        showProjectSaveSuccess = true;
+        StateHasChanged();
+
+        await Task.Delay(2500);
+        showProjectSaveSuccess = false;
+        StateHasChanged();
     }
 
     private void GeneratePassword()
