@@ -4,6 +4,5 @@ namespace VandaliaCentral.Services;
 
 public interface IAmAssignmentChangeRequestSubmissionService
 {
-    Task SubmitAsync(AmAssignmentChangeRequestModel model, string fromUserEmail, CancellationToken ct = default);
+    Task SubmitAsync(AmAssignmentChangeRequestModel model, string fromUserEmail, string submittedByName, CancellationToken ct = default);
 }
-
