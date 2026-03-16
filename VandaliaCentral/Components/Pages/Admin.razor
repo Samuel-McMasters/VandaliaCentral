@@ -131,6 +131,9 @@
                     <label class="mt-2">News Content:</label>
                     <InputTextArea @bind-Value="newItNewsContent" rows="4" class="form-control" />
 
+                    <label class="mt-2">Expiration Date (optional):</label>
+                    <InputDate @bind-Value="newItNewsExpirationDate" TValue="DateTime?" class="form-control" />
+
                     <button class="btn btn-success mt-3" @onclick="AddNewsItem">Add News Item</button>
                 </div>
 
@@ -156,6 +159,9 @@
                                     <label>News Content:</label>
                                     <InputTextArea @bind-Value="editItNewsContent" rows="4" class="form-control" />
 
+                                    <label class="mt-2">Expiration Date (optional):</label>
+                                    <InputDate @bind-Value="editItNewsExpirationDate" TValue="DateTime?" class="form-control" />
+
                                     <div class="d-flex gap-2 mt-3">
                                         <button class="btn btn-sm btn-primary" @onclick="SaveEditedNewsItem">Save</button>
                                         <button class="btn btn-sm btn-secondary" @onclick="CancelEditNewsItem">Cancel</button>
@@ -167,6 +173,10 @@
                                         <div>
                                             <strong>@item.Title</strong>
                                             <div class="text-muted small">@item.PostedOn.ToLocalTime().ToString("MMM d, yyyy")</div>
+                                            @if (item.ExpirationDate.HasValue)
+                                            {
+                                                <div class="text-muted small">Expires: @item.ExpirationDate.Value.ToString("MMM d, yyyy")</div>
+                                            }
                                             <div style="white-space: pre-wrap;">@item.Content</div>
                                         </div>
                                         <div class="d-flex gap-2">
@@ -413,9 +423,11 @@
     private List<ItNewsItem>? itNewsItems;
     private string newItNewsTitle = string.Empty;
     private string newItNewsContent = string.Empty;
+    private DateTime? newItNewsExpirationDate;
     private Guid? editingItNewsId;
     private string editItNewsTitle = string.Empty;
     private string editItNewsContent = string.Empty;
+    private DateTime? editItNewsExpirationDate;
     private bool showNewsSaveSuccess = false;
     private string? generatedPassword;
     private bool showCopySuccess = false;
@@ -649,7 +661,8 @@
             Id = Guid.NewGuid(),
             Title = itemTitle,
             Content = newItNewsContent.Trim(),
-            PostedOn = DateTime.UtcNow
+            PostedOn = DateTime.UtcNow,
+            ExpirationDate = newItNewsExpirationDate?.Date
         });
 
         var userName = await GetCurrentUserNameAsync();
@@ -657,6 +670,7 @@
 
         newItNewsTitle = string.Empty;
         newItNewsContent = string.Empty;
+        newItNewsExpirationDate = null;
         await SaveNewsAndShowStatus();
     }
 
@@ -665,6 +679,7 @@
         editingItNewsId = item.Id;
         editItNewsTitle = item.Title;
         editItNewsContent = item.Content;
+        editItNewsExpirationDate = item.ExpirationDate?.Date;
     }
 
     private void CancelEditNewsItem()
@@ -672,6 +687,7 @@
         editingItNewsId = null;
         editItNewsTitle = string.Empty;
         editItNewsContent = string.Empty;
+        editItNewsExpirationDate = null;
     }
 
     private async Task SaveEditedNewsItem()
@@ -685,6 +701,7 @@
 
         item.Title = editItNewsTitle.Trim();
         item.Content = editItNewsContent.Trim();
+        item.ExpirationDate = editItNewsExpirationDate?.Date;
 
         var userName = await GetCurrentUserNameAsync();
         await Logger.LogActivityAsync(userName, $"Edited IT News Item {item.Title}");
