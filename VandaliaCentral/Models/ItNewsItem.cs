@@ -7,5 +7,6 @@ namespace VandaliaCentral.Models
         public string Content { get; set; } = string.Empty;
         public DateTime PostedOn { get; set; } = DateTime.UtcNow;
         public DateTime? ExpirationDate { get; set; }
+        public bool Archivable { get; set; }
     }
 }
