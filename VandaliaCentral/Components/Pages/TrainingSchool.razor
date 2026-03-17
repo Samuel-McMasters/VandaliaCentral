@@ -1354,6 +1354,7 @@
     // Legacy watcher fields kept to avoid compile breaks when older merged code paths still reference them.
     private bool launchedVideoWatcherInitialized;
     private IDisposable? launchedVideoWatcherReference;
+    private int? clientTimezoneOffsetMinutes;
     private ElementReference launchedVideoElement;
     private string assignCourseSearchTerm = string.Empty;
     private string assignDocumentSearchTerm = string.Empty;
@@ -1563,9 +1564,27 @@
         await TryActivateLaunchFromQueryAsync();
     }
 
+    private async Task TrySetClientTimezoneOffsetAsync()
+    {
+        try
+        {
+            clientTimezoneOffsetMinutes = await JS.InvokeAsync<int>("trainingSchoolVideo.getClientTimezoneOffsetMinutes");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Ignore timezone lookup failures and fall back to server timezone formatting.
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            await TrySetClientTimezoneOffsetAsync();
+        }
 
         if (!IsLaunchedVideoAssignment() || launchedVideoWatcherInitialized)
         {
@@ -3563,9 +3582,9 @@
         return itemType;
     }
 
-    private static string BuildLearningHistoryDetail(UserLearningAssignmentViewModel history)
+    private string BuildLearningHistoryDetail(UserLearningAssignmentViewModel history)
     {
-        var detail = $"{GetAssignmentTypeLabel(history.ItemType)} • Completed {(history.CompletedAtUtc?.LocalDateTime.ToString("g") ?? "Unknown")}";
+        var detail = $"{GetAssignmentTypeLabel(history.ItemType)} • Completed {(history.CompletedAtUtc.HasValue ? FormatClientLocalDateTime(history.CompletedAtUtc.Value) : "Unknown")}";
 
         if (history.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase) && history.ExamScorePercent.HasValue)
         {
@@ -3580,9 +3599,9 @@
         return detail;
     }
 
-    private static string BuildExamAttemptSummary(UserExamAttemptViewModel attempt)
+    private string BuildExamAttemptSummary(UserExamAttemptViewModel attempt)
     {
-        var summary = $"Attempted {attempt.AttemptedAtUtc.LocalDateTime:g} • Score {attempt.ScorePercent}% (Pass {attempt.PassingScorePercent}%)";
+        var summary = $"Attempted {FormatClientLocalDateTime(attempt.AttemptedAtUtc)} • Score {attempt.ScorePercent}% (Pass {attempt.PassingScorePercent}%)";
 
         if (!string.IsNullOrWhiteSpace(attempt.CourseStepTitle))
         {
@@ -3590,6 +3609,17 @@
         }
 
         return summary;
+    }
+
+    private string FormatClientLocalDateTime(DateTimeOffset timestamp)
+    {
+        if (clientTimezoneOffsetMinutes.HasValue)
+        {
+            var localTime = timestamp.ToOffset(TimeSpan.FromMinutes(-clientTimezoneOffsetMinutes.Value));
+            return localTime.ToString("g");
+        }
+
+        return timestamp.LocalDateTime.ToString("g");
     }
 
     private static string BuildSelectedOptionAnswerText(UserExamQuestionResponseViewModel response)
