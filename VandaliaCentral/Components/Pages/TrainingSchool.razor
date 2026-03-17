@@ -490,7 +490,17 @@
                                     <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class='nav-link @(trainerToolTab == "requests" ? "active" : "")' @onclick='() => SetTrainerToolTab("requests")'>Requests</button>
+                                    <button class='nav-link @(trainerToolTab == "requests" ? "active" : "")' @onclick='() => SetTrainerToolTab("requests")'>
+                                        Requests
+                                        @if (HasPendingCourseAccessRequests)
+                                        {
+                                            <span class="ms-1 text-danger" title="Pending course access requests" aria-label="Pending course access requests">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" role="img" aria-hidden="true">
+                                                    <path d="M8 16a2 2 0 0 0 1.985-1.75h-3.97A2 2 0 0 0 8 16Zm.104-14.995a1 1 0 0 0-1.208 0A1.5 1.5 0 0 0 6 2.5c0 .63-.203 1.204-.547 1.695C4.57 5.435 4 6.788 4 8.25V11l-.447.894A1 1 0 0 0 4.447 13.5h7.106a1 1 0 0 0 .894-1.606L12 11V8.25c0-1.462-.57-2.815-1.453-4.055A2.99 2.99 0 0 1 10 2.5a1.5 1.5 0 0 0-.896-1.495Z" />
+                                                </svg>
+                                            </span>
+                                        }
+                                    </button>
                                 </li>
                             </ul>
 
@@ -1369,6 +1379,7 @@
     private string? allCoursesStatusMessage;
     private bool showCourseRequestSentModal;
     private List<CourseAccessRequest> courseAccessRequests = new();
+    private bool HasPendingCourseAccessRequests => courseAccessRequests.Any();
 
     private class UserTrainingProfileViewModel
     {
