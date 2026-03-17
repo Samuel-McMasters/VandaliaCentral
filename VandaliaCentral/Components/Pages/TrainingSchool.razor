@@ -1467,10 +1467,11 @@
             ?? Enumerable.Empty<User>();
 
     private IEnumerable<User> ActiveEntraUsers =>
-        FilteredEntraUsers
+        entraUsers?
             .Where(user => !string.IsNullOrWhiteSpace(user.Id)
                 && activeAssignedUserIds.Contains(user.Id))
-            .OrderBy(user => user.DisplayName ?? string.Empty);
+            .OrderBy(user => user.DisplayName ?? string.Empty)
+            ?? Enumerable.Empty<User>();
 
     private IEnumerable<AssignableLearningItem> FilteredAssignableCourses =>
         courses
