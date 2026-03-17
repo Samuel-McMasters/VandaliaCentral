@@ -1,0 +1,108 @@
+@page "/feedback"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Options
+@using VandaliaCentral.Models
+@using VandaliaCentral.Services
+@inject GraphEmailService GraphEmailService
+@inject IOptions<FeedbackEmailOptions> FeedbackEmailOptions
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Feedback</PageTitle>
+
+<div class="container py-4" style="max-width: 800px;">
+    <div class="p-4 border rounded bg-white shadow-sm">
+        <h3 class="mb-2">Submit Feedback</h3>
+        <p class="text-muted">Share ideas, issues, or enhancements you would like to see on the intranet.</p>
+
+        @if (isSuccess)
+        {
+            <div class="alert alert-success" role="alert">
+                Thanks! Your feedback has been submitted.
+            </div>
+            <button class="btn btn-outline-secondary" @onclick="GoHome">Back to Home</button>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@errorMessage</div>
+            }
+
+            <EditForm Model="feedbackModel" OnValidSubmit="SubmitFeedbackAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Feedback</strong></label>
+                    <InputTextArea @bind-Value="feedbackModel.Text" class="form-control" rows="8" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @(isSubmitting ? "Submitting..." : "Submit")
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="GoHome" disabled="@isSubmitting">Cancel</button>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly FeedbackFormModel feedbackModel = new();
+    private bool isSubmitting;
+    private bool isSuccess;
+    private string? errorMessage;
+
+    private async Task SubmitFeedbackAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            var submitter =
+                user.FindFirst("preferred_username")?.Value ??
+                user.FindFirst("email")?.Value ??
+                user.Identity?.Name ??
+                "unknown";
+
+            var body = $"Feedback from: {submitter}\n\n{feedbackModel.Text}";
+
+            await GraphEmailService.SendEmailTextAsyncStrict(
+                FeedbackEmailOptions.Value.To,
+                "Vandalia Central Feedback",
+                body);
+
+            isSuccess = true;
+            feedbackModel.Text = string.Empty;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Unable to submit feedback right now. Please try again later.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private sealed class FeedbackFormModel
+    {
+        [Required(ErrorMessage = "Please enter feedback before submitting.")]
+        [StringLength(4000, ErrorMessage = "Feedback cannot exceed 4000 characters.")]
+        public string Text { get; set; } = string.Empty;
+    }
+}
