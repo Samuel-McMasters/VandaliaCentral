@@ -361,8 +361,11 @@ window.trainingSchoolVideo = window.trainingSchoolVideo || (() => {
         handler();
     };
 
+    const getClientTimezoneOffsetMinutes = () => new Date().getTimezoneOffset();
+
     return {
         watchForNearEnd,
-        stopWatching
+        stopWatching,
+        getClientTimezoneOffsetMinutes
     };
 })();
