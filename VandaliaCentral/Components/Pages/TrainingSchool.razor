@@ -1420,6 +1420,27 @@
         public DateTimeOffset? CompletedAtUtc { get; set; }
         public int? ExamScorePercent { get; set; }
         public List<string> CompletedCourseStepIds { get; set; } = new();
+        public List<UserExamAttemptViewModel> ExamAttempts { get; set; } = new();
+    }
+
+    private class UserExamAttemptViewModel
+    {
+        public string ExamId { get; set; } = string.Empty;
+        public string ExamTitle { get; set; } = string.Empty;
+        public string? CourseStepId { get; set; }
+        public string? CourseStepTitle { get; set; }
+        public int ScorePercent { get; set; }
+        public int PassingScorePercent { get; set; }
+        public bool Passed { get; set; }
+        public DateTimeOffset AttemptedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+        public List<UserExamQuestionResponseViewModel> QuestionResponses { get; set; } = new();
+    }
+
+    private class UserExamQuestionResponseViewModel
+    {
+        public string QuestionText { get; set; } = string.Empty;
+        public List<string> Options { get; set; } = new();
+        public List<int> SelectedOptionIndexes { get; set; } = new();
     }
 
     private class AssignableLearningItem
@@ -2934,6 +2955,7 @@
         var scorePercent = (int)Math.Round((double)matchedAnswerCount / exam.Questions.Count * 100d, MidpointRounding.AwayFromZero);
         examResultScorePercent = scorePercent;
         examResultPassed = scorePercent >= exam.PassingScorePercent;
+        await SaveTrainingSchoolExamAttemptV5Async(exam, scorePercent, examResultPassed);
 
         if (examResultPassed)
         {
@@ -2948,6 +2970,65 @@
         }
 
         showExamResultModal = true;
+    }
+
+    private async Task SaveTrainingSchoolExamAttemptV5Async(TrainingExam exam, int scorePercent, bool passed)
+    {
+        if (launchedAssignment == null
+            || string.IsNullOrWhiteSpace(currentUserId)
+            || string.IsNullOrWhiteSpace(launchedAssignment.AssignmentId))
+        {
+            return;
+        }
+
+        string? courseStepId = null;
+        string? courseStepTitle = null;
+
+        if (launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+            && launchedCourse != null
+            && launchedCourse.Steps.Any())
+        {
+            var orderedSteps = launchedCourse.Steps.OrderBy(s => s.Order).ToList();
+            var currentStep = orderedSteps[Math.Clamp(launchedCourseStepIndex, 0, orderedSteps.Count - 1)];
+            courseStepId = currentStep.Id;
+            courseStepTitle = currentStep.Title;
+        }
+
+        var attempt = BuildExamAttemptV5(exam, scorePercent, passed, courseStepId, courseStepTitle);
+        await TrainingDocumentService.SaveAssignmentExamAttemptAsync(currentUserId, launchedAssignment.AssignmentId, attempt);
+    }
+
+    private UserExamAttempt BuildExamAttemptV5(TrainingExam exam, int scorePercent, bool passed, string? courseStepId, string? courseStepTitle)
+    {
+        var questionResponses = new List<UserExamQuestionResponse>();
+
+        for (var questionIndex = 0; questionIndex < exam.Questions.Count; questionIndex++)
+        {
+            var question = exam.Questions[questionIndex];
+            var selectedAnswers = launchedExamResponses.TryGetValue(questionIndex, out var selectedAnswerIndexes)
+                ? selectedAnswerIndexes.OrderBy(i => i).ToList()
+                : new List<int>();
+
+            questionResponses.Add(new UserExamQuestionResponse
+            {
+                QuestionText = question.QuestionText,
+                Options = question.Options.ToList(),
+                SelectedOptionIndexes = selectedAnswers
+            });
+        }
+
+        return new UserExamAttempt
+        {
+            ExamId = exam.Id,
+            ExamTitle = exam.Title,
+            CourseStepId = courseStepId,
+            CourseStepTitle = courseStepTitle,
+            ScorePercent = scorePercent,
+            PassingScorePercent = exam.PassingScorePercent,
+            Passed = passed,
+            AttemptedAtUtc = DateTimeOffset.UtcNow,
+            QuestionResponses = questionResponses
+        };
     }
 
     private bool IsTrainingSchoolExamQuestionCorrectV5(TrainingExamQuestion question, List<int> selectedAnswers)
@@ -3394,7 +3475,71 @@
                 AssignedAtUtc = ReadDateTimeOffsetProperty(item, "AssignedAtUtc"),
                 CompletedAtUtc = ReadNullableDateTimeOffsetProperty(item, "CompletedAtUtc"),
                 ExamScorePercent = ReadNullableIntProperty(item, "ExamScorePercent"),
-                CompletedCourseStepIds = ReadStringListProperty(item, "CompletedCourseStepIds")
+                CompletedCourseStepIds = ReadStringListProperty(item, "CompletedCourseStepIds"),
+                ExamAttempts = ReadExamAttempts(item)
+            });
+        }
+
+        return list;
+    }
+
+
+    private static List<UserExamAttemptViewModel> ReadExamAttempts(object source)
+    {
+        var prop = source.GetType().GetProperty("ExamAttempts");
+        var value = prop?.GetValue(source);
+        if (value is not System.Collections.IEnumerable enumerable)
+        {
+            return new List<UserExamAttemptViewModel>();
+        }
+
+        var list = new List<UserExamAttemptViewModel>();
+        foreach (var item in enumerable)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            list.Add(new UserExamAttemptViewModel
+            {
+                ExamId = ReadStringProperty(item, "ExamId") ?? string.Empty,
+                ExamTitle = ReadStringProperty(item, "ExamTitle") ?? string.Empty,
+                CourseStepId = ReadStringProperty(item, "CourseStepId"),
+                CourseStepTitle = ReadStringProperty(item, "CourseStepTitle"),
+                ScorePercent = ReadNullableIntProperty(item, "ScorePercent") ?? 0,
+                PassingScorePercent = ReadNullableIntProperty(item, "PassingScorePercent") ?? 0,
+                Passed = ReadNullableBoolProperty(item, "Passed") ?? false,
+                AttemptedAtUtc = ReadNullableDateTimeOffsetProperty(item, "AttemptedAtUtc") ?? DateTimeOffset.UtcNow,
+                QuestionResponses = ReadQuestionResponses(item)
+            });
+        }
+
+        return list;
+    }
+
+    private static List<UserExamQuestionResponseViewModel> ReadQuestionResponses(object source)
+    {
+        var prop = source.GetType().GetProperty("QuestionResponses");
+        var value = prop?.GetValue(source);
+        if (value is not System.Collections.IEnumerable enumerable)
+        {
+            return new List<UserExamQuestionResponseViewModel>();
+        }
+
+        var list = new List<UserExamQuestionResponseViewModel>();
+        foreach (var item in enumerable)
+        {
+            if (item == null)
+            {
+                continue;
+            }
+
+            list.Add(new UserExamQuestionResponseViewModel
+            {
+                QuestionText = ReadStringProperty(item, "QuestionText") ?? string.Empty,
+                Options = ReadStringListProperty(item, "Options"),
+                SelectedOptionIndexes = ReadIntListProperty(item, "SelectedOptionIndexes")
             });
         }
 
@@ -3427,7 +3572,44 @@
             detail += $" • Score {history.ExamScorePercent.Value}%";
         }
 
+        if (history.ExamAttempts.Any())
+        {
+            detail += $" • Attempts {history.ExamAttempts.Count}";
+        }
+
         return detail;
+    }
+
+    private static string BuildExamAttemptSummary(UserExamAttemptViewModel attempt)
+    {
+        var summary = $"Attempted {attempt.AttemptedAtUtc.LocalDateTime:g} • Score {attempt.ScorePercent}% (Pass {attempt.PassingScorePercent}%)";
+
+        if (!string.IsNullOrWhiteSpace(attempt.CourseStepTitle))
+        {
+            summary += $" • Course Step: {attempt.CourseStepTitle}";
+        }
+
+        return summary;
+    }
+
+    private static string BuildSelectedOptionAnswerText(UserExamQuestionResponseViewModel response)
+    {
+        if (!response.SelectedOptionIndexes.Any())
+        {
+            return "No answer selected.";
+        }
+
+        var selected = response.SelectedOptionIndexes
+            .Where(i => i >= 0 && i < response.Options.Count)
+            .Select(i => response.Options[i])
+            .ToList();
+
+        if (!selected.Any())
+        {
+            return string.Join(", ", response.SelectedOptionIndexes.Select(i => (i + 1).ToString()));
+        }
+
+        return string.Join(", ", selected);
     }
 
     private async Task DownloadSelectedUserTrainingProfilePdfAsync()
@@ -3511,6 +3693,18 @@
                             {
                                 itemCol.Item().Text($"• {assignment.Title}").SemiBold();
                                 itemCol.Item().Text(detailBuilder.ToString()).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+
+                                foreach (var attempt in assignment.ExamAttempts.OrderByDescending(a => a.AttemptedAtUtc))
+                                {
+                                    itemCol.Item().PaddingLeft(10).Text($"- {attempt.ExamTitle}").SemiBold().FontSize(10);
+                                    itemCol.Item().PaddingLeft(10).Text(BuildExamAttemptSummary(attempt)).FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+
+                                    foreach (var response in attempt.QuestionResponses)
+                                    {
+                                        itemCol.Item().PaddingLeft(16).Text($"Q: {response.QuestionText}").FontSize(9);
+                                        itemCol.Item().PaddingLeft(16).Text($"A: {BuildSelectedOptionAnswerText(response)}").FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                                    }
+                                }
                             });
                         }
                     }
@@ -3528,6 +3722,18 @@
                             {
                                 itemCol.Item().Text($"• {history.Title}").SemiBold();
                                 itemCol.Item().Text(BuildLearningHistoryDetail(history)).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+
+                                foreach (var attempt in history.ExamAttempts.OrderByDescending(a => a.AttemptedAtUtc))
+                                {
+                                    itemCol.Item().PaddingLeft(10).Text($"- {attempt.ExamTitle}").SemiBold().FontSize(10);
+                                    itemCol.Item().PaddingLeft(10).Text(BuildExamAttemptSummary(attempt)).FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+
+                                    foreach (var response in attempt.QuestionResponses)
+                                    {
+                                        itemCol.Item().PaddingLeft(16).Text($"Q: {response.QuestionText}").FontSize(9);
+                                        itemCol.Item().PaddingLeft(16).Text($"A: {BuildSelectedOptionAnswerText(response)}").FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                                    }
+                                }
                             });
                         }
                     }
@@ -3668,6 +3874,43 @@
         }
 
         return int.TryParse(value?.ToString(), out var parsed) ? parsed : null;
+    }
+
+    private static bool? ReadNullableBoolProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        if (value is bool boolValue)
+        {
+            return boolValue;
+        }
+
+        return bool.TryParse(value?.ToString(), out var parsed) ? parsed : null;
+    }
+
+    private static List<int> ReadIntListProperty(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+        if (value is not System.Collections.IEnumerable enumerable)
+        {
+            return new List<int>();
+        }
+
+        var result = new List<int>();
+        foreach (var item in enumerable)
+        {
+            if (item is int intValue)
+            {
+                result.Add(intValue);
+                continue;
+            }
+
+            if (int.TryParse(item?.ToString(), out var parsed))
+            {
+                result.Add(parsed);
+            }
+        }
+
+        return result;
     }
 
     private void StartLinkCreation()

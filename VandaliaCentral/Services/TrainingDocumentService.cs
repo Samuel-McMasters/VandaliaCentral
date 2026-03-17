@@ -61,6 +61,27 @@ namespace VandaliaCentral.Services
         public DateTimeOffset AssignedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? CompletedAtUtc { get; set; }
         public int? ExamScorePercent { get; set; }
+        public List<UserExamAttempt> ExamAttempts { get; set; } = new();
+    }
+
+    public class UserExamAttempt
+    {
+        public string ExamId { get; set; } = string.Empty;
+        public string ExamTitle { get; set; } = string.Empty;
+        public string? CourseStepId { get; set; }
+        public string? CourseStepTitle { get; set; }
+        public int ScorePercent { get; set; }
+        public int PassingScorePercent { get; set; }
+        public bool Passed { get; set; }
+        public DateTimeOffset AttemptedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+        public List<UserExamQuestionResponse> QuestionResponses { get; set; } = new();
+    }
+
+    public class UserExamQuestionResponse
+    {
+        public string QuestionText { get; set; } = string.Empty;
+        public List<string> Options { get; set; } = new();
+        public List<int> SelectedOptionIndexes { get; set; } = new();
     }
 
     public class CompleteCourseStepResult
@@ -477,6 +498,41 @@ namespace VandaliaCentral.Services
             assignment.CompletedAtUtc = DateTimeOffset.UtcNow;
             assignment.ExamScorePercent = examScorePercent;
             profile.LearningHistory.Add(assignment);
+
+            await SaveUserTrainingProfileAsync(profile);
+            return true;
+        }
+
+        public async Task<bool> SaveAssignmentExamAttemptAsync(string userId, string assignmentId, UserExamAttempt attempt)
+        {
+            var safeUserId = Path.GetFileNameWithoutExtension(userId);
+            if (string.IsNullOrWhiteSpace(safeUserId)
+                || string.IsNullOrWhiteSpace(assignmentId)
+                || attempt == null)
+            {
+                return false;
+            }
+
+            var profile = await GetUserTrainingProfileAsync(safeUserId);
+            profile.UserId = safeUserId;
+
+            var assignment = profile.ActiveAssignedLearning.FirstOrDefault(a =>
+                string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase))
+                ?? profile.LearningHistory.FirstOrDefault(a =>
+                    string.Equals(a.AssignmentId, assignmentId, StringComparison.OrdinalIgnoreCase));
+
+            if (assignment == null)
+            {
+                return false;
+            }
+
+            assignment.ExamAttempts ??= new List<UserExamAttempt>();
+            assignment.ExamAttempts.Add(attempt);
+
+            if (string.Equals(assignment.ItemType, "Exam", StringComparison.OrdinalIgnoreCase))
+            {
+                assignment.ExamScorePercent = attempt.ScorePercent;
+            }
 
             await SaveUserTrainingProfileAsync(profile);
             return true;
