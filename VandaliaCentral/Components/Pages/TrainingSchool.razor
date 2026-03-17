@@ -13,7 +13,6 @@
 @using System.Threading
 @using System.Security.Claims
 @using QuestPDF.Fluent
-@using QuestPDF.Helpers
 @using QuestPDF.Infrastructure
 @using VandaliaCentral.Services
 @layout VandaliaCentral.Components.Layout.TopBarLayout
@@ -3470,13 +3469,13 @@
             container.Page(page =>
             {
                 page.Margin(30);
-                page.Size(PageSizes.Letter);
+                page.Size(QuestPDF.Helpers.PageSizes.Letter);
                 page.DefaultTextStyle(x => x.FontSize(11));
 
                 page.Header().Column(col =>
                 {
                     col.Item().Text("User Training Profile").SemiBold().FontSize(18);
-                    col.Item().Text(DateTime.Now.ToString("f")).FontColor(Colors.Grey.Darken1).FontSize(9);
+                    col.Item().Text(DateTime.Now.ToString("f")).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1).FontSize(9);
                 });
 
                 page.Content().Column(col =>
@@ -3511,7 +3510,7 @@
                             col.Item().PaddingVertical(2).Column(itemCol =>
                             {
                                 itemCol.Item().Text($"• {assignment.Title}").SemiBold();
-                                itemCol.Item().Text(detailBuilder.ToString()).FontSize(10).FontColor(Colors.Grey.Darken1);
+                                itemCol.Item().Text(detailBuilder.ToString()).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
                             });
                         }
                     }
@@ -3528,7 +3527,7 @@
                             col.Item().PaddingVertical(2).Column(itemCol =>
                             {
                                 itemCol.Item().Text($"• {history.Title}").SemiBold();
-                                itemCol.Item().Text(BuildLearningHistoryDetail(history)).FontSize(10).FontColor(Colors.Grey.Darken1);
+                                itemCol.Item().Text(BuildLearningHistoryDetail(history)).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
                             });
                         }
                     }
