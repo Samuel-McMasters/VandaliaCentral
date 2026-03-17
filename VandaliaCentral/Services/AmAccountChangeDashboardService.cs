@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using VandaliaCentral.Models;
@@ -7,17 +6,17 @@ namespace VandaliaCentral.Services;
 
 public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardService
 {
-    private readonly List<AmAccountChangeDashboardItem> _pending = new();
-    private readonly object _sync = new();
+    private static readonly List<AmAccountChangeDashboardItem> Pending = new();
+    private static readonly object Sync = new();
 
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly GraphEmailService _email;
     private readonly AmAssignmentChangeRequestEmailOptions _opts;
 
     public AmAccountChangeDashboardService(
-        IServiceScopeFactory scopeFactory,
+        GraphEmailService email,
         IOptions<AmAssignmentChangeRequestEmailOptions> opts)
     {
-        _scopeFactory = scopeFactory;
+        _email = email;
         _opts = opts.Value;
     }
 
@@ -31,11 +30,11 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     {
         var now = DateTimeOffset.UtcNow;
 
-        lock (_sync)
+        lock (Sync)
         {
             foreach (var line in lines)
             {
-                _pending.Add(new AmAccountChangeDashboardItem
+                Pending.Add(new AmAccountChangeDashboardItem
                 {
                     SubmissionId = submissionId,
                     SubmittedByEmail = submittedByEmail,
@@ -61,9 +60,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
 
     public IReadOnlyList<AmAccountChangeDashboardItem> GetPending()
     {
-        lock (_sync)
+        lock (Sync)
         {
-            return _pending
+            return Pending
                 .OrderByDescending(x => x.SubmittedAtUtc)
                 .ToList();
         }
@@ -71,9 +70,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
 
     public int GetPendingCount()
     {
-        lock (_sync)
+        lock (Sync)
         {
-            return _pending.Count;
+            return Pending.Count;
         }
     }
 
@@ -102,9 +101,7 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
             submissionId: item.SubmissionId,
             approvedBy: approvedBy);
 
-        using var scope = _scopeFactory.CreateScope();
-        var email = scope.ServiceProvider.GetRequiredService<GraphEmailService>();
-        await email.SendEmailHtmlAsyncStrict(_opts.StandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
+        await _email.SendEmailHtmlAsyncStrict(_opts.StandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
         Remove(itemId);
     }
 
@@ -116,9 +113,7 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
             throw new InvalidOperationException("Original submitter email is missing.");
 
         var body = AmAssignmentChangeRequestEmailTemplateBuilder.BuildDeniedHtmlBody(item, deniedBy);
-        using var scope = _scopeFactory.CreateScope();
-        var email = scope.ServiceProvider.GetRequiredService<GraphEmailService>();
-        await email.SendEmailHtmlAsyncStrict(item.SubmittedByEmail, "AM Assignment Change Request - Denied", body, ccEmail: null, ct);
+        await _email.SendEmailHtmlAsyncStrict(item.SubmittedByEmail, "AM Assignment Change Request - Denied", body, ccEmail: null, ct);
 
         Remove(itemId);
     }
@@ -140,9 +135,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
 
     private AmAccountChangeDashboardItem GetRequiredItem(string itemId)
     {
-        lock (_sync)
+        lock (Sync)
         {
-            var item = _pending.FirstOrDefault(x => x.Id == itemId);
+            var item = Pending.FirstOrDefault(x => x.Id == itemId);
             if (item == null)
                 throw new InvalidOperationException("Dashboard item not found or already processed.");
 
@@ -152,9 +147,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
 
     private void Remove(string itemId)
     {
-        lock (_sync)
+        lock (Sync)
         {
-            _pending.RemoveAll(x => x.Id == itemId);
+            Pending.RemoveAll(x => x.Id == itemId);
         }
     }
 }
