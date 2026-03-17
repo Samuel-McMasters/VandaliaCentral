@@ -89,7 +89,7 @@ builder.Services
 // ===============================
 
 builder.Services.AddScoped<IAmAssignmentChangeRequestSubmissionService, AmAssignmentChangeRequestSubmissionService>();
-builder.Services.AddSingleton<IAmAccountChangeDashboardService, AmAccountChangeDashboardService>();
+builder.Services.AddScoped<IAmAccountChangeDashboardService, AmAccountChangeDashboardService>();
 
 // Bind Freshservice options (maps Freshservice__ApiKey, Freshservice__Domain, etc.)
 // Validate at startup so you instantly know if Azure settings are missing/misnamed
