@@ -864,3 +864,94 @@ select.form-select {
     font-weight: 700;
     color: #212529;
 }
+
+/* === 2026 UI Refresh (layout + surfaces, no logic changes) === */
+:root {
+    --vc-orange: #FF6720;
+    --vc-orange-soft: #F79239;
+    --vc-ink: #474748;
+    --vc-shell-bg: #E5E5E5;
+}
+
+body {
+    background: var(--vc-shell-bg);
+    color: #1f2328;
+}
+
+.vc-topbar {
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 4px 18px rgba(0,0,0,.14);
+}
+
+.vc-main-shell {
+    margin-top: 80px;
+    min-height: calc(100vh - 80px);
+}
+
+.vc-page-surface {
+    padding: 1.25rem 1.25rem 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .vc-page-surface {
+        padding: 1.5rem 2rem 2rem;
+    }
+}
+
+.card,
+.table,
+.list-group-item,
+.modal-content,
+.accordion-item {
+    border-radius: 0.8rem !important;
+}
+
+.card,
+.table,
+.modal-content,
+.accordion-item {
+    border: 1px solid rgba(71, 71, 72, 0.1);
+    box-shadow: 0 5px 18px rgba(0,0,0,.06);
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+    border-radius: 0.6rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--vc-orange-soft);
+    box-shadow: 0 0 0 .2rem rgba(247, 146, 57, .2);
+}
+
+.vandalia-sidebar {
+    border-right: 1px solid rgba(255,255,255,.08);
+}
+
+.vandalia-sidebar .sidebar {
+    padding: 1rem .85rem 1.25rem;
+}
+
+.vandalia-sidebar .sidebar .menu {
+    align-items: stretch !important;
+}
+
+.vandalia-sidebar .sidebar .menu > .btn,
+.vandalia-sidebar .sidebar .menu > .dropdown > .btn {
+    border-radius: .65rem !important;
+    font-weight: 600;
+}
+
+.vandalia-sidebar .sidebar .menu .dropdown-menu {
+    border-radius: .65rem;
+    margin-top: .25rem !important;
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.vandalia-sidebar .sidebar .menu .dropdown-menu .dropdown-item {
+    border-radius: .45rem;
+    margin: .1rem .3rem;
+    width: auto;
+}

@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @inject IWebHostEnvironment Env
 @inject HttpClient Http
 @inject NavigationManager Nav
@@ -12,173 +12,122 @@
 
 
 <PageTitle>Vandalia Central</PageTitle>
-<div class="container-fluid">
-
-    <!-- Bottom Row -->
-    <div class="row g-4 pb-4">
-
-        <!-- Left Column w/ fullscreen button -->
-        <div class="col-12 col-lg-7 d-flex flex-column">
-            <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">@mmPdfName</h5>
-                    <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
-                        View Fullscreen
-                    </a>
-                </div>
-
-                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
-                    @if (mmPdf == null)
-                    {
-
-                        <p>Loading latest Monday Minute PDF...</p>
-
-                    }
-                    else
-                    {
-                        <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
-                    }
-                </div>
-
-
-
+<div class="container-fluid px-3 px-md-4 py-4 home-dashboard">
+    <div class="home-hero card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <h1 class="h3 mb-1">Vandalia Central</h1>
+                <p class="text-muted mb-0">Your daily hub for updates, documents, and upcoming company events.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/employeecontacts" class="btn btn-primary">Employee Contacts</a>
+                <a href="/training-school" class="btn btn-outline-secondary">Training School</a>
             </div>
         </div>
-
-
-        <!-- Right Column -->
-        <div class="col-12 col-lg-5 d-flex flex-column gap-4">
-            <!-- Bonus Chart -->
-            <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">Bonus Chart</h5>
-                    <a href=@bcPdf target="_blank" class="btn btn-sm btn-outline-secondary">
-                        View Fullscreen
-                    </a>
-                </div>
-                <div class="w-100 rounded overflow-hidden" style="height: 400px; background-color: #e9ecef;">
-                    @if (bcPdf == null)
-                    {
-                        <p>Loading latest Monday Minute PDF...</p>
-
-                    }
-                    else
-                    {
-                        <embed src=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
-                                                    
-                    }
-
-
-                </div>
-
-
-            </div>
-
-            <div class="p-4 border rounded bg-white shadow-sm flex-fill d-flex flex-column" style="min-height: 350px;">
-                <h5 class="mb-3">Company Calendar</h5>
-
-                <!-- Scrollable container -->
-                <div style="overflow-y: auto; max-height: 250px;">
-                    @* <ul class="space-y-3">
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>May 5</strong> – SOS "Official" Grand Opening
-                                <div class="text-muted small">Promotional Event</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>May 26</strong> – Memorial Day
-                                <div class="text-muted small">Observed Holiday</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>July 4</strong> – Independence Day
-                                <div class="text-muted small">Observed Holiday</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>July 19</strong> – Mud Volleyball (Dayton)
-                                <div class="text-muted small">Company Event</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>September 1</strong> – Labor Day
-                                <div class="text-muted small">Observed Holiday</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>November 27</strong> – Thanksgiving
-                                <div class="text-muted small">Observed Holiday</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>December 11</strong> – Holiday Bonus Paid
-                                <div class="text-muted small">Payday, commissions, and holiday bonus paid out</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>December 24</strong> – Christmas Eve
-                                <div class="text-muted small">All branches close at noon</div>
-                            </div>
-                        </li>
-                        <li class="d-flex">
-                            <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                            <div>
-                                <strong>December 25</strong> – Christmas
-                                <div class="text-muted small">Observed Holiday</div>
-                            </div>
-                        </li>
-                    </ul> *@
-                    @if (calendarEvents == null)
-                    {
-                        <p>Loading calendar...</p>
-                    }
-                    else if (!calendarEvents.Any())
-                    {
-                        <p class="text-muted">No upcoming events.</p>
-                    }
-                    else
-                    {
-                        <ul class="space-y-3">
-                            @foreach (var e in calendarEvents)
-                            {
-                                <li class="d-flex">
-                                    <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
-                                    <div>
-                                        <strong>@e.Date.ToString("MMMM d")</strong> – @e.Title
-                                        <div class="text-muted small">@e.Type</div>
-                                    </div>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
-            </div>
-
-        </div> 
-
     </div>
 
+    <div class="row g-4 pb-2">
+        <div class="col-12 col-xxl-8 d-flex">
+            <section class="card shadow-sm border-0 w-100">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0">Monday Minute</h5>
+                    <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">View Fullscreen</a>
+                </div>
+                <div class="card-body pt-0">
+                    <p class="text-muted small mb-3">@mmPdfName</p>
+                    <div class="pdf-frame rounded overflow-hidden">
+                        @if (mmPdf == null)
+                        {
+                            <p class="p-3 mb-0">Loading latest Monday Minute PDF...</p>
+                        }
+                        else
+                        {
+                            <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;" />
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
 
+        <div class="col-12 col-xxl-4 d-flex flex-column gap-4">
+            <section class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0">Bonus Chart</h5>
+                    <a href=@bcPdf target="_blank" class="btn btn-sm btn-outline-secondary">View Fullscreen</a>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="pdf-frame pdf-frame-sm rounded overflow-hidden">
+                        @if (bcPdf == null)
+                        {
+                            <p class="p-3 mb-0">Loading latest Monday Minute PDF...</p>
+                        }
+                        else
+                        {
+                            <embed src=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;" />
+                        }
+                    </div>
+                </div>
+            </section>
 
+            <section class="card shadow-sm border-0 flex-fill">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">Company Calendar</h5>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="calendar-scroll">
+                        @if (calendarEvents == null)
+                        {
+                            <p>Loading calendar...</p>
+                        }
+                        else if (!calendarEvents.Any())
+                        {
+                            <p class="text-muted">No upcoming events.</p>
+                        }
+                        else
+                        {
+                            <ul class="space-y-3">
+                                @foreach (var e in calendarEvents)
+                                {
+                                    <li class="d-flex mb-2">
+                                        <div class="w-2 h-2 mt-2.5 rounded-circle bg-warning me-3"></div>
+                                        <div>
+                                            <strong>@e.Date.ToString("MMMM d")</strong> – @e.Title
+                                            <div class="text-muted small">@e.Type</div>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
 </div>
 
+<style>
+    .home-dashboard .home-hero {
+        background: #fff;
+        border-left: 6px solid #F79239;
+    }
+
+    .home-dashboard .pdf-frame {
+        height: 67vh;
+        min-height: 540px;
+        background: #e9ecef;
+    }
+
+    .home-dashboard .pdf-frame-sm {
+        height: 390px;
+        min-height: 300px;
+    }
+
+    .home-dashboard .calendar-scroll {
+        max-height: 320px;
+        overflow-y: auto;
+        padding-right: .25rem;
+    }
+</style>
 
 @code {
     //variables to hold api endpoints for pdfs
