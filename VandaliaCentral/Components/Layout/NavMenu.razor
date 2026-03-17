@@ -7,8 +7,8 @@
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject IAmAccountChangeDashboardService DashboardService
 
-<div class="sidebar pt-3" style="height: 100%; overflow-y: auto;">
-    <div class="menu btn-group-vertical gap-4 align-items-center ">
+<div class="sidebar pt-3">
+    <div class="menu btn-group-vertical gap-3 align-items-stretch">
 
         <a class="d-block d-lg-none" href="/" tabindex="-1" @onclick='(e) => HandleLinkClick("Home Button")'>
             <svg xmlns="http://www.w3.org/2000/svg" width="45" height="50" fill="white" class="bi bi-house" viewBox="0 0 16 20">
@@ -16,7 +16,7 @@
                 <line x1="2" y1="19" x2="14" y2="19" stroke="white" stroke-width="1.5"/>
             </svg>
         </a>
-        <NavLink href="/employeecontacts" @onclick='(e) => HandleLinkClick("Employee Contacts")' class="btn btn-primary " activeClass="active">
+        <NavLink href="/employeecontacts" @onclick='(e) => HandleLinkClick("Employee Contacts")' class="btn nav-quick-link" activeClass="active">
             
             Employee Contacts
         </NavLink>
@@ -27,7 +27,7 @@
 
         
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Rentals
             </button>
             <ul class="dropdown-menu">
@@ -40,7 +40,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Sales
                 @if (ShowAccountChangeNotification)
                 {
@@ -63,7 +63,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Training
             </button>
             <ul class="dropdown-menu">
@@ -73,7 +73,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Service
             </button>
             <ul class="dropdown-menu">
@@ -83,7 +83,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Maintenance
             </button>
             <ul class="dropdown-menu">
@@ -93,7 +93,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Dispatch
             </button>
             <ul class="dropdown-menu">
@@ -103,7 +103,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 IT
             </button>
             <ul class="dropdown-menu">
@@ -112,7 +112,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 HR
             </button>
             <ul class="dropdown-menu">
@@ -126,7 +126,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Purchasing
             </button>
             <ul class="dropdown-menu">
@@ -135,7 +135,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Fleet
             </button>
             <ul class="dropdown-menu">
@@ -153,7 +153,7 @@
            
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Accounting
             </button>
             <ul class="dropdown-menu">
@@ -167,7 +167,7 @@
         </div>
 
         <div class="dropdown w-100">
-            <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn nav-section-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Marketing
             </button>
             <ul class="dropdown-menu">

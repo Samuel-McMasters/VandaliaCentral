@@ -18,15 +18,15 @@
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 @implements IDisposable
 
-<div class="vc-shell">
+<div class="app-shell">
     <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary ps-4 pe-4 vc-topbar" style="height: 80px; overflow: hidden;">
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-vandalia-secondary ps-3 ps-md-4 pe-3 pe-md-4 app-topbar">
 
-        <div class="d-flex w-100 align-items-center position-relative">
+        <div class="d-flex w-100 align-items-center position-relative gap-2">
 
             <!-- Hamburger toggle (left side, mobile only) -->
             <div class="d-lg-none">
-                <button class="btn btn-light me-2" @onclick="ToggleSidebar">
+                <button class="btn btn-light me-2 app-hamburger" @onclick="ToggleSidebar" aria-label="Toggle menu">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                          class="bi bi-list" viewBox="0 0 16 16">
                         <path fill-rule="evenodd"
@@ -36,9 +36,9 @@
             </div>
 
             <!-- Logo: left-aligned on lg+, centered on <lg -->
-            <div class="mx-lg-0 ps-4 ps-lg-0 d-flex align-items-center">
+            <div class="mx-lg-0 ps-2 ps-lg-0 d-flex align-items-center app-brand-wrap">
                 <a class="navbar-brand me-2" href="/">
-                    <img src=".\VR_black.png" width="151" height="47" class="align-top mb-2 mt-1" />
+                    <img src=".\VR_black.png" width="151" height="47" class="align-top" />
                 </a>
 
                 <div class="navbar-divider d-none d-lg-block"></div>
@@ -51,7 +51,7 @@
                 </a>
             </div>
 
-            <div class="navbar-center-weather d-none d-md-flex" aria-live="polite" style="position:absolute;left:50%;transform:translateX(-50%);">
+            <div class="navbar-center-weather d-none d-md-flex" aria-live="polite">
                 @if (IsWeatherLoading)
                 {
                     <span>Loading local weather...</span>
@@ -100,8 +100,10 @@
             </CascadingValue>
         </div>
 
-        <div class="main-content flex-grow-1 page-enter vc-page-surface" style="background: #E5E5E5;" @ref="mainContentRef">
+        <div class="main-content flex-grow-1 page-enter" @ref="mainContentRef">
+            <div class="content-surface">
             @Body
+            </div>
         </div>
     </div>
 </div>

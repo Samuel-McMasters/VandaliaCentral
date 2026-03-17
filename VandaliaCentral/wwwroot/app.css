@@ -865,93 +865,140 @@ select.form-select {
     color: #212529;
 }
 
-/* === 2026 UI Refresh (layout + surfaces, no logic changes) === */
-:root {
-    --vc-orange: #FF6720;
-    --vc-orange-soft: #F79239;
-    --vc-ink: #474748;
-    --vc-shell-bg: #E5E5E5;
+/* ===== 2026 UI Refresh ===== */
+.app-shell {
+    background: #E5E5E5;
 }
 
-body {
-    background: var(--vc-shell-bg);
-    color: #1f2328;
+.app-topbar {
+    height: 80px;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
-.vc-topbar {
-    border-bottom: 1px solid rgba(0,0,0,.08);
-    box-shadow: 0 4px 18px rgba(0,0,0,.14);
+.app-hamburger {
+    border-radius: 12px;
+    border: none;
 }
 
-.vc-main-shell {
-    margin-top: 80px;
-    min-height: calc(100vh - 80px);
+.app-brand-wrap {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 14px;
+    padding: 0.35rem 0.75rem;
 }
 
-.vc-page-surface {
-    padding: 1.25rem 1.25rem 1.5rem;
-}
-
-@media (min-width: 992px) {
-    .vc-page-surface {
-        padding: 1.5rem 2rem 2rem;
-    }
-}
-
-.card,
-.table,
-.list-group-item,
-.modal-content,
-.accordion-item {
-    border-radius: 0.8rem !important;
-}
-
-.card,
-.table,
-.modal-content,
-.accordion-item {
-    border: 1px solid rgba(71, 71, 72, 0.1);
-    box-shadow: 0 5px 18px rgba(0,0,0,.06);
-}
-
-.form-control,
-.form-select,
-.input-group-text {
-    border-radius: 0.6rem;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--vc-orange-soft);
-    box-shadow: 0 0 0 .2rem rgba(247, 146, 57, .2);
-}
-
-.vandalia-sidebar {
-    border-right: 1px solid rgba(255,255,255,.08);
-}
-
-.vandalia-sidebar .sidebar {
-    padding: 1rem .85rem 1.25rem;
-}
-
-.vandalia-sidebar .sidebar .menu {
-    align-items: stretch !important;
-}
-
-.vandalia-sidebar .sidebar .menu > .btn,
-.vandalia-sidebar .sidebar .menu > .dropdown > .btn {
-    border-radius: .65rem !important;
+.navbar-center-weather {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.45);
+    color: #474748;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
     font-weight: 600;
 }
 
-.vandalia-sidebar .sidebar .menu .dropdown-menu {
-    border-radius: .65rem;
-    margin-top: .25rem !important;
-    border: 1px solid rgba(255,255,255,.08);
+.content-surface {
+    padding: 1.5rem;
 }
 
-.vandalia-sidebar .sidebar .menu .dropdown-menu .dropdown-item {
-    border-radius: .45rem;
-    margin: .1rem .3rem;
-    width: auto;
+.main-content {
+    background: #E5E5E5 !important;
+}
+
+.main-content > * {
+    animation: fadeSlideIn 0.2s ease;
+}
+
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ui-panel,
+.container-fluid.border.rounded.bg-white,
+.card,
+.table-responsive {
+    border: 1px solid #d7d7d9 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+h1, h2, h3, h4, h5 {
+    letter-spacing: 0.01em;
+}
+
+input.form-control,
+select.form-select,
+textarea.form-control {
+    border-radius: 12px !important;
+    border-color: #c9c9cc;
+}
+
+.table {
+    --bs-table-bg: transparent;
+}
+
+.table thead th {
+    border-bottom-width: 1px;
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    color: #666;
+}
+
+.vandalia-sidebar {
+    border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.vandalia-sidebar .sidebar {
+    padding: 0.4rem 0.7rem 1.2rem;
+}
+
+.nav-quick-link,
+.nav-section-toggle {
+    border-radius: 12px !important;
+    font-weight: 600;
+}
+
+.nav-quick-link {
+    width: 100%;
+    background: #FF6720 !important;
+    border: none !important;
+}
+
+.nav-section-toggle {
+    text-align: left;
+    background: #474748 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.vandalia-sidebar .dropdown-menu {
+    border-radius: 12px;
+    border: 1px solid #e2e2e4;
+    padding: 0.4rem;
+}
+
+.vandalia-sidebar .dropdown-item {
+    border-radius: 8px;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.dashboard-home .home-hero {
+    background: linear-gradient(135deg, rgba(255,103,32,.16), rgba(247,146,57,.18));
+    border: 1px solid rgba(255, 103, 32, 0.2);
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+}
+
+.login-screen {
+    background: radial-gradient(circle at top right, rgba(255,103,32,.20), transparent 35%), #E5E5E5;
+}
+
+.login-card {
+    border-radius: 20px !important;
+    border: 1px solid #d7d7d9;
 }
