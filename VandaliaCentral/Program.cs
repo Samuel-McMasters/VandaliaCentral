@@ -74,6 +74,13 @@ builder.Services
     .Validate(o => !string.IsNullOrWhiteSpace(o.To), "EmployeeTerminationEmail:To is required.")
     .ValidateOnStart();
 
+// Feedback Form
+builder.Services
+    .AddOptions<FeedbackEmailOptions>()
+    .Bind(builder.Configuration.GetSection("FeedbackEmail"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.To), "FeedbackEmail:To is required.")
+    .ValidateOnStart();
+
 // ===============================
 // Hard-coded locations list
 // ===============================
