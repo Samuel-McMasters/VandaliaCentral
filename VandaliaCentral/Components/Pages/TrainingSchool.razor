@@ -9,8 +9,11 @@
 @using Microsoft.Identity.Web
 @using System.IO
 @using System.Linq
+@using System.Text
 @using System.Threading
 @using System.Security.Claims
+@using QuestPDF.Fluent
+@using QuestPDF.Infrastructure
 @using VandaliaCentral.Services
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -936,6 +939,12 @@
                                                 {
                                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                                         <button class="btn btn-primary btn-sm" type="button" @onclick="OpenAssignLearningWindow">Assign Learning</button>
+                                                        <button class="btn btn-outline-primary btn-sm"
+                                                                type="button"
+                                                                disabled="@(isDownloadingSelectedUserProfilePdf || selectedUserTrainingProfile == null)"
+                                                                @onclick="DownloadSelectedUserTrainingProfilePdfAsync">
+                                                            @(isDownloadingSelectedUserProfilePdf ? "Downloading..." : "Download")
+                                                        </button>
                                                         <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="CloseSelectedUserProfile">Close</button>
                                                     </div>
 
@@ -1389,6 +1398,7 @@
     private CancellationTokenSource? linkStatusCts;
     private string? allCoursesStatusMessage;
     private bool showCourseRequestSentModal;
+    private bool isDownloadingSelectedUserProfilePdf;
     private List<CourseAccessRequest> courseAccessRequests = new();
     private bool HasPendingCourseAccessRequests => courseAccessRequests.Any();
 
@@ -3418,6 +3428,129 @@
         }
 
         return detail;
+    }
+
+    private async Task DownloadSelectedUserTrainingProfilePdfAsync()
+    {
+        if (selectedUserProfile == null || selectedUserTrainingProfile == null)
+        {
+            return;
+        }
+
+        isDownloadingSelectedUserProfilePdf = true;
+
+        try
+        {
+            var pdfBytes = BuildSelectedUserTrainingProfilePdfBytes();
+            var fileBase64 = Convert.ToBase64String(pdfBytes);
+            var safeName = SanitizePdfFileName(selectedUserProfile.DisplayName);
+            var fileName = $"training-profile-{safeName}-{DateTime.Now:yyyyMMddHHmmss}.pdf";
+
+            await JS.InvokeVoidAsync("downloadFileFromBytes", fileName, fileBase64, "application/pdf");
+        }
+        finally
+        {
+            isDownloadingSelectedUserProfilePdf = false;
+        }
+    }
+
+    private byte[] BuildSelectedUserTrainingProfilePdfBytes()
+    {
+        var profile = selectedUserTrainingProfile;
+        var user = selectedUserProfile;
+
+        if (profile == null || user == null)
+        {
+            return Array.Empty<byte>();
+        }
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(30);
+                page.Size(QuestPDF.Helpers.PageSizes.Letter);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Header().Column(col =>
+                {
+                    col.Item().Text("User Training Profile").SemiBold().FontSize(18);
+                    col.Item().Text(DateTime.Now.ToString("f")).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1).FontSize(9);
+                });
+
+                page.Content().Column(col =>
+                {
+                    col.Spacing(8);
+
+                    col.Item().Text($"Name: {user.DisplayName ?? "Unknown"}").SemiBold();
+                    col.Item().Text($"Email: {user.Mail ?? user.UserPrincipalName ?? "No email"}");
+                    col.Item().Text($"Office Location: {user.OfficeLocation ?? "Not set"}");
+
+                    col.Item().PaddingTop(8).Text("Active Assigned Learning").SemiBold().FontSize(13);
+                    if (!profile.ActiveAssignedLearning.Any())
+                    {
+                        col.Item().Text("No active learning assignments.");
+                    }
+                    else
+                    {
+                        foreach (var assignment in profile.ActiveAssignedLearning)
+                        {
+                            var detailBuilder = new StringBuilder();
+                            detailBuilder.Append(GetAssignmentTypeLabel(assignment.ItemType));
+                            detailBuilder.Append(" • Assigned ");
+                            detailBuilder.Append(assignment.AssignedAtUtc.LocalDateTime.ToString("g"));
+
+                            if (assignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+                            {
+                                detailBuilder.Append(" • Progress ");
+                                detailBuilder.Append(GetCourseCompletionPercent(assignment));
+                                detailBuilder.Append('%');
+                            }
+
+                            col.Item().PaddingVertical(2).Column(itemCol =>
+                            {
+                                itemCol.Item().Text($"• {assignment.Title}").SemiBold();
+                                itemCol.Item().Text(detailBuilder.ToString()).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                            });
+                        }
+                    }
+
+                    col.Item().PaddingTop(8).Text("Learning History").SemiBold().FontSize(13);
+                    if (!profile.LearningHistory.Any())
+                    {
+                        col.Item().Text("No completed learning history.");
+                    }
+                    else
+                    {
+                        foreach (var history in profile.LearningHistory)
+                        {
+                            col.Item().PaddingVertical(2).Column(itemCol =>
+                            {
+                                itemCol.Item().Text($"• {history.Title}").SemiBold();
+                                itemCol.Item().Text(BuildLearningHistoryDetail(history)).FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                            });
+                        }
+                    }
+                });
+            });
+        }).GeneratePdf();
+    }
+
+    private static string SanitizePdfFileName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "user";
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var safeChars = value
+            .Trim()
+            .Select(c => invalidChars.Contains(c) ? '-' : c)
+            .ToArray();
+
+        var safeValue = new string(safeChars).Replace(' ', '-');
+        return string.IsNullOrWhiteSpace(safeValue) ? "user" : safeValue;
     }
 
     private static bool IsPdfPath(string blobPath)
