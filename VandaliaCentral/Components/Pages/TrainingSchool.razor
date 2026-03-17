@@ -354,7 +354,16 @@
                         @if (HasTrainerToolsAccess)
                         {
                             <li class="nav-item">
-                                <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>Trainer Tools</button>
+                                <button class="nav-link @(activeTab == "trainer-tools" ? "active" : "")" @onclick='() => SetActiveTab("trainer-tools")'>
+                                    Trainer Tools
+                                    @if (HasPendingCourseAccessRequests)
+                                    {
+                                        <span class="ms-1 d-inline-block rounded-circle bg-danger"
+                                              style="width: 8px; height: 8px;"
+                                              title="Pending course access requests"
+                                              aria-label="Pending course access requests"></span>
+                                    }
+                                </button>
                             </li>
                         }
                     </ul>
@@ -490,7 +499,16 @@
                                     <button class='nav-link @(trainerToolTab == "users" ? "active" : "")' @onclick='() => SetTrainerToolTab("users")'>Users</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class='nav-link @(trainerToolTab == "requests" ? "active" : "")' @onclick='() => SetTrainerToolTab("requests")'>Requests</button>
+                                    <button class='nav-link @(trainerToolTab == "requests" ? "active" : "")' @onclick='() => SetTrainerToolTab("requests")'>
+                                        Requests
+                                        @if (HasPendingCourseAccessRequests)
+                                        {
+                                            <span class="ms-1 d-inline-block rounded-circle bg-danger"
+                                                  style="width: 8px; height: 8px;"
+                                                  title="Pending course access requests"
+                                                  aria-label="Pending course access requests"></span>
+                                        }
+                                    </button>
                                 </li>
                             </ul>
 
@@ -1369,6 +1387,7 @@
     private string? allCoursesStatusMessage;
     private bool showCourseRequestSentModal;
     private List<CourseAccessRequest> courseAccessRequests = new();
+    private bool HasPendingCourseAccessRequests => courseAccessRequests.Any();
 
     private class UserTrainingProfileViewModel
     {
