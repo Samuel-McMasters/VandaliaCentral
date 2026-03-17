@@ -12,7 +12,13 @@
 
 
 <PageTitle>Vandalia Central</PageTitle>
-<div class="container-fluid">
+<div class="container-fluid dashboard-home">
+    <div class="home-hero mb-4">
+        <div>
+            <h2 class="mb-1">Welcome to Vandalia Central</h2>
+            <p class="mb-0 text-muted">Your daily hub for updates, charts, and upcoming company events.</p>
+        </div>
+    </div>
 
     <!-- Bottom Row -->
     <div class="row g-4 pb-4">
@@ -20,7 +26,7 @@
         <!-- Left Column w/ fullscreen button -->
         <div class="col-12 col-lg-7 d-flex flex-column">
             <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
+            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative ui-panel">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">@mmPdfName</h5>
                     <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
@@ -50,7 +56,7 @@
         <!-- Right Column -->
         <div class="col-12 col-lg-5 d-flex flex-column gap-4">
             <!-- Bonus Chart -->
-            <div class="p-4 border rounded bg-white shadow-sm flex-fill" style="min-height: 500px;">
+            <div class="p-4 border rounded bg-white shadow-sm flex-fill ui-panel" style="min-height: 500px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">Bonus Chart</h5>
                     <a href=@bcPdf target="_blank" class="btn btn-sm btn-outline-secondary">
@@ -75,7 +81,7 @@
 
             </div>
 
-            <div class="p-4 border rounded bg-white shadow-sm flex-fill d-flex flex-column" style="min-height: 350px;">
+            <div class="p-4 border rounded bg-white shadow-sm flex-fill d-flex flex-column ui-panel" style="min-height: 350px;">
                 <h5 class="mb-3">Company Calendar</h5>
 
                 <!-- Scrollable container -->
