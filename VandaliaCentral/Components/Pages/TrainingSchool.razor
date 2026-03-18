@@ -1354,6 +1354,8 @@
     private int examResultScorePercent;
     private string examResultModalTitle = string.Empty;
     private string examResultModalMessage = string.Empty;
+    private int? pendingPassedCourseNextStepIndex;
+    private bool pendingPassedCourseAssignmentCompleted;
     private bool showAssignLearningModal;
     private bool showUserTrainingProfileModal;
     private bool isCompletingLaunchedVideo;
@@ -2892,6 +2894,8 @@
         examResultModalTitle = string.Empty;
         examResultModalMessage = string.Empty;
         showExamResultModal = false;
+        pendingPassedCourseNextStepIndex = null;
+        pendingPassedCourseAssignmentCompleted = false;
 
         for (var i = 0; i < exam.Questions.Count; i++)
         {
@@ -2904,6 +2908,8 @@
         launchedExamResponseContext = string.Empty;
         launchedExamResponses = new Dictionary<int, HashSet<int>>();
         examResultScorePercent = 0;
+        pendingPassedCourseNextStepIndex = null;
+        pendingPassedCourseAssignmentCompleted = false;
         CloseTrainingSchoolExamResultModalV5();
     }
 
@@ -2955,6 +2961,8 @@
 
     private async Task SubmitTrainingSchoolExamAttemptV5(TrainingExam exam)
     {
+        var submittedCourseStepIndex = launchedCourseStepIndex;
+
         if (exam.Questions.Count == 0)
         {
             examResultPassed = false;
@@ -2988,6 +2996,14 @@
         if (examResultPassed)
         {
             await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam, scorePercent);
+
+            if (launchedAssignment != null
+                && launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase))
+            {
+                launchedCourseStepIndex = submittedCourseStepIndex;
+                launchedCourseStepExam = exam;
+            }
+
             examResultModalTitle = "Congratulations!";
             examResultModalMessage = $"Congratulations! You passed. Score received: {scorePercent}%.";
         }
@@ -3121,6 +3137,8 @@
 
         if (completion.AssignmentCompleted)
         {
+            pendingPassedCourseAssignmentCompleted = true;
+            pendingPassedCourseNextStepIndex = null;
             return;
         }
 
@@ -3129,8 +3147,13 @@
 
         if (nextIndex >= 0)
         {
-            launchedCourseStepIndex = nextIndex;
-            await LoadTrainingSchoolActiveExamStepV5Async();
+            pendingPassedCourseNextStepIndex = nextIndex;
+            pendingPassedCourseAssignmentCompleted = false;
+        }
+        else
+        {
+            pendingPassedCourseNextStepIndex = null;
+            pendingPassedCourseAssignmentCompleted = false;
         }
     }
 
@@ -3304,6 +3327,30 @@
         var shouldReturnToMyCourses = examResultPassed;
         CloseTrainingSchoolExamResultModalV5();
 
+        if (!shouldReturnToMyCourses)
+        {
+            return;
+        }
+
+        if (launchedAssignment != null
+            && launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+            && launchedCourse != null)
+        {
+            if (pendingPassedCourseAssignmentCompleted)
+            {
+                pendingPassedCourseAssignmentCompleted = false;
+                pendingPassedCourseNextStepIndex = null;
+            }
+            else if (pendingPassedCourseNextStepIndex.HasValue)
+            {
+                launchedCourseStepIndex = pendingPassedCourseNextStepIndex.Value;
+                pendingPassedCourseNextStepIndex = null;
+                await LoadTrainingSchoolActiveExamStepV5Async();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+
         if (shouldReturnToMyCourses)
         {
             launchedAssignment = null;
@@ -3311,6 +3358,8 @@
             launchedCourse = null;
             launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
+            pendingPassedCourseNextStepIndex = null;
+            pendingPassedCourseAssignmentCompleted = false;
             ResetTrainingSchoolExamAttemptV5();
             activeTab = "my-courses";
             NavigationManager.NavigateTo("/training-school", forceLoad: false);
