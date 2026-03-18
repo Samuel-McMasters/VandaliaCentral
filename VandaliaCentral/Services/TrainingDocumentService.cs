@@ -125,6 +125,7 @@ namespace VandaliaCentral.Services
         private const string UserTrainingProfilePrefix = "user-training-profiles/";
         private const string CourseFolderPrefix = "courses/";
         private const string LinkFolderPrefix = "links/";
+        private const string CourseAccessRequestsFolderPrefix = "course-access-requests/";
         private const string CourseAccessRequestsPath = "course-access-requests/requests.json";
         private const long MaxFileSizeBytes = 500L * 1024 * 1024;
 
@@ -156,7 +157,8 @@ namespace VandaliaCentral.Services
                 if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase)
-                    || blob.Name.StartsWith(LinkFolderPrefix, StringComparison.OrdinalIgnoreCase))
+                    || blob.Name.StartsWith(LinkFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(CourseAccessRequestsFolderPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
