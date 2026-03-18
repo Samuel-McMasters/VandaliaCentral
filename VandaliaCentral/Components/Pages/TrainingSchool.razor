@@ -330,11 +330,19 @@
                                         <p class="mb-0">@examResultModalMessage</p>
                                     </div>
                                     <div class="modal-footer">
-                                        @if (!examResultPassed)
+                                        @if (ShouldShowTrainingSchoolStandaloneExamPassActionsV5())
                                         {
-                                            <button class="btn btn-outline-secondary" type="button" @onclick="() => RetakeTrainingSchoolExamV5Async()">Retake Exam</button>
+                                            <button class="btn btn-success" type="button" @onclick="() => ProceedTrainingSchoolStandaloneExamPassV5Async()">Proceed</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="() => CloseTrainingSchoolExamResultModalV5()">Close</button>
                                         }
-                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="() => HandleTrainingSchoolExamPrimaryActionV5Async()">OK</button>
+                                        else
+                                        {
+                                            @if (!examResultPassed)
+                                            {
+                                                <button class="btn btn-outline-secondary" type="button" @onclick="() => RetakeTrainingSchoolExamV5Async()">Retake Exam</button>
+                                            }
+                                            <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="() => HandleTrainingSchoolExamPrimaryActionV5Async()">OK</button>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -2981,7 +2989,7 @@
         {
             await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam, scorePercent);
             examResultModalTitle = "Congratulations!";
-            examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
+            examResultModalMessage = $"Congratulations! You passed. Score received: {scorePercent}%.";
         }
         else
         {
@@ -3310,6 +3318,11 @@
         }
     }
 
+    private async Task ProceedTrainingSchoolStandaloneExamPassV5Async()
+    {
+        await HandleTrainingSchoolExamPrimaryActionV5Async();
+    }
+
     private async Task RetakeTrainingSchoolExamV5Async()
     {
         showExamResultModal = false;
@@ -3356,6 +3369,13 @@
 
         return launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
             && launchedCourseStepExam != null;
+    }
+
+    private bool ShouldShowTrainingSchoolStandaloneExamPassActionsV5()
+    {
+        return examResultPassed
+            && launchedAssignment != null
+            && launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV5(TrainingExamQuestion question, bool usesOneBasedIndexes)
