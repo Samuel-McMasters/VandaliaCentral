@@ -156,7 +156,15 @@ namespace VandaliaCentral.Services
 
             await foreach (var blob in _containerClient.GetBlobsAsync(prefix: DocumentFolderPrefix))
             {
+<<<<<<< codex/fix-folder-visibility-in-training-documents-lbfiul
                 if (blob.Name.EndsWith("/", StringComparison.Ordinal))
+=======
+                if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(LinkFolderPrefix, StringComparison.OrdinalIgnoreCase)
+                    || blob.Name.StartsWith(CourseAccessRequestsFolderPrefix, StringComparison.OrdinalIgnoreCase))
+>>>>>>> chatGPT
                 {
                     continue;
                 }
