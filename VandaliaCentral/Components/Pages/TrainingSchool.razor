@@ -574,8 +574,8 @@
                                                 </div>
                                                 <div class="d-flex gap-2 flex-wrap">
                                                     <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
-                                                    <a class="btn btn-sm btn-primary" href="@($"/api/training-documents/download?fileName={Uri.EscapeDataString(doc.FileName)}")">Download</a>
-                                                    <button class="btn btn-sm btn-danger" @onclick='() => DeleteTrainingDocument(doc.FileName)'>Delete</button>
+                                                    <a class="btn btn-sm btn-primary" href="@($"/api/training-documents/download?fileName={Uri.EscapeDataString(doc.BlobPath)}")">Download</a>
+                                                    <button class="btn btn-sm btn-danger" @onclick='() => DeleteTrainingDocument(doc.BlobPath)'>Delete</button>
                                                 </div>
                                             </li>
                                         }
@@ -1504,7 +1504,7 @@
             {
                 Title = Path.GetFileNameWithoutExtension(d.FileName),
                 ItemType = "Document",
-                BlobPath = d.FileName,
+                BlobPath = d.BlobPath,
                 ContentType = d.ContentType
             });
 

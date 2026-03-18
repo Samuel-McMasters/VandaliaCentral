@@ -10,6 +10,7 @@ namespace VandaliaCentral.Services
     public class TrainingDocumentInfo
     {
         public string FileName { get; set; } = string.Empty;
+        public string BlobPath { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public string ContentType { get; set; } = string.Empty;
         public long? SizeInBytes { get; set; }
@@ -124,6 +125,7 @@ namespace VandaliaCentral.Services
         private const string ExamFolderPrefix = "exams/";
         private const string UserTrainingProfilePrefix = "user-training-profiles/";
         private const string CourseFolderPrefix = "courses/";
+        private const string DocumentFolderPrefix = "documents/";
         private const string LinkFolderPrefix = "links/";
         private const string CourseAccessRequestsFolderPrefix = "course-access-requests/";
         private const string CourseAccessRequestsPath = "course-access-requests/requests.json";
@@ -152,20 +154,25 @@ namespace VandaliaCentral.Services
         {
             var documents = new List<TrainingDocumentInfo>();
 
-            await foreach (var blob in _containerClient.GetBlobsAsync())
+            await foreach (var blob in _containerClient.GetBlobsAsync(prefix: DocumentFolderPrefix))
             {
+<<<<<<< codex/fix-folder-visibility-in-training-documents-lbfiul
+                if (blob.Name.EndsWith("/", StringComparison.Ordinal))
+=======
                 if (blob.Name.StartsWith(ExamFolderPrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(UserTrainingProfilePrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(CourseFolderPrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(LinkFolderPrefix, StringComparison.OrdinalIgnoreCase)
                     || blob.Name.StartsWith(CourseAccessRequestsFolderPrefix, StringComparison.OrdinalIgnoreCase))
+>>>>>>> chatGPT
                 {
                     continue;
                 }
 
                 documents.Add(new TrainingDocumentInfo
                 {
-                    FileName = blob.Name,
+                    FileName = Path.GetFileName(blob.Name),
+                    BlobPath = blob.Name,
                     Url = _containerClient.GetBlobClient(blob.Name).Uri.ToString(),
                     ContentType = blob.Properties.ContentType ?? "application/octet-stream",
                     SizeInBytes = blob.Properties.ContentLength,
@@ -721,7 +728,7 @@ namespace VandaliaCentral.Services
                 throw new InvalidOperationException("Unsupported file type. Please upload a .pdf or .mp4 file.");
             }
 
-            var blobClient = _containerClient.GetBlobClient(safeFileName);
+            var blobClient = _containerClient.GetBlobClient($"{DocumentFolderPrefix}{safeFileName}");
             await using var stream = file.OpenReadStream(maxAllowedSize: MaxFileSizeBytes);
 
             var contentType = string.IsNullOrWhiteSpace(file.ContentType)
@@ -734,13 +741,13 @@ namespace VandaliaCentral.Services
 
         public async Task<BlobDownloadStreamingResult?> DownloadDocumentAsync(string fileName)
         {
-            var safeFileName = Path.GetFileName(fileName);
-            if (string.IsNullOrWhiteSpace(safeFileName))
+            var blobPath = GetDocumentBlobPath(fileName);
+            if (string.IsNullOrWhiteSpace(blobPath))
             {
                 return null;
             }
 
-            var blobClient = _containerClient.GetBlobClient(safeFileName);
+            var blobClient = _containerClient.GetBlobClient(blobPath);
 
             try
             {
@@ -755,14 +762,36 @@ namespace VandaliaCentral.Services
 
         public async Task DeleteDocumentAsync(string fileName)
         {
-            var safeFileName = Path.GetFileName(fileName);
-            if (string.IsNullOrWhiteSpace(safeFileName))
+            var blobPath = GetDocumentBlobPath(fileName);
+            if (string.IsNullOrWhiteSpace(blobPath))
             {
                 return;
             }
 
-            await _containerClient.DeleteBlobIfExistsAsync(safeFileName);
-            await RemoveActiveAssignmentsByBlobPathAsync(safeFileName);
+            await _containerClient.DeleteBlobIfExistsAsync(blobPath);
+            await RemoveActiveAssignmentsByBlobPathAsync(blobPath);
+        }
+
+        private static string? GetDocumentBlobPath(string? fileNameOrBlobPath)
+        {
+            if (string.IsNullOrWhiteSpace(fileNameOrBlobPath))
+            {
+                return null;
+            }
+
+            var normalized = fileNameOrBlobPath.Replace('\\', '/').Trim();
+            if (normalized.StartsWith(DocumentFolderPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return normalized;
+            }
+
+            var safeFileName = Path.GetFileName(normalized);
+            if (string.IsNullOrWhiteSpace(safeFileName))
+            {
+                return null;
+            }
+
+            return $"{DocumentFolderPrefix}{safeFileName}";
         }
 
         public async Task RemoveActiveAssignmentsByBlobPathAsync(string blobPath)
