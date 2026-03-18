@@ -50,7 +50,19 @@ namespace VandaliaCentral.Services
             if (latestBlob != null)
             {
                 var blobClient = containerClient.GetBlobClient(latestBlob.Name);
-                return blobClient.Uri.ToString();
+                var uriBuilder = new UriBuilder(blobClient.Uri);
+                var cacheBustToken = latestModified?.ToUnixTimeMilliseconds().ToString() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+                if (string.IsNullOrWhiteSpace(uriBuilder.Query))
+                {
+                    uriBuilder.Query = $"v={cacheBustToken}";
+                }
+                else
+                {
+                    uriBuilder.Query = $"{uriBuilder.Query.TrimStart('?')}&v={cacheBustToken}";
+                }
+
+                return uriBuilder.Uri.ToString();
             }
 
             return null;
