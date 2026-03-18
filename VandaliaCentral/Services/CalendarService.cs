@@ -10,6 +10,7 @@ namespace VandaliaCentral.Services
     {
         private readonly BlobContainerClient _containerClient;
         private const string BlobName = "company-calendar.json";
+        private static readonly TimeZoneInfo EasternTimeZone = ResolveEasternTimeZone();
 
         public CalendarService(IConfiguration configuration)
         {
@@ -30,7 +31,14 @@ namespace VandaliaCentral.Services
                 if (!string.IsNullOrWhiteSpace(json))
                 {
                     var events = JsonSerializer.Deserialize<List<CalendarEvent>>(json) ?? new();
-                    return events.OrderBy(e => e.Date).ToList();
+                    var activeEvents = RemoveExpiredEvents(events, out var removedAny);
+
+                    if (removedAny)
+                    {
+                        await SaveCalendarAsync(activeEvents);
+                    }
+
+                    return activeEvents.OrderBy(e => e.Date).ToList();
                 }
             }
 
@@ -39,11 +47,35 @@ namespace VandaliaCentral.Services
 
         public async Task SaveCalendarAsync(List<CalendarEvent> events)
         {
-            var json = JsonSerializer.Serialize(events.OrderBy(e => e.Date));
+            var activeEvents = RemoveExpiredEvents(events, out _);
+            var json = JsonSerializer.Serialize(activeEvents.OrderBy(e => e.Date));
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
 
             var blobClient = _containerClient.GetBlobClient(BlobName);
             await blobClient.UploadAsync(stream, overwrite: true);
+        }
+
+        private static List<CalendarEvent> RemoveExpiredEvents(List<CalendarEvent> events, out bool removedAny)
+        {
+            var easternNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EasternTimeZone);
+            var filtered = events
+                .Where(e => e.Date.Date >= easternNow.Date)
+                .ToList();
+
+            removedAny = filtered.Count != events.Count;
+            return filtered;
+        }
+
+        private static TimeZoneInfo ResolveEasternTimeZone()
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+            }
         }
     }
 }

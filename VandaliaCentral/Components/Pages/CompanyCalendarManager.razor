@@ -69,8 +69,6 @@
             }
         </ul>
 
-        <button class="btn btn-primary mt-3" @onclick="SaveCalendar">Save Changes</button>
-
         @if (showSaveSuccess)
         {
             <div class="text-success fw-bold mt-2">✓ Calendar saved!</div>
@@ -90,7 +88,7 @@
         calendarEvents = await CalendarService.LoadCalendarAsync();
     }
 
-    private void AddEvent()
+    private async Task AddEvent()
     {
         if (string.IsNullOrWhiteSpace(newEvent.Title))
         {
@@ -105,6 +103,7 @@
         });
 
         newEvent = new CalendarEvent { Date = DateTime.Today };
+        await SaveCalendar();
     }
 
     private void StartEditing(CalendarEvent ev)
@@ -144,7 +143,7 @@
         ResetEditingState();
     }
 
-    private void DeleteEvent(CalendarEvent ev)
+    private async Task DeleteEvent(CalendarEvent ev)
     {
         if (ReferenceEquals(editingEvent, ev))
         {
@@ -152,6 +151,7 @@
         }
 
         calendarEvents?.Remove(ev);
+        await SaveCalendar();
     }
 
     private async Task SaveCalendar()
