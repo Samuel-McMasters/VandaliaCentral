@@ -330,11 +330,19 @@
                                         <p class="mb-0">@examResultModalMessage</p>
                                     </div>
                                     <div class="modal-footer">
-                                        @if (!examResultPassed)
+                                        @if (ShouldShowTrainingSchoolStandaloneExamPassActionsV5())
                                         {
-                                            <button class="btn btn-outline-secondary" type="button" @onclick="() => RetakeTrainingSchoolExamV5Async()">Retake Exam</button>
+                                            <button class="btn btn-success" type="button" @onclick="() => ProceedTrainingSchoolStandaloneExamPassV5Async()">Proceed</button>
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="() => CloseTrainingSchoolExamResultModalV5()">Close</button>
                                         }
-                                        <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="() => HandleTrainingSchoolExamPrimaryActionV5Async()">OK</button>
+                                        else
+                                        {
+                                            @if (!examResultPassed)
+                                            {
+                                                <button class="btn btn-outline-secondary" type="button" @onclick="() => RetakeTrainingSchoolExamV5Async()">Retake Exam</button>
+                                            }
+                                            <button class="btn @(examResultPassed ? "btn-success" : "btn-primary")" type="button" @onclick="() => HandleTrainingSchoolExamPrimaryActionV5Async()">OK</button>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -1346,6 +1354,8 @@
     private int examResultScorePercent;
     private string examResultModalTitle = string.Empty;
     private string examResultModalMessage = string.Empty;
+    private int? pendingPassedCourseNextStepIndex;
+    private bool pendingPassedCourseAssignmentCompleted;
     private bool showAssignLearningModal;
     private bool showUserTrainingProfileModal;
     private bool isCompletingLaunchedVideo;
@@ -2884,6 +2894,8 @@
         examResultModalTitle = string.Empty;
         examResultModalMessage = string.Empty;
         showExamResultModal = false;
+        pendingPassedCourseNextStepIndex = null;
+        pendingPassedCourseAssignmentCompleted = false;
 
         for (var i = 0; i < exam.Questions.Count; i++)
         {
@@ -2896,6 +2908,8 @@
         launchedExamResponseContext = string.Empty;
         launchedExamResponses = new Dictionary<int, HashSet<int>>();
         examResultScorePercent = 0;
+        pendingPassedCourseNextStepIndex = null;
+        pendingPassedCourseAssignmentCompleted = false;
         CloseTrainingSchoolExamResultModalV5();
     }
 
@@ -2981,7 +2995,7 @@
         {
             await CompleteTrainingSchoolAssignmentIfEligibleV5Async(exam, scorePercent);
             examResultModalTitle = "Congratulations!";
-            examResultModalMessage = $"Congratulation! You passed. Score: {scorePercent}%.";
+            examResultModalMessage = $"Congratulations! You passed. Score received: {scorePercent}%.";
         }
         else
         {
@@ -3113,6 +3127,8 @@
 
         if (completion.AssignmentCompleted)
         {
+            pendingPassedCourseAssignmentCompleted = true;
+            pendingPassedCourseNextStepIndex = null;
             return;
         }
 
@@ -3121,8 +3137,13 @@
 
         if (nextIndex >= 0)
         {
-            launchedCourseStepIndex = nextIndex;
-            await LoadTrainingSchoolActiveExamStepV5Async();
+            pendingPassedCourseNextStepIndex = nextIndex;
+            pendingPassedCourseAssignmentCompleted = false;
+        }
+        else
+        {
+            pendingPassedCourseNextStepIndex = null;
+            pendingPassedCourseAssignmentCompleted = false;
         }
     }
 
@@ -3296,6 +3317,30 @@
         var shouldReturnToMyCourses = examResultPassed;
         CloseTrainingSchoolExamResultModalV5();
 
+        if (!shouldReturnToMyCourses)
+        {
+            return;
+        }
+
+        if (launchedAssignment != null
+            && launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
+            && launchedCourse != null)
+        {
+            if (pendingPassedCourseAssignmentCompleted)
+            {
+                pendingPassedCourseAssignmentCompleted = false;
+                pendingPassedCourseNextStepIndex = null;
+            }
+            else if (pendingPassedCourseNextStepIndex.HasValue)
+            {
+                launchedCourseStepIndex = pendingPassedCourseNextStepIndex.Value;
+                pendingPassedCourseNextStepIndex = null;
+                await LoadTrainingSchoolActiveExamStepV5Async();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+
         if (shouldReturnToMyCourses)
         {
             launchedAssignment = null;
@@ -3303,11 +3348,18 @@
             launchedCourse = null;
             launchedCourseStepExam = null;
             launchedCourseStepIndex = 0;
+            pendingPassedCourseNextStepIndex = null;
+            pendingPassedCourseAssignmentCompleted = false;
             ResetTrainingSchoolExamAttemptV5();
             activeTab = "my-courses";
             NavigationManager.NavigateTo("/training-school", forceLoad: false);
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task ProceedTrainingSchoolStandaloneExamPassV5Async()
+    {
+        await HandleTrainingSchoolExamPrimaryActionV5Async();
     }
 
     private async Task RetakeTrainingSchoolExamV5Async()
@@ -3356,6 +3408,13 @@
 
         return launchedAssignment.ItemType.Equals("Course", StringComparison.OrdinalIgnoreCase)
             && launchedCourseStepExam != null;
+    }
+
+    private bool ShouldShowTrainingSchoolStandaloneExamPassActionsV5()
+    {
+        return examResultPassed
+            && launchedAssignment != null
+            && launchedAssignment.ItemType.Equals("Exam", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<int> NormalizeTrainingSchoolExamCorrectIndexesV5(TrainingExamQuestion question, bool usesOneBasedIndexes)
