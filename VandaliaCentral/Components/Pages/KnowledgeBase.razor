@@ -30,7 +30,42 @@
         </aside>
 
         <main class="kb-main p-3 p-md-4">
-            @if (SelectedFolder is null)
+            <div class="mb-3">
+                <input type="search"
+                       class="form-control"
+                       placeholder="Search all article titles..."
+                       @bind="ArticleSearchTerm"
+                       @bind:event="oninput" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ArticleSearchTerm))
+            {
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Search Results</h4>
+                    <span class="text-muted small">@FilteredArticles.Count article(s)</span>
+                </div>
+
+                @if (FilteredArticles.Count == 0)
+                {
+                    <p class="text-muted">No articles match your search.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var result in FilteredArticles)
+                        {
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(result)">
+                                    <div class="fw-semibold">@result.Article.Title</div>
+                                    <div class="text-muted small mt-1">@result.Folder.Name</div>
+                                    <div class="text-muted small mt-2">Click to open</div>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else if (SelectedFolder is null)
             {
                 <div class="text-center text-muted py-5">
                     <h4 class="mb-2">Knowledge Base</h4>
@@ -121,6 +156,17 @@
     private List<KnowledgeBaseFolderItem> Folders { get; set; } = new();
     private KnowledgeBaseFolderItem? SelectedFolder;
     private KnowledgeBaseArticleItem? SelectedArticle;
+    private string ArticleSearchTerm { get; set; } = string.Empty;
+
+    private List<KnowledgeBaseSearchResultItem> FilteredArticles =>
+        Folders
+            .SelectMany(folder => folder.Articles.Select(article => new KnowledgeBaseSearchResultItem
+            {
+                Folder = folder,
+                Article = article
+            }))
+            .Where(result => result.Article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -138,8 +184,22 @@
         SelectedArticle = article;
     }
 
+    private void OpenArticle(KnowledgeBaseSearchResultItem result)
+    {
+        SelectedFolder = result.Folder;
+        SelectedArticle = result.Article;
+    }
+
     private void BackToTiles()
     {
         SelectedArticle = null;
+    }
+
+    private sealed class KnowledgeBaseSearchResultItem
+    {
+        public required KnowledgeBaseFolderItem Folder { get; init; }
+        public required KnowledgeBaseArticleItem Article { get; init; }
+        public string Title => Article.Title;
+        public string EmbedUrl => Article.EmbedUrl;
     }
 }
