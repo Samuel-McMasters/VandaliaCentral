@@ -281,5 +281,6 @@
         public required KnowledgeBaseArticleItem Article { get; init; }
         public string Title => Article.Title;
         public string EmbedUrl => Article.EmbedUrl;
+        public int ViewCount { get; set; }
     }
 }
