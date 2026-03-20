@@ -2,7 +2,10 @@
 @layout VandaliaCentral.Components.Layout.TopBarLayout
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject KnowledgeBaseService KnowledgeBaseService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject GraphUserService GraphUserService
 
 <PageTitle>Knowledge Base</PageTitle>
 
@@ -207,6 +210,8 @@
 @code {
     private const int HighlightArticleCount = 5;
     private List<KnowledgeBaseFolderItem> Folders { get; set; } = new();
+    private List<KnowledgeBaseSecurityTagItem> SecurityTags { get; set; } = new();
+    private HashSet<string> UserGroupIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     private KnowledgeBaseFolderItem? SelectedFolder;
     private KnowledgeBaseArticleItem? SelectedArticle;
     private string ArticleSearchTerm { get; set; } = string.Empty;
@@ -241,7 +246,19 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Folders = await KnowledgeBaseService.LoadFoldersAsync();
+        var snapshot = await KnowledgeBaseService.LoadSnapshotAsync();
+        SecurityTags = snapshot.SecurityTags;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            UserGroupIds = await GetUserGroupIdsAsync(userId);
+        }
+
+        Folders = FilterFoldersForUser(snapshot.Folders);
     }
 
     private void SelectFolder(KnowledgeBaseFolderItem folder)
@@ -262,7 +279,7 @@
     {
         article.ViewCount++;
         SelectedArticle = article;
-        await KnowledgeBaseService.SaveFoldersAsync(Folders);
+        await SaveArticleViewCountAsync(article.Id);
     }
 
     private Task OpenArticle(KnowledgeBaseSearchResultItem result)
@@ -283,5 +300,92 @@
         public string Title => Article.Title;
         public string EmbedUrl => Article.EmbedUrl;
         public int ViewCount { get; set; }
+    }
+
+    private List<KnowledgeBaseFolderItem> FilterFoldersForUser(List<KnowledgeBaseFolderItem> folders)
+    {
+        var filteredFolders = new List<KnowledgeBaseFolderItem>();
+
+        foreach (var folder in folders)
+        {
+            var folderAllowed = IsItemVisible(folder.SecurityTagIds, folder.AllowedGroupIds);
+
+            var visibleArticles = folder.Articles
+                .Where(article => folderAllowed && IsItemVisible(article.SecurityTagIds, article.AllowedGroupIds))
+                .ToList();
+
+            if (!folderAllowed || visibleArticles.Count == 0)
+            {
+                continue;
+            }
+
+            filteredFolders.Add(new KnowledgeBaseFolderItem
+            {
+                Id = folder.Id,
+                Name = folder.Name,
+                CreatedOn = folder.CreatedOn,
+                SecurityTagIds = folder.SecurityTagIds.ToList(),
+                AllowedGroupIds = folder.AllowedGroupIds.ToList(),
+                Articles = visibleArticles
+            });
+        }
+
+        return filteredFolders;
+    }
+
+    private bool IsItemVisible(List<Guid>? tagIds, List<string>? directGroupIds)
+    {
+        var hasDirectGroups = directGroupIds != null && directGroupIds.Count > 0;
+        var hasTags = tagIds != null && tagIds.Count > 0;
+
+        if (!hasDirectGroups && !hasTags)
+        {
+            return true;
+        }
+
+        if (hasDirectGroups && directGroupIds!.Any(groupId => UserGroupIds.Contains(groupId)))
+        {
+            return true;
+        }
+
+        if (hasTags && tagIds!.Any(tagId => IsUserInSecurityTag(tagId)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsUserInSecurityTag(Guid tagId)
+    {
+        var tag = SecurityTags.FirstOrDefault(item => item.Id == tagId);
+        if (tag == null || tag.AllowedGroupIds.Count == 0)
+        {
+            return false;
+        }
+
+        return tag.AllowedGroupIds.Any(groupId => UserGroupIds.Contains(groupId));
+    }
+
+    private async Task<HashSet<string>> GetUserGroupIdsAsync(string userId)
+    {
+        var groups = await GraphUserService.GetGroupsAsync();
+        return await GraphUserService.GetUserMemberGroupIdsAsync(userId, groups.Select(group => group.Id));
+    }
+
+    private async Task SaveArticleViewCountAsync(Guid articleId)
+    {
+        var snapshot = await KnowledgeBaseService.LoadSnapshotAsync();
+        foreach (var folder in snapshot.Folders)
+        {
+            var target = folder.Articles.FirstOrDefault(article => article.Id == articleId);
+            if (target != null)
+            {
+                target.ViewCount++;
+                break;
+            }
+        }
+
+        await KnowledgeBaseService.SaveSnapshotAsync(snapshot);
     }
 }
