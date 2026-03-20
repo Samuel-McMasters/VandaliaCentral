@@ -41,7 +41,7 @@
             {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">@SelectedFolder.Name</h4>
-                    <span class="text-muted small">@SelectedFolder.Articles.Count article(s)</span>
+                    <span class="text-muted small">@FilteredArticles.Count article(s)</span>
                 </div>
 
                 @if (SelectedFolder.Articles.Count == 0)
@@ -50,8 +50,22 @@
                 }
                 else
                 {
+                    <div class="mb-3">
+                        <input type="search"
+                               class="form-control"
+                               placeholder="Search article titles..."
+                               @bind="ArticleSearchTerm"
+                               @bind:event="oninput" />
+                    </div>
+
+                    @if (FilteredArticles.Count == 0)
+                    {
+                        <p class="text-muted">No articles match your search.</p>
+                    }
+                    else
+                    {
                     <div class="row g-3">
-                        @foreach (var article in SelectedFolder.Articles)
+                        @foreach (var article in FilteredArticles)
                         {
                             <div class="col-12 col-md-6 col-xl-4">
                                 <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
@@ -61,6 +75,7 @@
                             </div>
                         }
                     </div>
+                    }
                 }
             }
             else
@@ -121,6 +136,13 @@
     private List<KnowledgeBaseFolderItem> Folders { get; set; } = new();
     private KnowledgeBaseFolderItem? SelectedFolder;
     private KnowledgeBaseArticleItem? SelectedArticle;
+    private string ArticleSearchTerm { get; set; } = string.Empty;
+
+    private List<KnowledgeBaseArticleItem> FilteredArticles =>
+        SelectedFolder?.Articles
+            .Where(article => string.IsNullOrWhiteSpace(ArticleSearchTerm) ||
+                              article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList() ?? new List<KnowledgeBaseArticleItem>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,6 +153,7 @@
     {
         SelectedFolder = folder;
         SelectedArticle = null;
+        ArticleSearchTerm = string.Empty;
     }
 
     private void OpenArticle(KnowledgeBaseArticleItem article)
