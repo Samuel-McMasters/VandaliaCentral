@@ -6,12 +6,6 @@ using System.Net.Http.Headers;
 
 namespace VandaliaCentral.Services
 {
-    public sealed class EntraGroupOption
-    {
-        public string Id { get; init; } = string.Empty;
-        public string DisplayName { get; init; } = string.Empty;
-    }
-
     public class GraphUserService
     {
         private readonly ITokenAcquisition _tokenAcquisition;
@@ -237,90 +231,6 @@ namespace VandaliaCentral.Services
             {
                 Console.WriteLine($"Graph error: {ex.Message}");
                 return false;
-            }
-        }
-
-        public async Task<List<EntraGroupOption>> GetGroupsAsync()
-        {
-            try
-            {
-                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
-                {
-                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Group.Read.All" });
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }));
-
-                var groups = new List<EntraGroupOption>();
-
-                var page = await graphClient.Groups
-                    .Request()
-                    .Select("id,displayName")
-                    .Top(200)
-                    .GetAsync();
-
-                while (page != null)
-                {
-                    groups.AddRange(page.CurrentPage
-                        .Where(group => !string.IsNullOrWhiteSpace(group.Id) && !string.IsNullOrWhiteSpace(group.DisplayName))
-                        .Select(group => new EntraGroupOption
-                        {
-                            Id = group.Id!,
-                            DisplayName = group.DisplayName!
-                        }));
-
-                    if (page.NextPageRequest != null)
-                    {
-                        page = await page.NextPageRequest.GetAsync();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                return groups
-                    .OrderBy(group => group.DisplayName, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                _consentHandler.HandleException(ex);
-                return new List<EntraGroupOption>();
-            }
-        }
-
-        public async Task<HashSet<string>> GetUserMemberGroupIdsAsync(string userId, IEnumerable<string> candidateGroupIds)
-        {
-            var normalizedIds = candidateGroupIds
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => id.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (string.IsNullOrWhiteSpace(userId) || normalizedIds.Count == 0)
-            {
-                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            try
-            {
-                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
-                {
-                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "GroupMember.Read.All" });
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }));
-
-                var result = await graphClient.Users[userId]
-                    .CheckMemberGroups(normalizedIds)
-                    .Request()
-                    .PostAsync();
-
-                return result.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            }
-            catch (Exception ex)
-            {
-                _consentHandler.HandleException(ex);
-                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
         }
     }

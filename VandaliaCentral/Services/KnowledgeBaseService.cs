@@ -17,13 +17,13 @@ public class KnowledgeBaseService
         _containerClient.CreateIfNotExists();
     }
 
-    public async Task<KnowledgeBaseSnapshot> LoadSnapshotAsync()
+    public async Task<List<KnowledgeBaseFolderItem>> LoadFoldersAsync()
     {
         var blobClient = _containerClient.GetBlobClient(BlobName);
 
         if (!await blobClient.ExistsAsync())
         {
-            return new KnowledgeBaseSnapshot();
+            return new List<KnowledgeBaseFolderItem>();
         }
 
         var download = await blobClient.DownloadContentAsync();
@@ -32,59 +32,24 @@ public class KnowledgeBaseService
 
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new KnowledgeBaseSnapshot();
+            return new List<KnowledgeBaseFolderItem>();
         }
 
-        // Backwards compatibility: old payload is just a JSON array of folders.
-        if (json.TrimStart().StartsWith("[", StringComparison.Ordinal))
+        var folders = JsonSerializer.Deserialize<List<KnowledgeBaseFolderItem>>(json) ?? new List<KnowledgeBaseFolderItem>();
+
+        foreach (var folder in folders)
         {
-            var legacyFolders = JsonSerializer.Deserialize<List<KnowledgeBaseFolderItem>>(json) ?? new List<KnowledgeBaseFolderItem>();
-            NormalizeFolders(legacyFolders);
-            return new KnowledgeBaseSnapshot
-            {
-                Folders = legacyFolders
-                    .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-                    .ToList(),
-                SecurityTags = new List<KnowledgeBaseSecurityTagItem>()
-            };
+            folder.Articles ??= new List<KnowledgeBaseArticleItem>();
         }
 
-        var snapshot = JsonSerializer.Deserialize<KnowledgeBaseSnapshot>(json) ?? new KnowledgeBaseSnapshot();
-
-        snapshot.Folders ??= new List<KnowledgeBaseFolderItem>();
-        snapshot.SecurityTags ??= new List<KnowledgeBaseSecurityTagItem>();
-
-        NormalizeFolders(snapshot.Folders);
-
-        foreach (var securityTag in snapshot.SecurityTags)
-        {
-            securityTag.AllowedGroupIds = NormalizeGroupIds(securityTag.AllowedGroupIds);
-        }
-
-        snapshot.Folders = snapshot.Folders
+        return folders
             .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        snapshot.SecurityTags = snapshot.SecurityTags
-            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return snapshot;
     }
 
-    public async Task SaveSnapshotAsync(KnowledgeBaseSnapshot snapshot)
+    public async Task SaveFoldersAsync(List<KnowledgeBaseFolderItem> folders)
     {
-        snapshot.Folders ??= new List<KnowledgeBaseFolderItem>();
-        snapshot.SecurityTags ??= new List<KnowledgeBaseSecurityTagItem>();
-
-        NormalizeFolders(snapshot.Folders);
-
-        foreach (var securityTag in snapshot.SecurityTags)
-        {
-            securityTag.AllowedGroupIds = NormalizeGroupIds(securityTag.AllowedGroupIds);
-        }
-
-        snapshot.Folders = snapshot.Folders
+        var orderedFolders = folders
             .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
             .Select(folder =>
             {
@@ -95,56 +60,10 @@ public class KnowledgeBaseService
             })
             .ToList();
 
-        snapshot.SecurityTags = snapshot.SecurityTags
-            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var json = JsonSerializer.Serialize(snapshot);
+        var json = JsonSerializer.Serialize(orderedFolders);
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
         var blobClient = _containerClient.GetBlobClient(BlobName);
         await blobClient.UploadAsync(stream, overwrite: true);
-    }
-
-    public async Task<List<KnowledgeBaseFolderItem>> LoadFoldersAsync()
-    {
-        var snapshot = await LoadSnapshotAsync();
-        return snapshot.Folders;
-    }
-
-    public async Task SaveFoldersAsync(List<KnowledgeBaseFolderItem> folders)
-    {
-        var snapshot = await LoadSnapshotAsync();
-        snapshot.Folders = folders;
-        await SaveSnapshotAsync(snapshot);
-    }
-
-    private static void NormalizeFolders(List<KnowledgeBaseFolderItem> folders)
-    {
-        foreach (var folder in folders)
-        {
-            folder.Articles ??= new List<KnowledgeBaseArticleItem>();
-            folder.SecurityTagIds = folder.SecurityTagIds
-                .Distinct()
-                .ToList();
-            folder.AllowedGroupIds = NormalizeGroupIds(folder.AllowedGroupIds);
-
-            foreach (var article in folder.Articles)
-            {
-                article.SecurityTagIds = article.SecurityTagIds
-                    .Distinct()
-                    .ToList();
-                article.AllowedGroupIds = NormalizeGroupIds(article.AllowedGroupIds);
-            }
-        }
-    }
-
-    private static List<string> NormalizeGroupIds(List<string>? groupIds)
-    {
-        return (groupIds ?? new List<string>())
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 }

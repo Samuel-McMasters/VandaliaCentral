@@ -391,290 +391,131 @@
 
         @if (activeTab == "knowledgebase")
         {
-            <div class="knowledge-base-admin d-flex flex-column gap-4">
-                <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
-                    <div>
-                        <h5 class="mb-1">Knowledge Base Manager</h5>
-                        <p class="text-muted mb-0">Manage folders, articles, and Entra security controls in one place.</p>
-                    </div>
-                    @if (isLoadingEntraGroups)
-                    {
-                        <span class="badge text-bg-light">Loading Entra groups...</span>
-                    }
-                    else
-                    {
-                        <span class="badge text-bg-light">@entraGroups.Count Entra group(s) available</span>
-                    }
+            <div>
+                <h5>Knowledge Base Manager</h5>
+                <div class="border rounded p-3 mb-4" style="max-width: 700px;">
+                    <h6>Add Folder</h6>
+                    <label class="mt-2">Folder Name:</label>
+                    <InputText @bind-Value="newKnowledgeFolderName" class="form-control" />
+                    <button class="btn btn-success mt-3" @onclick="AddKnowledgeFolder">Add Folder</button>
                 </div>
 
-                <div class="kb-admin-grid">
-                    <section class="border rounded p-3 kb-admin-card">
-                        <h6 class="mb-3">Security Tags</h6>
-                        <p class="text-muted small mb-3">Create reusable tags and map Entra groups to each tag.</p>
-
-                        <label class="form-label">Tag Name</label>
-                        <InputText @bind-Value="newKnowledgeSecurityTagName" class="form-control" placeholder="e.g. Rental" />
-                        <button class="btn btn-success btn-sm mt-2" @onclick="AddKnowledgeSecurityTag">Add Security Tag</button>
-
-                        @if (!string.IsNullOrWhiteSpace(knowledgeBaseSecurityStatusMessage))
+                <div class="border rounded p-3 mb-4" style="max-width: 900px;">
+                    <h6>Add Article</h6>
+                    <label class="mt-2">Folder:</label>
+                    <select @bind="selectedFolderForNewArticleId" class="form-select">
+                        <option value="">-- Select Folder --</option>
+                        @if (knowledgeBaseFolders != null)
                         {
-                            <div class="alert alert-info py-2 mt-3 mb-0">@knowledgeBaseSecurityStatusMessage</div>
-                        }
-
-                        <div class="mt-3 kb-scroll">
-                            @if (knowledgeBaseSecurityTags == null || !knowledgeBaseSecurityTags.Any())
+                            @foreach (var folder in knowledgeBaseFolders)
                             {
-                                <p class="text-muted mb-0">No security tags yet.</p>
+                                <option value="@folder.Id.ToString()">@folder.Name</option>
                             }
-                            else
-                            {
-                                @foreach (var tag in knowledgeBaseSecurityTags)
+                        }
+                    </select>
+
+                    <label class="mt-2">Article Title:</label>
+                    <InputText @bind-Value="newKnowledgeArticleTitle" class="form-control" />
+
+                    <label class="mt-2">Scribe Iframe Link:</label>
+                    <InputText @bind-Value="newKnowledgeArticleEmbedUrl" class="form-control" />
+
+                    <button class="btn btn-success mt-3" @onclick="AddKnowledgeArticle">Add Article</button>
+                </div>
+
+                @if (knowledgeBaseFolders == null)
+                {
+                    <p>Loading knowledge base...</p>
+                }
+                else if (!knowledgeBaseFolders.Any())
+                {
+                    <p class="text-muted">No folders have been created yet.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3" style="max-width: 1000px;">
+                        @foreach (var folder in knowledgeBaseFolders)
+                        {
+                            <div class="border rounded p-3">
+                                @if (editingKnowledgeFolderId == folder.Id)
                                 {
-                                    <div class="border rounded p-2 mb-2">
-                                        <div class="d-flex justify-content-between align-items-center gap-2">
-                                            <div class="fw-semibold">@tag.Name</div>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteKnowledgeSecurityTag(tag)">Delete</button>
+                                    <label>Folder Name:</label>
+                                    <InputText @bind-Value="editKnowledgeFolderName" class="form-control" />
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeFolder">Save</button>
+                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeFolder">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                        <h6 class="mb-0">@folder.Name</h6>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeFolder(folder)">Edit Folder</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeFolder(folder)">Delete Folder</button>
                                         </div>
-                                        <div class="text-muted small mt-1">Allowed groups: @GetTagGroupSummary(tag)</div>
-                                        <details class="mt-2">
-                                            <summary class="small text-primary" style="cursor:pointer;">Edit group access</summary>
-                                            <div class="mt-2 kb-scroll-inner">
-                                                @if (!entraGroups.Any())
+                                    </div>
+                                }
+
+                                @if (!folder.Articles.Any())
+                                {
+                                    <p class="text-muted mb-0">No articles in this folder.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group">
+                                        @foreach (var article in folder.Articles)
+                                        {
+                                            <li class="list-group-item">
+                                                @if (editingKnowledgeArticleId == article.Id)
                                                 {
-                                                    <p class="text-muted mb-0 small">No Entra groups available.</p>
+                                                    <label>Article Title:</label>
+                                                    <InputText @bind-Value="editKnowledgeArticleTitle" class="form-control mb-2" />
+
+                                                    <label>Scribe Iframe Link:</label>
+                                                    <InputText @bind-Value="editKnowledgeArticleEmbedUrl" class="form-control mb-2" />
+
+                                                    <label>Folder:</label>
+                                                    <select @bind="editKnowledgeArticleFolderId" class="form-select">
+                                                        @if (knowledgeBaseFolders != null)
+                                                        {
+                                                            @foreach (var availableFolder in knowledgeBaseFolders)
+                                                            {
+                                                                <option value="@availableFolder.Id.ToString()">@availableFolder.Name</option>
+                                                            }
+                                                        }
+                                                    </select>
+
+                                                    <div class="d-flex gap-2 mt-3">
+                                                        <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeArticle">Save</button>
+                                                        <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeArticle">Cancel</button>
+                                                    </div>
                                                 }
                                                 else
                                                 {
-                                                    @foreach (var group in entraGroups)
-                                                    {
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox"
-                                                                   checked="@IsGroupAssignedToTag(tag, group.Id)"
-                                                                   @onchange="args => ToggleTagGroup(tag, group.Id, args.Value)" />
-                                                            <label class="form-check-label small">@group.DisplayName</label>
+                                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                                        <div>
+                                                            <strong>@article.Title</strong>
+                                                            <div class="text-muted small" style="word-break: break-all;">@article.EmbedUrl</div>
                                                         </div>
-                                                    }
+                                                        <div class="d-flex gap-2">
+                                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeArticle(folder, article)">Edit</button>
+                                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeArticle(folder, article)">Delete</button>
+                                                        </div>
+                                                    </div>
                                                 }
-                                            </div>
-                                        </details>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </section>
-
-                    <section class="border rounded p-3 kb-admin-card">
-                        <h6 class="mb-3">Folders &amp; Articles</h6>
-
-                        <div class="border rounded p-2 mb-3">
-                            <h6 class="mb-2">Add Folder</h6>
-                            <InputText @bind-Value="newKnowledgeFolderName" class="form-control" placeholder="Folder name" />
-                            <button class="btn btn-success btn-sm mt-2" @onclick="AddKnowledgeFolder">Add Folder</button>
-                        </div>
-
-                        <div class="border rounded p-2 mb-3">
-                            <h6 class="mb-2">Add Article</h6>
-                            <select @bind="selectedFolderForNewArticleId" class="form-select mb-2">
-                                <option value="">-- Select Folder --</option>
-                                @if (knowledgeBaseFolders != null)
-                                {
-                                    @foreach (var folder in knowledgeBaseFolders)
-                                    {
-                                        <option value="@folder.Id.ToString()">@folder.Name</option>
-                                    }
-                                }
-                            </select>
-                            <InputText @bind-Value="newKnowledgeArticleTitle" class="form-control mb-2" placeholder="Article title" />
-                            <InputText @bind-Value="newKnowledgeArticleEmbedUrl" class="form-control" placeholder="Scribe iframe link" />
-                            <button class="btn btn-success btn-sm mt-2" @onclick="AddKnowledgeArticle">Add Article</button>
-                        </div>
-
-                        @if (knowledgeBaseFolders == null)
-                        {
-                            <p>Loading knowledge base...</p>
-                        }
-                        else if (!knowledgeBaseFolders.Any())
-                        {
-                            <p class="text-muted mb-0">No folders have been created yet.</p>
-                        }
-                        else
-                        {
-                            <div class="d-flex flex-column gap-3">
-                                @foreach (var folder in knowledgeBaseFolders)
-                                {
-                                    <div class="border rounded p-3">
-                                        @if (editingKnowledgeFolderId == folder.Id)
-                                        {
-                                            <InputText @bind-Value="editKnowledgeFolderName" class="form-control" />
-                                            <div class="d-flex gap-2 mt-2">
-                                                <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeFolder">Save</button>
-                                                <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeFolder">Cancel</button>
-                                            </div>
+                                            </li>
                                         }
-                                        else
-                                        {
-                                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                                <h6 class="mb-0">@folder.Name</h6>
-                                                <div class="d-flex gap-2">
-                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeFolder(folder)">Edit Folder</button>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeFolder(folder)">Delete Folder</button>
-                                                </div>
-                                            </div>
-                                        }
-
-                                        <div class="kb-security-pillbox mb-2">
-                                            <div class="small fw-semibold">Folder Security</div>
-                                            <div class="small text-muted">Tags: @GetTagSummary(folder.SecurityTagIds)</div>
-                                            <div class="small text-muted">Direct groups: @GetGroupSummary(folder.AllowedGroupIds)</div>
-                                        </div>
-                                        <details>
-                                            <summary class="small text-primary" style="cursor:pointer;">Edit folder security</summary>
-                                            <div class="mt-2 row g-3">
-                                                <div class="col-12 col-lg-6">
-                                                    <div class="small fw-semibold mb-1">Security Tags</div>
-                                                    @if (knowledgeBaseSecurityTags == null || !knowledgeBaseSecurityTags.Any())
-                                                    {
-                                                        <div class="text-muted small">No tags created.</div>
-                                                    }
-                                                    else
-                                                    {
-                                                        @foreach (var tag in knowledgeBaseSecurityTags)
-                                                        {
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                       checked="@folder.SecurityTagIds.Contains(tag.Id)"
-                                                                       @onchange="args => ToggleFolderTag(folder, tag.Id, args.Value)" />
-                                                                <label class="form-check-label small">@tag.Name</label>
-                                                            </div>
-                                                        }
-                                                    }
-                                                </div>
-                                                <div class="col-12 col-lg-6">
-                                                    <div class="small fw-semibold mb-1">Direct Entra Groups</div>
-                                                    @if (!entraGroups.Any())
-                                                    {
-                                                        <div class="text-muted small">No groups available.</div>
-                                                    }
-                                                    else
-                                                    {
-                                                        @foreach (var group in entraGroups)
-                                                        {
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                       checked="@folder.AllowedGroupIds.Contains(group.Id, StringComparer.OrdinalIgnoreCase)"
-                                                                       @onchange="args => ToggleFolderGroup(folder, group.Id, args.Value)" />
-                                                                <label class="form-check-label small">@group.DisplayName</label>
-                                                            </div>
-                                                        }
-                                                    }
-                                                </div>
-                                            </div>
-                                        </details>
-
-                                        @if (!folder.Articles.Any())
-                                        {
-                                            <p class="text-muted mb-0 mt-2">No articles in this folder.</p>
-                                        }
-                                        else
-                                        {
-                                            <ul class="list-group mt-2">
-                                                @foreach (var article in folder.Articles)
-                                                {
-                                                    <li class="list-group-item">
-                                                        @if (editingKnowledgeArticleId == article.Id)
-                                                        {
-                                                            <InputText @bind-Value="editKnowledgeArticleTitle" class="form-control mb-2" />
-                                                            <InputText @bind-Value="editKnowledgeArticleEmbedUrl" class="form-control mb-2" />
-                                                            <select @bind="editKnowledgeArticleFolderId" class="form-select mb-2">
-                                                                @if (knowledgeBaseFolders != null)
-                                                                {
-                                                                    @foreach (var availableFolder in knowledgeBaseFolders)
-                                                                    {
-                                                                        <option value="@availableFolder.Id.ToString()">@availableFolder.Name</option>
-                                                                    }
-                                                                }
-                                                            </select>
-                                                            <div class="kb-security-pillbox mb-2">
-                                                                <div class="small text-muted">Tags: @GetTagSummary(editKnowledgeArticleTagIds)</div>
-                                                                <div class="small text-muted">Direct groups: @GetGroupSummary(editKnowledgeArticleAllowedGroupIds)</div>
-                                                            </div>
-                                                            <details>
-                                                                <summary class="small text-primary" style="cursor:pointer;">Edit article security</summary>
-                                                                <div class="mt-2 row g-3">
-                                                                    <div class="col-12 col-lg-6">
-                                                                        <div class="small fw-semibold mb-1">Security Tags</div>
-                                                                        @if (knowledgeBaseSecurityTags == null || !knowledgeBaseSecurityTags.Any())
-                                                                        {
-                                                                            <div class="text-muted small">No tags created.</div>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            @foreach (var tag in knowledgeBaseSecurityTags)
-                                                                            {
-                                                                                <div class="form-check">
-                                                                                    <input class="form-check-input" type="checkbox"
-                                                                                           checked="@editKnowledgeArticleTagIds.Contains(tag.Id)"
-                                                                                           @onchange="args => ToggleEditingArticleTag(tag.Id, args.Value)" />
-                                                                                    <label class="form-check-label small">@tag.Name</label>
-                                                                                </div>
-                                                                            }
-                                                                        }
-                                                                    </div>
-                                                                    <div class="col-12 col-lg-6">
-                                                                        <div class="small fw-semibold mb-1">Direct Entra Groups</div>
-                                                                        @if (!entraGroups.Any())
-                                                                        {
-                                                                            <div class="text-muted small">No groups available.</div>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            @foreach (var group in entraGroups)
-                                                                            {
-                                                                                <div class="form-check">
-                                                                                    <input class="form-check-input" type="checkbox"
-                                                                                           checked="@editKnowledgeArticleAllowedGroupIds.Contains(group.Id, StringComparer.OrdinalIgnoreCase)"
-                                                                                           @onchange="args => ToggleEditingArticleGroup(group.Id, args.Value)" />
-                                                                                    <label class="form-check-label small">@group.DisplayName</label>
-                                                                                </div>
-                                                                            }
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                            </details>
-                                                            <div class="d-flex gap-2 mt-2">
-                                                                <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeArticle">Save</button>
-                                                                <button class="btn btn-sm btn-secondary" @onclick="CancelEditKnowledgeArticle">Cancel</button>
-                                                            </div>
-                                                        }
-                                                        else
-                                                        {
-                                                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                                                <div>
-                                                                    <div class="fw-semibold">@article.Title</div>
-                                                                    <div class="text-muted small" style="word-break: break-all;">@article.EmbedUrl</div>
-                                                                    <div class="text-muted small mt-1">Tags: @GetTagSummary(article.SecurityTagIds)</div>
-                                                                    <div class="text-muted small">Direct groups: @GetGroupSummary(article.AllowedGroupIds)</div>
-                                                                </div>
-                                                                <div class="d-flex gap-2">
-                                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditKnowledgeArticle(folder, article)">Edit</button>
-                                                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteKnowledgeArticle(folder, article)">Delete</button>
-                                                                </div>
-                                                            </div>
-                                                        }
-                                                    </li>
-                                                }
-                                            </ul>
-                                        }
-                                    </div>
+                                    </ul>
                                 }
                             </div>
                         }
-                    </section>
-                </div>
+                    </div>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(knowledgeBaseStatusMessage))
                 {
-                    <div class="text-success fw-bold">✓ @knowledgeBaseStatusMessage</div>
+                    <div class="text-success fw-bold mt-3">✓ @knowledgeBaseStatusMessage</div>
                 }
             </div>
         }
@@ -759,43 +600,8 @@
         background: #eef5ff;
     }
 
-    .kb-admin-grid {
-        display: grid;
-        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-        gap: 1rem;
-    }
-
-    .kb-admin-card {
-        background: #fff;
-    }
-
-    .kb-scroll {
-        max-height: 58vh;
-        overflow-y: auto;
-    }
-
-    .kb-scroll-inner {
-        max-height: 220px;
-        overflow-y: auto;
-        border: 1px solid #e9ecef;
-        border-radius: .5rem;
-        padding: .5rem;
-        background: #f8f9fa;
-    }
-
-    .kb-security-pillbox {
-        border: 1px dashed #ced4da;
-        border-radius: .5rem;
-        padding: .5rem .6rem;
-        background: #f8fbff;
-    }
-
     @@media (max-width: 992px) {
         .admin-layout {
-            grid-template-columns: 1fr;
-        }
-
-        .kb-admin-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -840,11 +646,6 @@
     private DateTime? editProjectCompletedDate;
     private bool showProjectSaveSuccess = false;
     private List<KnowledgeBaseFolderItem>? knowledgeBaseFolders;
-    private List<KnowledgeBaseSecurityTagItem>? knowledgeBaseSecurityTags;
-    private string newKnowledgeSecurityTagName = string.Empty;
-    private string? knowledgeBaseSecurityStatusMessage;
-    private List<EntraGroupOption> entraGroups = new();
-    private bool isLoadingEntraGroups = false;
     private string newKnowledgeFolderName = string.Empty;
     private Guid? editingKnowledgeFolderId;
     private string editKnowledgeFolderName = string.Empty;
@@ -856,8 +657,6 @@
     private string editKnowledgeArticleTitle = string.Empty;
     private string editKnowledgeArticleEmbedUrl = string.Empty;
     private string editKnowledgeArticleFolderId = string.Empty;
-    private List<Guid> editKnowledgeArticleTagIds = new();
-    private List<string> editKnowledgeArticleAllowedGroupIds = new();
     private string? knowledgeBaseStatusMessage;
 
     private void SetActiveTab(string tab)
@@ -916,8 +715,7 @@
                 flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
                 itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
-                await LoadKnowledgeBaseStateAsync();
-                await LoadEntraGroupsAsync();
+                knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
             }
         }
         catch (MsalUiRequiredException ex)
@@ -1357,9 +1155,7 @@
             Id = Guid.NewGuid(),
             Name = folderName,
             CreatedOn = DateTime.UtcNow,
-            Articles = new List<KnowledgeBaseArticleItem>(),
-            SecurityTagIds = new List<Guid>(),
-            AllowedGroupIds = new List<string>()
+            Articles = new List<KnowledgeBaseArticleItem>()
         });
 
         var userName = await GetCurrentUserNameAsync();
@@ -1450,9 +1246,7 @@
             Id = Guid.NewGuid(),
             Title = articleTitle,
             EmbedUrl = embedUrl,
-            CreatedOn = DateTime.UtcNow,
-            SecurityTagIds = new List<Guid>(),
-            AllowedGroupIds = new List<string>()
+            CreatedOn = DateTime.UtcNow
         });
 
         var userName = await GetCurrentUserNameAsync();
@@ -1471,8 +1265,6 @@
         editKnowledgeArticleTitle = article.Title;
         editKnowledgeArticleEmbedUrl = article.EmbedUrl;
         editKnowledgeArticleFolderId = folder.Id.ToString();
-        editKnowledgeArticleTagIds = article.SecurityTagIds.ToList();
-        editKnowledgeArticleAllowedGroupIds = article.AllowedGroupIds.ToList();
     }
 
     private void CancelEditKnowledgeArticle()
@@ -1482,8 +1274,6 @@
         editKnowledgeArticleTitle = string.Empty;
         editKnowledgeArticleEmbedUrl = string.Empty;
         editKnowledgeArticleFolderId = string.Empty;
-        editKnowledgeArticleTagIds = new List<Guid>();
-        editKnowledgeArticleAllowedGroupIds = new List<string>();
     }
 
     private async Task SaveEditedKnowledgeArticle()
@@ -1501,8 +1291,6 @@
 
         article.Title = editKnowledgeArticleTitle.Trim();
         article.EmbedUrl = NormalizeScribeEmbedUrl(editKnowledgeArticleEmbedUrl) ?? article.EmbedUrl;
-        article.SecurityTagIds = editKnowledgeArticleTagIds.Distinct().ToList();
-        article.AllowedGroupIds = editKnowledgeArticleAllowedGroupIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         if (sourceFolder.Id != targetFolder.Id)
         {
@@ -1536,211 +1324,19 @@
         await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
     }
 
-    private async Task AddKnowledgeSecurityTag()
-    {
-        if (knowledgeBaseSecurityTags == null || string.IsNullOrWhiteSpace(newKnowledgeSecurityTagName))
-        {
-            return;
-        }
-
-        var tagName = newKnowledgeSecurityTagName.Trim();
-        if (knowledgeBaseSecurityTags.Any(tag => string.Equals(tag.Name, tagName, StringComparison.OrdinalIgnoreCase)))
-        {
-            knowledgeBaseSecurityStatusMessage = "A security tag with that name already exists.";
-            return;
-        }
-
-        knowledgeBaseSecurityTags.Add(new KnowledgeBaseSecurityTagItem
-        {
-            Id = Guid.NewGuid(),
-            Name = tagName
-        });
-
-        newKnowledgeSecurityTagName = string.Empty;
-        knowledgeBaseSecurityStatusMessage = "Security tag created.";
-        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
-    }
-
-    private async Task DeleteKnowledgeSecurityTag(KnowledgeBaseSecurityTagItem tag)
-    {
-        if (knowledgeBaseSecurityTags == null || knowledgeBaseFolders == null)
-        {
-            return;
-        }
-
-        knowledgeBaseSecurityTags.Remove(tag);
-
-        foreach (var folder in knowledgeBaseFolders)
-        {
-            folder.SecurityTagIds.RemoveAll(id => id == tag.Id);
-
-            foreach (var article in folder.Articles)
-            {
-                article.SecurityTagIds.RemoveAll(id => id == tag.Id);
-            }
-        }
-
-        knowledgeBaseSecurityStatusMessage = $"Removed security tag '{tag.Name}'.";
-        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
-    }
-
-    private async Task ToggleTagGroup(KnowledgeBaseSecurityTagItem tag, string groupId, object? value)
-    {
-        var isChecked = value as bool? == true;
-
-        if (isChecked)
-        {
-            if (!tag.AllowedGroupIds.Contains(groupId, StringComparer.OrdinalIgnoreCase))
-            {
-                tag.AllowedGroupIds.Add(groupId);
-            }
-        }
-        else
-        {
-            tag.AllowedGroupIds.RemoveAll(id => string.Equals(id, groupId, StringComparison.OrdinalIgnoreCase));
-        }
-
-        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
-    }
-
-    private async Task ToggleFolderTag(KnowledgeBaseFolderItem folder, Guid tagId, object? value)
-    {
-        var isChecked = value as bool? == true;
-        if (isChecked && !folder.SecurityTagIds.Contains(tagId))
-        {
-            folder.SecurityTagIds.Add(tagId);
-        }
-        else if (!isChecked)
-        {
-            folder.SecurityTagIds.RemoveAll(id => id == tagId);
-        }
-
-        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
-    }
-
-    private async Task ToggleFolderGroup(KnowledgeBaseFolderItem folder, string groupId, object? value)
-    {
-        var isChecked = value as bool? == true;
-        if (isChecked)
-        {
-            if (!folder.AllowedGroupIds.Contains(groupId, StringComparer.OrdinalIgnoreCase))
-            {
-                folder.AllowedGroupIds.Add(groupId);
-            }
-        }
-        else
-        {
-            folder.AllowedGroupIds.RemoveAll(id => string.Equals(id, groupId, StringComparison.OrdinalIgnoreCase));
-        }
-
-        await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
-    }
-
-    private bool IsGroupAssignedToTag(KnowledgeBaseSecurityTagItem tag, string groupId) =>
-        tag.AllowedGroupIds.Contains(groupId, StringComparer.OrdinalIgnoreCase);
-
-    private void ToggleEditingArticleTag(Guid tagId, object? value)
-    {
-        var isChecked = value as bool? == true;
-        if (isChecked && !editKnowledgeArticleTagIds.Contains(tagId))
-        {
-            editKnowledgeArticleTagIds.Add(tagId);
-        }
-        else if (!isChecked)
-        {
-            editKnowledgeArticleTagIds.RemoveAll(id => id == tagId);
-        }
-    }
-
-    private void ToggleEditingArticleGroup(string groupId, object? value)
-    {
-        var isChecked = value as bool? == true;
-        if (isChecked)
-        {
-            if (!editKnowledgeArticleAllowedGroupIds.Contains(groupId, StringComparer.OrdinalIgnoreCase))
-            {
-                editKnowledgeArticleAllowedGroupIds.Add(groupId);
-            }
-        }
-        else
-        {
-            editKnowledgeArticleAllowedGroupIds.RemoveAll(id => string.Equals(id, groupId, StringComparison.OrdinalIgnoreCase));
-        }
-    }
-
-    private string GetTagSummary(List<Guid>? tagIds)
-    {
-        if (knowledgeBaseSecurityTags == null || tagIds == null || tagIds.Count == 0)
-        {
-            return "None";
-        }
-
-        var names = knowledgeBaseSecurityTags
-            .Where(tag => tagIds.Contains(tag.Id))
-            .Select(tag => tag.Name)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return names.Count == 0 ? "None" : string.Join(", ", names);
-    }
-
-    private string GetGroupSummary(List<string>? groupIds)
-    {
-        if (groupIds == null || groupIds.Count == 0)
-        {
-            return "None";
-        }
-
-        var groupNameById = entraGroups
-            .GroupBy(group => group.Id, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.OrdinalIgnoreCase);
-
-        var names = groupIds
-            .Select(groupId => groupNameById.TryGetValue(groupId, out var displayName) ? displayName : groupId)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return names.Count == 0 ? "None" : string.Join(", ", names);
-    }
-
-    private string GetTagGroupSummary(KnowledgeBaseSecurityTagItem tag) => GetGroupSummary(tag.AllowedGroupIds);
-
     private async Task SaveKnowledgeBaseAndShowStatus(string message)
     {
-        if (knowledgeBaseFolders == null || knowledgeBaseSecurityTags == null)
+        if (knowledgeBaseFolders == null)
             return;
 
-        await KnowledgeBaseService.SaveSnapshotAsync(new KnowledgeBaseSnapshot
-        {
-            Folders = knowledgeBaseFolders,
-            SecurityTags = knowledgeBaseSecurityTags
-        });
-        await LoadKnowledgeBaseStateAsync();
+        await KnowledgeBaseService.SaveFoldersAsync(knowledgeBaseFolders);
+        knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
 
         knowledgeBaseStatusMessage = message;
         StateHasChanged();
 
         await Task.Delay(2500);
         knowledgeBaseStatusMessage = null;
-        StateHasChanged();
-    }
-
-    private async Task LoadKnowledgeBaseStateAsync()
-    {
-        var snapshot = await KnowledgeBaseService.LoadSnapshotAsync();
-        knowledgeBaseFolders = snapshot.Folders;
-        knowledgeBaseSecurityTags = snapshot.SecurityTags;
-    }
-
-    private async Task LoadEntraGroupsAsync()
-    {
-        isLoadingEntraGroups = true;
-        StateHasChanged();
-
-        entraGroups = await GraphUserService.GetGroupsAsync();
-
-        isLoadingEntraGroups = false;
         StateHasChanged();
     }
 
