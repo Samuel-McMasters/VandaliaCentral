@@ -473,7 +473,18 @@
                                                     <InputText @bind-Value="editKnowledgeArticleTitle" class="form-control mb-2" />
 
                                                     <label>Scribe Iframe Link:</label>
-                                                    <InputText @bind-Value="editKnowledgeArticleEmbedUrl" class="form-control" />
+                                                    <InputText @bind-Value="editKnowledgeArticleEmbedUrl" class="form-control mb-2" />
+
+                                                    <label>Folder:</label>
+                                                    <select @bind="editKnowledgeArticleFolderId" class="form-select">
+                                                        @if (knowledgeBaseFolders != null)
+                                                        {
+                                                            @foreach (var availableFolder in knowledgeBaseFolders)
+                                                            {
+                                                                <option value="@availableFolder.Id.ToString()">@availableFolder.Name</option>
+                                                            }
+                                                        }
+                                                    </select>
 
                                                     <div class="d-flex gap-2 mt-3">
                                                         <button class="btn btn-sm btn-primary" @onclick="SaveEditedKnowledgeArticle">Save</button>
@@ -645,6 +656,7 @@
     private Guid? editingKnowledgeArticleId;
     private string editKnowledgeArticleTitle = string.Empty;
     private string editKnowledgeArticleEmbedUrl = string.Empty;
+    private string editKnowledgeArticleFolderId = string.Empty;
     private string? knowledgeBaseStatusMessage;
 
     private void SetActiveTab(string tab)
@@ -1252,6 +1264,7 @@
         editingKnowledgeArticleId = article.Id;
         editKnowledgeArticleTitle = article.Title;
         editKnowledgeArticleEmbedUrl = article.EmbedUrl;
+        editKnowledgeArticleFolderId = folder.Id.ToString();
     }
 
     private void CancelEditKnowledgeArticle()
@@ -1260,24 +1273,33 @@
         editingKnowledgeArticleId = null;
         editKnowledgeArticleTitle = string.Empty;
         editKnowledgeArticleEmbedUrl = string.Empty;
+        editKnowledgeArticleFolderId = string.Empty;
     }
 
     private async Task SaveEditedKnowledgeArticle()
     {
         if (knowledgeBaseFolders == null || editingKnowledgeFolderForArticleId == null || editingKnowledgeArticleId == null ||
-            string.IsNullOrWhiteSpace(editKnowledgeArticleTitle) || string.IsNullOrWhiteSpace(editKnowledgeArticleEmbedUrl))
+            string.IsNullOrWhiteSpace(editKnowledgeArticleTitle) || string.IsNullOrWhiteSpace(editKnowledgeArticleEmbedUrl) ||
+            !Guid.TryParse(editKnowledgeArticleFolderId, out var targetFolderId))
             return;
 
-        var folder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == editingKnowledgeFolderForArticleId.Value);
-        var article = folder?.Articles.FirstOrDefault(x => x.Id == editingKnowledgeArticleId.Value);
-        if (article == null || folder == null)
+        var sourceFolder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == editingKnowledgeFolderForArticleId.Value);
+        var targetFolder = knowledgeBaseFolders.FirstOrDefault(x => x.Id == targetFolderId);
+        var article = sourceFolder?.Articles.FirstOrDefault(x => x.Id == editingKnowledgeArticleId.Value);
+        if (article == null || sourceFolder == null || targetFolder == null)
             return;
 
         article.Title = editKnowledgeArticleTitle.Trim();
         article.EmbedUrl = NormalizeScribeEmbedUrl(editKnowledgeArticleEmbedUrl) ?? article.EmbedUrl;
 
+        if (sourceFolder.Id != targetFolder.Id)
+        {
+            sourceFolder.Articles.Remove(article);
+            targetFolder.Articles.Add(article);
+        }
+
         var userName = await GetCurrentUserNameAsync();
-        await Logger.LogActivityAsync(userName, $"Edited Knowledge Base article {article.Title} in folder {folder.Name}");
+        await Logger.LogActivityAsync(userName, $"Edited Knowledge Base article {article.Title} in folder {targetFolder.Name}");
 
         await SaveKnowledgeBaseAndShowStatus("Knowledge base saved!");
         CancelEditKnowledgeArticle();
