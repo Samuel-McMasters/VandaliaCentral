@@ -9,7 +9,10 @@
 <div class="container-fluid px-3 px-md-4 px-xl-5 py-4">
     <div class="kb-shell bg-white border rounded shadow-sm overflow-hidden">
         <aside class="kb-sidebar border-end p-3">
-            <h5 class="mb-3">Folders</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
+                <h5 class="mb-0">Folders</h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="GoHome">Home</button>
+            </div>
             @if (Folders.Count == 0)
             {
                 <p class="text-muted mb-0">No folders are available yet.</p>
@@ -45,17 +48,17 @@
             {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">Search Results</h4>
-                    <span class="text-muted small">@FilteredArticles.Count article(s)</span>
+                    <span class="text-muted small">@GlobalSearchResults.Count article(s)</span>
                 </div>
 
-                @if (FilteredArticles.Count == 0)
+                @if (GlobalSearchResults.Count == 0)
                 {
                     <p class="text-muted">No articles match your search.</p>
                 }
                 else
                 {
                     <div class="row g-3">
-                        @foreach (var result in FilteredArticles)
+                        @foreach (var result in GlobalSearchResults)
                         {
                             <div class="col-12 col-md-6 col-xl-4">
                                 <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(result)">
@@ -123,7 +126,7 @@
             {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">@SelectedFolder.Name</h4>
-                    <span class="text-muted small">@FilteredArticles.Count article(s)</span>
+                    <span class="text-muted small">@SelectedFolder.Articles.Count article(s)</span>
                 </div>
 
                 @if (SelectedFolder.Articles.Count == 0)
@@ -132,24 +135,17 @@
                 }
                 else
                 {
-                    @if (FilteredArticles.Count == 0)
-                    {
-                        <p class="text-muted">No articles match your search.</p>
-                    }
-                    else
-                    {
-                        <div class="row g-3">
-                            @foreach (var article in FilteredArticles)
-                            {
-                                <div class="col-12 col-md-6 col-xl-4">
-                                    <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
-                                        <div class="fw-semibold">@article.Title</div>
-                                        <div class="text-muted small mt-2">Click to open</div>
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    }
+                    <div class="row g-3">
+                        @foreach (var article in SelectedFolder.Articles.OrderBy(a => a.Title, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
+                                    <div class="fw-semibold">@article.Title</div>
+                                    <div class="text-muted small mt-2">Click to open</div>
+                                </button>
+                            </div>
+                        }
+                    </div>
                 }
             }
             else
@@ -224,11 +220,9 @@
             }))
             .ToList();
 
-    private List<KnowledgeBaseSearchResultItem> FilteredArticles =>
+    private List<KnowledgeBaseSearchResultItem> GlobalSearchResults =>
         AllArticles
-            .Where(result =>
-                result.Article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase) &&
-                (SelectedFolder is null || result.Folder.Id == SelectedFolder.Id))
+            .Where(result => result.Article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
     private List<KnowledgeBaseSearchResultItem> RecentlyAddedArticles =>
@@ -253,6 +247,13 @@
     private void SelectFolder(KnowledgeBaseFolderItem folder)
     {
         SelectedFolder = folder;
+        SelectedArticle = null;
+        ArticleSearchTerm = string.Empty;
+    }
+
+    private void GoHome()
+    {
+        SelectedFolder = null;
         SelectedArticle = null;
         ArticleSearchTerm = string.Empty;
     }
