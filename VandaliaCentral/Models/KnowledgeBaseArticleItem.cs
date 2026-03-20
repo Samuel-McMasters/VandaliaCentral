@@ -6,4 +6,5 @@ public class KnowledgeBaseArticleItem
     public string Title { get; set; } = string.Empty;
     public string EmbedUrl { get; set; } = string.Empty;
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
+    public int ViewCount { get; set; }
 }
