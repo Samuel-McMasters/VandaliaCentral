@@ -30,13 +30,16 @@
         </aside>
 
         <main class="kb-main p-3 p-md-4">
-            <div class="mb-3">
-                <input type="search"
-                       class="form-control"
-                       placeholder="Search articles..."
-                       @bind="ArticleSearchTerm"
-                       @bind:event="oninput" />
-            </div>
+            @if (SelectedArticle is null)
+            {
+                <div class="mb-3">
+                    <input type="search"
+                           class="form-control"
+                           placeholder="Search articles..."
+                           @bind="ArticleSearchTerm"
+                           @bind:event="oninput" />
+                </div>
+            }
 
             @if (!string.IsNullOrWhiteSpace(ArticleSearchTerm))
             {
@@ -67,9 +70,53 @@
             }
             else if (SelectedFolder is null)
             {
-                <div class="text-center text-muted py-5">
-                    <h4 class="mb-2">Knowledge Base</h4>
-                    <p class="mb-0">Select a folder on the left to view available articles.</p>
+                <div class="mb-4">
+                    <h4 class="mb-2">Knowledge Base Home</h4>
+                    <p class="text-muted mb-0">Browse highlighted articles or select a folder on the left.</p>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-12 col-xl-6">
+                        <h5 class="mb-3">Recently Added</h5>
+                        @if (RecentlyAddedArticles.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No articles available yet.</p>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var article in RecentlyAddedArticles)
+                                {
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                        <div class="fw-semibold">@article.Article.Title</div>
+                                        <div class="text-muted small mt-1">@article.Folder.Name</div>
+                                        <div class="text-muted small mt-1">Added @article.Article.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")</div>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="col-12 col-xl-6">
+                        <h5 class="mb-3">Most Viewed</h5>
+                        @if (MostViewedArticles.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No articles available yet.</p>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var article in MostViewedArticles)
+                                {
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                        <div class="fw-semibold">@article.Article.Title</div>
+                                        <div class="text-muted small mt-1">@article.Folder.Name</div>
+                                        <div class="text-muted small mt-1">@article.Article.ViewCount view(s)</div>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             }
             else if (SelectedArticle is null)
@@ -85,31 +132,23 @@
                 }
                 else
                 {
-                    <div class="mb-3">
-                        <input type="search"
-                               class="form-control"
-                               placeholder="Search article titles..."
-                               @bind="ArticleSearchTerm"
-                               @bind:event="oninput" />
-                    </div>
-
                     @if (FilteredArticles.Count == 0)
                     {
                         <p class="text-muted">No articles match your search.</p>
                     }
                     else
                     {
-                    <div class="row g-3">
-                        @foreach (var article in FilteredArticles)
-                        {
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
-                                    <div class="fw-semibold">@article.Title</div>
-                                    <div class="text-muted small mt-2">Click to open</div>
-                                </button>
-                            </div>
-                        }
-                    </div>
+                        <div class="row g-3">
+                            @foreach (var article in FilteredArticles)
+                            {
+                                <div class="col-12 col-md-6 col-xl-4">
+                                    <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(article)">
+                                        <div class="fw-semibold">@article.Title</div>
+                                        <div class="text-muted small mt-2">Click to open</div>
+                                    </button>
+                                </div>
+                            }
+                        </div>
                     }
                 }
             }
@@ -142,7 +181,8 @@
         background: #f8f9fa;
     }
 
-    .article-tile {
+    .article-tile,
+    .article-highlight-tile {
         border: 1px solid #dee2e6;
         background: #fff;
         border-radius: .5rem;
@@ -150,7 +190,8 @@
         transition: box-shadow .15s ease, transform .15s ease;
     }
 
-        .article-tile:hover {
+        .article-tile:hover,
+        .article-highlight-tile:hover {
             box-shadow: 0 .25rem .75rem rgba(0,0,0,.08);
             transform: translateY(-1px);
         }
@@ -168,19 +209,40 @@
 </style>
 
 @code {
+    private const int HighlightArticleCount = 5;
     private List<KnowledgeBaseFolderItem> Folders { get; set; } = new();
     private KnowledgeBaseFolderItem? SelectedFolder;
     private KnowledgeBaseArticleItem? SelectedArticle;
     private string ArticleSearchTerm { get; set; } = string.Empty;
 
-    private List<KnowledgeBaseSearchResultItem> FilteredArticles =>
+    private List<KnowledgeBaseSearchResultItem> AllArticles =>
         Folders
             .SelectMany(folder => folder.Articles.Select(article => new KnowledgeBaseSearchResultItem
             {
                 Folder = folder,
                 Article = article
             }))
-            .Where(result => result.Article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private List<KnowledgeBaseSearchResultItem> FilteredArticles =>
+        AllArticles
+            .Where(result =>
+                result.Article.Title.Contains(ArticleSearchTerm, StringComparison.OrdinalIgnoreCase) &&
+                (SelectedFolder is null || result.Folder.Id == SelectedFolder.Id))
+            .ToList();
+
+    private List<KnowledgeBaseSearchResultItem> RecentlyAddedArticles =>
+        AllArticles
+            .OrderByDescending(result => result.Article.CreatedOn)
+            .ThenBy(result => result.Article.Title, StringComparer.OrdinalIgnoreCase)
+            .Take(HighlightArticleCount)
+            .ToList();
+
+    private List<KnowledgeBaseSearchResultItem> MostViewedArticles =>
+        AllArticles
+            .OrderByDescending(result => result.Article.ViewCount)
+            .ThenBy(result => result.Article.Title, StringComparer.OrdinalIgnoreCase)
+            .Take(HighlightArticleCount)
             .ToList();
 
     protected override async Task OnInitializedAsync()
@@ -195,15 +257,17 @@
         ArticleSearchTerm = string.Empty;
     }
 
-    private void OpenArticle(KnowledgeBaseArticleItem article)
+    private async Task OpenArticle(KnowledgeBaseArticleItem article)
     {
+        article.ViewCount++;
         SelectedArticle = article;
+        await KnowledgeBaseService.SaveFoldersAsync(Folders);
     }
 
-    private void OpenArticle(KnowledgeBaseSearchResultItem result)
+    private Task OpenArticle(KnowledgeBaseSearchResultItem result)
     {
         SelectedFolder = result.Folder;
-        SelectedArticle = result.Article;
+        return OpenArticle(result.Article);
     }
 
     private void BackToTiles()
