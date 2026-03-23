@@ -10,7 +10,7 @@
 @inject LoggingService Logger
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
 @inject IOptions<BranchLocationsOptions> BranchLocations
-@inject IOptions<EmployeeTerminationEmailOptions> EmailOptions
+@inject EmailRoutingSettingsService EmailRoutingSettingsService
 
 @attribute [Authorize]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "GroupMember.Read.All", "Mail.Send" })]
@@ -309,18 +309,20 @@
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(EmailOptions.Value.To))
-                throw new InvalidOperationException("TODO: Configure EmployeeTerminationEmail:To in appsettings / Azure App Settings.");
+            var emailSettings = await EmailRoutingSettingsService.GetSettingsAsync();
+
+            if (string.IsNullOrWhiteSpace(emailSettings.EmployeeTerminationTo))
+                throw new InvalidOperationException("Employee Termination email route is missing.");
 
             var pdfBytes = PDFTemplateFiller.FillTermination(formModel);
 
             await EmailService.SendEmailWithAttachmentAsyncStrict(
-                toEmail: EmailOptions.Value.To,
+                toEmail: emailSettings.EmployeeTerminationTo,
                 subject: $"Termination Form: {formModel.EmployeeName}",
                 bodyText: $"Attached is the termination form for {formModel.EmployeeName}.",
                 fileBytes: pdfBytes,
                 fileName: $"{formModel.EmployeeName}_termination.pdf",
-                ccEmail: string.IsNullOrWhiteSpace(EmailOptions.Value.Cc) ? null : EmailOptions.Value.Cc
+                ccEmail: string.IsNullOrWhiteSpace(emailSettings.EmployeeTerminationCc) ? null : emailSettings.EmployeeTerminationCc
             );
 
             // Get current user identity

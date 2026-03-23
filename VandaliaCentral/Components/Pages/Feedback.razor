@@ -2,11 +2,10 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.Extensions.Options
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject GraphEmailService GraphEmailService
-@inject IOptions<FeedbackEmailOptions> FeedbackEmailOptions
+@inject EmailRoutingSettingsService EmailRoutingSettingsService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
@@ -76,8 +75,10 @@
 
             var body = $"Feedback from: {submitter}\n\n{feedbackModel.Text}";
 
+            var emailSettings = await EmailRoutingSettingsService.GetSettingsAsync();
+
             await GraphEmailService.SendEmailTextAsyncStrict(
-                FeedbackEmailOptions.Value.To,
+                emailSettings.FeedbackTo,
                 "Vandalia Central Feedback",
                 body);
 

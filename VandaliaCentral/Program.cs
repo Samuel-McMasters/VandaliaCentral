@@ -47,6 +47,7 @@ builder.Services.AddSingleton<SowDocumentService>();
 builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<TrainingDocumentService>();
 builder.Services.AddSingleton<CourseStorageService>();
+builder.Services.AddSingleton<EmailRoutingSettingsService>();
 builder.Services.AddSingleton<IPasswordGeneratorService, PasswordGeneratorService>();
 builder.Services.AddScoped<ISupportTicketSubmissionService, SupportTicketSubmissionService>();
 
