@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-
 using VandaliaCentral.Models;
 
 namespace VandaliaCentral.Services;
@@ -10,14 +8,14 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     private static readonly object Sync = new();
 
     private readonly GraphEmailService _email;
-    private readonly AmAssignmentChangeRequestEmailOptions _opts;
+    private readonly EmailRoutingSettingsService _emailRoutingSettingsService;
 
     public AmAccountChangeDashboardService(
         GraphEmailService email,
-        IOptions<AmAssignmentChangeRequestEmailOptions> opts)
+        EmailRoutingSettingsService emailRoutingSettingsService)
     {
         _email = email;
-        _opts = opts.Value;
+        _emailRoutingSettingsService = emailRoutingSettingsService;
     }
 
     public Task QueueOpenContractAccountsAsync(
@@ -79,8 +77,9 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     public async Task ApproveAsync(string itemId, string approvedBy, CancellationToken ct = default)
     {
         var item = GetRequiredItem(itemId);
+        var emailSettings = await _emailRoutingSettingsService.GetSettingsAsync(ct);
 
-        if (string.IsNullOrWhiteSpace(_opts.StandardTo))
+        if (string.IsNullOrWhiteSpace(emailSettings.AmStandardTo))
             throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:StandardTo.");
 
         var model = ToRequestModel(item);
@@ -101,7 +100,7 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
             submissionId: item.SubmissionId,
             approvedBy: approvedBy);
 
-        await _email.SendEmailHtmlAsyncStrict(_opts.StandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
+        await _email.SendEmailHtmlAsyncStrict(emailSettings.AmStandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
         Remove(itemId);
     }
 

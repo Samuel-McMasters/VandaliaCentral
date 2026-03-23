@@ -15,7 +15,7 @@
 @inject NavigationManager Navigation
 @inject ITokenAcquisition TokenAcquisition
 @inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
-@inject IOptions<EmployeeChangeEmailOptions> EmailOptions
+@inject EmailRoutingSettingsService EmailRoutingSettingsService
 @inject IOptions<BranchLocationsOptions> BranchLocations
 
 @attribute [Authorize]
@@ -391,23 +391,22 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             userName = authState.User?.Identity?.Name ?? "anonymous";
 
-            var opts = EmailOptions.Value;
+            var emailSettings = await EmailRoutingSettingsService.GetSettingsAsync();
 
-            // Fail loud until configured (same vibe as AM change form)
-            if (string.IsNullOrWhiteSpace(opts.To))
-                throw new InvalidOperationException("TODO: Configure EmployeeChangeEmail:To in appsettings / Azure App Settings.");
+            if (string.IsNullOrWhiteSpace(emailSettings.EmployeeChangeTo))
+                throw new InvalidOperationException("Employee Change email route is missing.");
 
             var pdfBytes = PDFTemplateFiller.FillChange(formModel);
 
             var fileSafeName = fullName.Replace(" ", "_");
 
             await EmailService.SendEmailWithAttachmentAsyncStrict(
-                toEmail: opts.To,
+                toEmail: emailSettings.EmployeeChangeTo,
                 subject: $"Employee Change Form: {fullName}",
                 bodyText: $"Attached is the employee change form for {fullName}.",
                 fileBytes: pdfBytes,
                 fileName: $"{fileSafeName}_employee_change.pdf",
-                ccEmail: string.IsNullOrWhiteSpace(opts.Cc) ? null : opts.Cc);
+                ccEmail: string.IsNullOrWhiteSpace(emailSettings.EmployeeChangeCc) ? null : emailSettings.EmployeeChangeCc);
 
             await Logger.LogActivityAsync(userName, $"Submitted Employee Change Form For: '{fullName}'");
 

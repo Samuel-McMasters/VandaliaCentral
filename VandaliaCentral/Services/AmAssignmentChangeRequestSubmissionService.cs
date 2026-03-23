@@ -1,24 +1,22 @@
-﻿using Microsoft.Extensions.Options;
-
-using VandaliaCentral.Models;
+﻿using VandaliaCentral.Models;
 
 namespace VandaliaCentral.Services;
 
 public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentChangeRequestSubmissionService
 {
     private readonly GraphEmailService _email;
-    private readonly AmAssignmentChangeRequestEmailOptions _opts;
+    private readonly EmailRoutingSettingsService _emailRoutingSettingsService;
     private readonly IAmAccountChangeDashboardService _dashboardService;
 
     private const string SubjectLine = "AM Assignment Change Request";
 
     public AmAssignmentChangeRequestSubmissionService(
         GraphEmailService email,
-        IOptions<AmAssignmentChangeRequestEmailOptions> opts,
+        EmailRoutingSettingsService emailRoutingSettingsService,
         IAmAccountChangeDashboardService dashboardService)
     {
         _email = email;
-        _opts = opts.Value;
+        _emailRoutingSettingsService = emailRoutingSettingsService;
         _dashboardService = dashboardService;
     }
 
@@ -26,20 +24,21 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
     {
         var openLines = model.Accounts.Where(a => a.AssignOpenContracts).ToList();
         var standardLines = model.Accounts.Where(a => !a.AssignOpenContracts).ToList();
+        var emailSettings = await _emailRoutingSettingsService.GetSettingsAsync(ct);
 
         // Validate config only for groups that actually exist
         if (openLines.Count > 0)
         {
-            if (string.IsNullOrWhiteSpace(_opts.OpenContractsTo))
+            if (string.IsNullOrWhiteSpace(emailSettings.AmOpenContractsTo))
                 throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:OpenContractsTo.");
 
-            if (string.IsNullOrWhiteSpace(_opts.OpenContractsCc))
+            if (string.IsNullOrWhiteSpace(emailSettings.AmOpenContractsCc))
                 throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:OpenContractsCc (required when Assign Open Contracts is checked).");
         }
 
         if (standardLines.Count > 0)
         {
-            if (string.IsNullOrWhiteSpace(_opts.StandardTo))
+            if (string.IsNullOrWhiteSpace(emailSettings.AmStandardTo))
                 throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:StandardTo.");
         }
 
@@ -54,7 +53,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
                 submittedBy: fromUserEmail,
                 submissionId: submissionId);
 
-            await _email.SendEmailHtmlAsyncStrict(_opts.OpenContractsTo, subject, body, _opts.OpenContractsCc, ct);
+            await _email.SendEmailHtmlAsyncStrict(emailSettings.AmOpenContractsTo, subject, body, emailSettings.AmOpenContractsCc, ct);
         }
 
         if (standardLines.Count > 0)
@@ -65,7 +64,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
                 submittedBy: fromUserEmail,
                 submissionId: submissionId);
 
-            await _email.SendEmailHtmlAsyncStrict(_opts.StandardTo, subject, body, ccEmail: null, ct);
+            await _email.SendEmailHtmlAsyncStrict(emailSettings.AmStandardTo, subject, body, ccEmail: null, ct);
         }
 
         if (openLines.Count > 0)
