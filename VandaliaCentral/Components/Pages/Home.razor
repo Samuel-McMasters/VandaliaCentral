@@ -20,7 +20,7 @@
         <!-- Left Column w/ fullscreen button -->
         <div class="col-12 col-lg-7 d-flex flex-column">
             <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
+            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative" style="height: 750px;">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">@mmPdfName</h5>
                     <div class="d-flex gap-2">
@@ -35,14 +35,14 @@
 
                 @if (showMondayMinuteHistory)
                 {
-                    <div class="flex-grow-1 w-100 rounded border bg-light-subtle d-flex flex-column" style="min-height: 100%;">
+                    <div class="flex-grow-1 w-100 rounded border bg-light-subtle d-flex flex-column overflow-hidden" style="min-height: 0;">
                         <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                             <h6 class="mb-0">Previous Monday Minutes</h6>
                             <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CloseMondayMinuteHistory">
                                 Close
                             </button>
                         </div>
-                        <div class="p-3 overflow-auto flex-grow-1">
+                        <div class="p-3 overflow-auto flex-grow-1" style="min-height: 0;">
                             @if (isLoadingMondayMinuteHistory)
                             {
                                 <p class="text-muted mb-0">Loading Monday Minutes...</p>
@@ -53,7 +53,7 @@
                             }
                             else
                             {
-                                <ul class="list-group">
+                                <ul class="list-group mb-0">
                                     @foreach (var minute in mondayMinuteHistory)
                                     {
                                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -81,11 +81,6 @@
                         }
                     </div>
                 }
-                    
-                
-
-    
-
 
 
 
@@ -193,7 +188,6 @@
             await LoadMondayMinuteHistoryAsync();
         }
     }
-
 
     private void CloseMondayMinuteHistory()
     {
