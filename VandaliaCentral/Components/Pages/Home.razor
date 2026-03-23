@@ -15,31 +15,72 @@
 <div class="container-fluid">
 
     <!-- Bottom Row -->
-    <div class="row g-4 pb-4">
+    <div class="row g-4 pb-4 align-items-stretch">
 
         <!-- Left Column w/ fullscreen button -->
-        <div class="col-12 col-lg-7 d-flex flex-column">
+        <div class="col-12 col-lg-7 d-flex flex-column h-100">
             <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative">
+            <div class="p-4 border rounded bg-white shadow-sm w-100 d-flex flex-column position-relative flex-fill">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">@mmPdfName</h5>
-                    <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
-                        View Fullscreen
-                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ToggleMondayMinuteHistory">
+                            View Previous Monday Minutes
+                        </button>
+                        <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
+                            View Fullscreen
+                        </a>
+                    </div>
                 </div>
 
-                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
-                    @if (mmPdf == null)
-                    {
+                @if (showMondayMinuteHistory)
+                {
+                    <div class="flex-grow-1 w-100 rounded border bg-light-subtle d-flex flex-column overflow-hidden" style="min-height: 0;">
+                        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                            <h6 class="mb-0">Previous Monday Minutes</h6>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CloseMondayMinuteHistory">
+                                Close
+                            </button>
+                        </div>
+                        <div class="p-3 overflow-y-auto flex-grow-1" style="min-height: 0; max-height: 100%;">
+                            @if (isLoadingMondayMinuteHistory)
+                            {
+                                <p class="text-muted mb-0">Loading Monday Minutes...</p>
+                            }
+                            else if (!mondayMinuteHistory.Any())
+                            {
+                                <p class="text-muted mb-0">No previous Monday Minutes available.</p>
+                            }
+                            else
+                            {
+                                <ul class="list-group mb-0">
+                                    @foreach (var minute in mondayMinuteHistory)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>@minute.Name</span>
+                                            <a href="@minute.Url" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">View</a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
+                        @if (mmPdf == null)
+                        {
 
-                        <p>Loading latest Monday Minute PDF...</p>
+                            <p>Loading latest Monday Minute PDF...</p>
 
-                    }
-                    else
-                    {
-                        <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
-                    }
-                </div>
+                        }
+                        else
+                        {
+                            <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
+                        }
+                    </div>
+                }
 
 
 
@@ -131,6 +172,9 @@
     private string mmPdfName;
     private string bcPdf;
     private List<CalendarEvent>? calendarEvents;
+    private bool showMondayMinuteHistory;
+    private bool isLoadingMondayMinuteHistory;
+    private List<PdfInfo> mondayMinuteHistory = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,6 +186,58 @@
 
         calendarEvents = await CalendarService.LoadCalendarAsync();
         
+    }
+
+    private async Task ToggleMondayMinuteHistory()
+    {
+        showMondayMinuteHistory = !showMondayMinuteHistory;
+
+        if (showMondayMinuteHistory && !mondayMinuteHistory.Any())
+        {
+            await LoadMondayMinuteHistoryAsync();
+        }
+    }
+
+    private void CloseMondayMinuteHistory()
+    {
+        showMondayMinuteHistory = false;
+    }
+
+    private async Task LoadMondayMinuteHistoryAsync()
+    {
+        isLoadingMondayMinuteHistory = true;
+
+        try
+        {
+            var containerClient = PdfService.GetBlobContainerClient("mondayminute");
+            var blobs = await PdfService.ListBlobsAsync("mondayminute");
+
+            mondayMinuteHistory = blobs
+                .Where(blob => blob.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(blob => blob.Properties.LastModified ?? DateTimeOffset.MinValue)
+                .Select(blob =>
+                {
+                    var blobClient = containerClient.GetBlobClient(blob.Name);
+                    var displayName = Path.GetFileNameWithoutExtension(blob.Name);
+                    var modifiedTime = blob.Properties.LastModified?.ToUnixTimeMilliseconds().ToString() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                    var uriBuilder = new UriBuilder(blobClient.Uri);
+
+                    uriBuilder.Query = string.IsNullOrWhiteSpace(uriBuilder.Query)
+                        ? $"v={modifiedTime}"
+                        : $"{uriBuilder.Query.TrimStart('?')}&v={modifiedTime}";
+
+                    return new PdfInfo
+                        {
+                            Name = displayName,
+                            Url = uriBuilder.Uri.ToString()
+                        };
+                })
+                .ToList();
+        }
+        finally
+        {
+            isLoadingMondayMinuteHistory = false;
+        }
     }
 
     
