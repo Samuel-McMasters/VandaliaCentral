@@ -35,7 +35,6 @@
 
                 @if (showMondayMinuteHistory)
                 {
-<<<<<<< codex/add-button-to-view-previous-monday-minutes-advdqn
                     <div class="flex-grow-1 w-100 rounded border bg-light-subtle d-flex flex-column" style="min-height: 100%;">
                         <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                             <h6 class="mb-0">Previous Monday Minutes</h6>
@@ -82,46 +81,11 @@
                         }
                     </div>
                 }
-=======
-                    <div class="border rounded p-3 mb-3 bg-light-subtle">
-                        <h6 class="mb-3">Previous Monday Minutes</h6>
+                    
+                
 
-                        @if (isLoadingMondayMinuteHistory)
-                        {
-                            <p class="text-muted mb-0">Loading Monday Minutes...</p>
-                        }
-                        else if (!mondayMinuteHistory.Any())
-                        {
-                            <p class="text-muted mb-0">No previous Monday Minutes available.</p>
-                        }
-                        else
-                        {
-                            <ul class="list-group">
-                                @foreach (var minute in mondayMinuteHistory)
-                                {
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>@minute.Name</span>
-                                        <a href="@minute.Url" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">View</a>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </div>
-                }
+    
 
-                <div class="flex-grow-1 w-100 rounded overflow-hidden" style="background-color: #e9ecef;">   
-                    @if (mmPdf == null)
-                    {
-
-                        <p>Loading latest Monday Minute PDF...</p>
-
-                    }
-                    else
-                    {
-                        <embed src=@mmPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
-                    }
-                </div>
->>>>>>> chatGPT
 
 
 
@@ -191,19 +155,10 @@
                         <embed src=@bcPdf type="application/pdf" width="100%" height="100%" style="min-height: 100%;"/>
                                                     
                     }
-
-
                 </div>
-
-
             </div>
-
         </div> 
-
     </div>
-
-
-
 </div>
 
 
@@ -239,14 +194,12 @@
         }
     }
 
-<<<<<<< codex/add-button-to-view-previous-monday-minutes-advdqn
+
     private void CloseMondayMinuteHistory()
     {
         showMondayMinuteHistory = false;
     }
 
-=======
->>>>>>> chatGPT
     private async Task LoadMondayMinuteHistoryAsync()
     {
         isLoadingMondayMinuteHistory = true;
