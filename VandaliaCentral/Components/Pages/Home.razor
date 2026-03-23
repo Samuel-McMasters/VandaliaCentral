@@ -20,7 +20,7 @@
         <!-- Left Column w/ fullscreen button -->
         <div class="col-12 col-lg-7 d-flex flex-column">
             <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm h-100 w-100 d-flex flex-column position-relative monday-minute-card">
+            <div class="p-4 border rounded bg-white shadow-sm w-100 d-flex flex-column position-relative monday-minute-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">@mmPdfName</h5>
                     <div class="d-flex gap-2">
@@ -165,7 +165,9 @@
 
 <style>
     .monday-minute-card {
-        min-height: 700px;
+        height: 700px;
+        max-height: 700px;
+        overflow: hidden;
     }
 
     .monday-minute-content {
