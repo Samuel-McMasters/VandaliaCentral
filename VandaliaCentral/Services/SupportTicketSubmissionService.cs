@@ -18,14 +18,16 @@ public sealed class SupportTicketSubmissionService : ISupportTicketSubmissionSer
 {
     private readonly IFreshserviceService _freshservice;
     private readonly GraphEmailService _email;
+    private readonly EmailRoutingSettingsService _emailRoutingSettingsService;
 
-    private const string SupportEmail = "support@vandaliarental.com";
-    private const string DevCcEmail = "sam.mcmasters@vandaliarental.com"; // “CC” copy target
-
-    public SupportTicketSubmissionService(IFreshserviceService freshservice, GraphEmailService email)
+    public SupportTicketSubmissionService(
+        IFreshserviceService freshservice,
+        GraphEmailService email,
+        EmailRoutingSettingsService emailRoutingSettingsService)
     {
         _freshservice = freshservice;
         _email = email;
+        _emailRoutingSettingsService = emailRoutingSettingsService;
     }
 
     public async Task<SupportTicketSubmissionResult> SubmitAsync(
@@ -57,19 +59,22 @@ public sealed class SupportTicketSubmissionService : ISupportTicketSubmissionSer
 
             try
             {
-                // 1) Send to Support
+                var emailSettings = await _emailRoutingSettingsService.GetSettingsAsync(ct);
+
                 await _email.SendEmailAsync(
-                    toEmail: SupportEmail,
+                    toEmail: emailSettings.SupportTo,
                     subject: emailSubject,
                     bodyText: emailBody
                 );
 
-                // 2) Send a “CC copy” to Sam (so you’re always aware)
-                await _email.SendEmailAsync(
-                    toEmail: DevCcEmail,
-                    subject: emailSubject,
-                    bodyText: "[COPY] This fallback ticket email was sent to Support.\n\n" + emailBody
-                );
+                if (!string.IsNullOrWhiteSpace(emailSettings.SupportCc))
+                {
+                    await _email.SendEmailAsync(
+                        toEmail: emailSettings.SupportCc,
+                        subject: emailSubject,
+                        bodyText: "[COPY] This fallback ticket email was sent to Support.\n\n" + emailBody
+                    );
+                }
             }
             catch (Exception emailEx)
             {

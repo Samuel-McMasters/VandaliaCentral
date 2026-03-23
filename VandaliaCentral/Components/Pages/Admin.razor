@@ -19,6 +19,7 @@
 @inject FlappyLeaderboardService FlappyLeaderboardService
 @inject SowDocumentService SowDocumentService
 @inject KnowledgeBaseService KnowledgeBaseService
+@inject EmailRoutingSettingsService EmailRoutingSettingsService
 @implements IAsyncDisposable
 
 
@@ -82,6 +83,10 @@
                     <button class='btn text-start admin-tab-button @(IsActiveTab("knowledgebase"))' @onclick='() => SetActiveTab("knowledgebase")' type='button'>
                         <span class="fw-semibold d-block">Knowledge Base</span>
                         <small class="text-muted">Manage folders and articles</small>
+                    </button>
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("emails"))' @onclick='() => SetActiveTab("emails")' type='button'>
+                        <span class="fw-semibold d-block">Email Routing</span>
+                        <small class="text-muted">Update form and notification recipients</small>
                     </button>
                     <button class='btn text-start admin-tab-button @(IsActiveTab("flappybird"))' @onclick='() => SetActiveTab("flappybird")' type='button'>
                         <span class="fw-semibold d-block">Flappy Bird</span>
@@ -520,6 +525,98 @@
             </div>
         }
 
+
+        @if (activeTab == "emails")
+        {
+            <div style="max-width: 950px;">
+                <h5>Email Routing</h5>
+                <p class="text-muted">These addresses override appsettings defaults and are stored in Azure Blob storage.</p>
+
+                <div class="d-flex flex-column gap-3">
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Employee Change Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeChangeTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeChangeCc" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Employee Termination Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationCc" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Feedback Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.FeedbackTo" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">AM Assignment Change Request</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Open Contracts To</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmOpenContractsTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Open Contracts Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmOpenContractsCc" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Standard To</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmStandardTo" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Support Ticket Fallback</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.SupportTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.SupportCc" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-primary" @onclick="SaveEmailRoutingSettings" disabled="@isSavingEmailRouting">
+                        @(isSavingEmailRouting ? "Saving..." : "Save Email Routing")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(emailRoutingStatusMessage))
+                {
+                    <div class="mt-3 fw-semibold @(emailRoutingSaveFailed ? "text-danger" : "text-success")">@emailRoutingStatusMessage</div>
+                }
+            </div>
+        }
+
         @if (activeTab == "flappybird")
         {
             <div>
@@ -658,6 +755,10 @@
     private string editKnowledgeArticleEmbedUrl = string.Empty;
     private string editKnowledgeArticleFolderId = string.Empty;
     private string? knowledgeBaseStatusMessage;
+    private EmailRoutingSettings emailRoutingSettings = new();
+    private bool isSavingEmailRouting = false;
+    private bool emailRoutingSaveFailed = false;
+    private string? emailRoutingStatusMessage;
 
     private void SetActiveTab(string tab)
     {
@@ -683,6 +784,7 @@
         "passwords" => string.Empty,
         "projecttracker" => string.Empty,
         "knowledgebase" => string.Empty,
+        "emails" => string.Empty,
         "flappybird" => "Flappy Bird",
         _ => "Admin Dashboard"
     };
@@ -716,6 +818,7 @@
                 sowDocuments = await SowDocumentService.ListDocumentsAsync();
                 itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
                 knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
+                emailRoutingSettings = await EmailRoutingSettingsService.GetSettingsAsync();
             }
         }
         catch (MsalUiRequiredException ex)
@@ -1338,6 +1441,33 @@
         await Task.Delay(2500);
         knowledgeBaseStatusMessage = null;
         StateHasChanged();
+    }
+
+    private async Task SaveEmailRoutingSettings()
+    {
+        isSavingEmailRouting = true;
+        emailRoutingSaveFailed = false;
+        emailRoutingStatusMessage = null;
+
+        try
+        {
+            await EmailRoutingSettingsService.SaveSettingsAsync(emailRoutingSettings);
+            emailRoutingSettings = await EmailRoutingSettingsService.GetSettingsAsync();
+
+            var userName = await GetCurrentUserNameAsync();
+            await Logger.LogActivityAsync(userName, "Updated email routing settings");
+
+            emailRoutingStatusMessage = "Email routing saved.";
+        }
+        catch (Exception ex)
+        {
+            emailRoutingSaveFailed = true;
+            emailRoutingStatusMessage = $"Unable to save email routing: {ex.Message}";
+        }
+        finally
+        {
+            isSavingEmailRouting = false;
+        }
     }
 
     private static string? NormalizeScribeEmbedUrl(string? input)
