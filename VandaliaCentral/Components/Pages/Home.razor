@@ -18,9 +18,9 @@
     <div class="row g-4 pb-4">
 
         <!-- Left Column w/ fullscreen button -->
-        <div class="col-12 col-lg-7 d-flex flex-column">
+        <div class="col-12 col-lg-7 d-flex flex-column monday-minute-column">
             <!-- Monday Minute -->
-            <div class="p-4 border rounded bg-white shadow-sm w-100 d-flex flex-column position-relative monday-minute-card">
+            <div class="p-4 border rounded bg-white shadow-sm w-100 d-flex flex-column position-relative flex-grow-1 monday-minute-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h5 class="mb-0">@mmPdfName</h5>
                     <div class="d-flex gap-2">
@@ -166,8 +166,14 @@
 <style>
     .monday-minute-card {
         height: 700px;
-        max-height: 700px;
         overflow: hidden;
+    }
+
+    @media (min-width: 992px) {
+        .monday-minute-card {
+            height: 100%;
+            min-height: 0;
+        }
     }
 
     .monday-minute-content {
