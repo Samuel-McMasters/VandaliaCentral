@@ -528,54 +528,79 @@
 
         @if (activeTab == "emails")
         {
-            <div style="max-width: 900px;">
+            <div style="max-width: 950px;">
                 <h5>Email Routing</h5>
                 <p class="text-muted">These addresses override appsettings defaults and are stored in Azure Blob storage.</p>
 
-                <div class="row g-3">
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Employee Change - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.EmployeeChangeTo" class="form-control" />
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Employee Change - Cc</label>
-                        <InputText @bind-Value="emailRoutingSettings.EmployeeChangeCc" class="form-control" />
-                    </div>
-
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Employee Termination - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationTo" class="form-control" />
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Employee Termination - Cc</label>
-                        <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationCc" class="form-control" />
+                <div class="d-flex flex-column gap-3">
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Employee Change Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeChangeTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeChangeCc" class="form-control" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Feedback - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.FeedbackTo" class="form-control" />
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Employee Termination Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.EmployeeTerminationCc" class="form-control" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">AM Assignment Open Contracts - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.AmOpenContractsTo" class="form-control" />
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">AM Assignment Open Contracts - Cc</label>
-                        <InputText @bind-Value="emailRoutingSettings.AmOpenContractsCc" class="form-control" />
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">AM Assignment Standard - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.AmStandardTo" class="form-control" />
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Feedback Form</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.FeedbackTo" class="form-control" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Support fallback - To</label>
-                        <InputText @bind-Value="emailRoutingSettings.SupportTo" class="form-control" />
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">AM Assignment Change Request</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Open Contracts To</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmOpenContractsTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Open Contracts Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmOpenContractsCc" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Standard To</label>
+                                <InputText @bind-Value="emailRoutingSettings.AmStandardTo" class="form-control" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Support fallback - Cc</label>
-                        <InputText @bind-Value="emailRoutingSettings.SupportCc" class="form-control" />
+
+                    <div class="border rounded p-3 bg-light-subtle">
+                        <h6 class="mb-3">Support Ticket Fallback</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">To</label>
+                                <InputText @bind-Value="emailRoutingSettings.SupportTo" class="form-control" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label">Cc</label>
+                                <InputText @bind-Value="emailRoutingSettings.SupportCc" class="form-control" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
