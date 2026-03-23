@@ -9,6 +9,7 @@ namespace VandaliaCentral.Services
     {
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public DateTimeOffset? LastModified { get; set; }
     }
 
 
@@ -114,6 +115,42 @@ namespace VandaliaCentral.Services
             // Upload file stream with content type
             var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
             await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" });
+        }
+
+        public async Task<List<PdfInfo>> GetPdfsAsync(string containerName)
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var pdfs = new List<PdfInfo>();
+
+            await foreach (var blobItem in containerClient.GetBlobsAsync())
+            {
+                if (!blobItem.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                var uriBuilder = new UriBuilder(blobClient.Uri);
+                var cacheBustToken = blobItem.Properties.LastModified?.ToUnixTimeMilliseconds().ToString() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+                if (string.IsNullOrWhiteSpace(uriBuilder.Query))
+                {
+                    uriBuilder.Query = $"v={cacheBustToken}";
+                }
+                else
+                {
+                    uriBuilder.Query = $"{uriBuilder.Query.TrimStart('?')}&v={cacheBustToken}";
+                }
+
+                pdfs.Add(new PdfInfo
+                {
+                    Name = Path.GetFileNameWithoutExtension(blobItem.Name),
+                    Url = uriBuilder.Uri.ToString(),
+                    LastModified = blobItem.Properties.LastModified
+                });
+            }
+
+            return pdfs
+                .OrderByDescending(pdf => pdf.LastModified ?? DateTimeOffset.MinValue)
+                .ToList();
         }
 
         public async Task<List<BlobItem>> ListBlobsAsync(string containerName)
