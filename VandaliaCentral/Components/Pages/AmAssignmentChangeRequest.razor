@@ -1,16 +1,18 @@
 ﻿@page "/am-assignment-change-request"
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send" })]
+@attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send", "User.Read.All", "GroupMember.Read.All" })]
 
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Options
+@using Microsoft.Graph
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 
 @inject GraphEmailService GraphEmailService
+@inject GraphUserService UserService
 @inject IAmAssignmentChangeRequestSubmissionService SubmissionService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
@@ -75,7 +77,46 @@
             <div class="row g-3">
                 <div class="col-12 col-lg-8">
                     <label class="form-label">Name</label>
-                    <InputText class="form-control" @bind-Value="Model.CurrentAmName" disabled="@_isSubmitting" />
+                    <div class="position-relative">
+                        <button type="button"
+                                class="form-control text-start"
+                                @onclick="ToggleCurrentAmDropdown"
+                                disabled="@(_isSubmitting || _isAmListLoading)">
+                            @GetCurrentAmSelectionText()
+                        </button>
+
+                        @if (_showCurrentAmDropdown)
+                        {
+                            <div class="position-fixed top-0 start-0 w-100 h-100"
+                                 style="z-index: 1040;"
+                                 @onclick="CloseCurrentAmDropdown"></div>
+                            <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
+                                 style="z-index: 1050;"
+                                 @onclick:stopPropagation="true">
+                                <input class="form-control mb-2"
+                                       placeholder="Search AM users..."
+                                       @bind="_currentAmSearchTerm"
+                                       @bind:event="oninput" />
+                                <div style="max-height: 240px; overflow-y: auto;">
+                                    @if (!FilteredCurrentAmUsers.Any())
+                                    {
+                                        <div class="text-muted small px-2 py-1">No users found.</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var user in FilteredCurrentAmUsers)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-link text-decoration-none text-start w-100 px-2 py-1"
+                                                    @onclick="() => SelectCurrentAm(user)">
+                                                @user.DisplayName
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
                     <ValidationMessage For="@(() => Model.CurrentAmName)" />
                 </div>
 
@@ -93,7 +134,46 @@
             <div class="row g-3">
                 <div class="col-12 col-lg-8">
                     <label class="form-label">Name</label>
-                    <InputText class="form-control" @bind-Value="Model.NewAmName" disabled="@_isSubmitting" />
+                    <div class="position-relative">
+                        <button type="button"
+                                class="form-control text-start"
+                                @onclick="ToggleNewAmDropdown"
+                                disabled="@(_isSubmitting || _isAmListLoading)">
+                            @GetNewAmSelectionText()
+                        </button>
+
+                        @if (_showNewAmDropdown)
+                        {
+                            <div class="position-fixed top-0 start-0 w-100 h-100"
+                                 style="z-index: 1040;"
+                                 @onclick="CloseNewAmDropdown"></div>
+                            <div class="position-absolute w-100 mt-1 border rounded bg-white shadow p-2"
+                                 style="z-index: 1050;"
+                                 @onclick:stopPropagation="true">
+                                <input class="form-control mb-2"
+                                       placeholder="Search AM users..."
+                                       @bind="_newAmSearchTerm"
+                                       @bind:event="oninput" />
+                                <div style="max-height: 240px; overflow-y: auto;">
+                                    @if (!FilteredNewAmUsers.Any())
+                                    {
+                                        <div class="text-muted small px-2 py-1">No users found.</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var user in FilteredNewAmUsers)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-link text-decoration-none text-start w-100 px-2 py-1"
+                                                    @onclick="() => SelectNewAm(user)">
+                                                @user.DisplayName
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
                     <ValidationMessage For="@(() => Model.NewAmName)" />
                 </div>
 
@@ -207,6 +287,18 @@
     private string? _errorMessage;
 
     private bool _redirectScheduled;
+    private bool _isAmListLoading = true;
+    private bool _showCurrentAmDropdown;
+    private bool _showNewAmDropdown;
+    private string _currentAmSearchTerm = string.Empty;
+    private string _newAmSearchTerm = string.Empty;
+    private List<User> _eligibleAmUsers = new();
+    private static readonly HashSet<string> AllowedAmJobTitles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Account Manager",
+        "Sales Development Representative",
+        "Senior Account Manager"
+    };
 
     protected override void OnInitialized()
     {
@@ -226,6 +318,80 @@
 
         // Optional but helpful: triggers consent/CA flow early rather than on Submit click
         await GraphEmailService.EnsureMailSendAccessAsync();
+        await LoadEligibleAmUsersAsync();
+    }
+
+    private async Task LoadEligibleAmUsersAsync()
+    {
+        var users = await UserService.GetUsersAsync();
+        _eligibleAmUsers = users
+            .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName))
+            .Where(u => !string.IsNullOrWhiteSpace(u.JobTitle) && AllowedAmJobTitles.Contains(u.JobTitle.Trim()))
+            .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _isAmListLoading = false;
+    }
+
+    private IEnumerable<User> FilteredCurrentAmUsers =>
+        _eligibleAmUsers.Where(u =>
+            string.IsNullOrWhiteSpace(_currentAmSearchTerm) ||
+            (u.DisplayName?.Contains(_currentAmSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private IEnumerable<User> FilteredNewAmUsers =>
+        _eligibleAmUsers.Where(u =>
+            string.IsNullOrWhiteSpace(_newAmSearchTerm) ||
+            (u.DisplayName?.Contains(_newAmSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private string GetCurrentAmSelectionText()
+    {
+        if (_isAmListLoading)
+            return "Loading users...";
+
+        return string.IsNullOrWhiteSpace(Model.CurrentAmName)
+            ? "Select user"
+            : Model.CurrentAmName;
+    }
+
+    private string GetNewAmSelectionText()
+    {
+        if (_isAmListLoading)
+            return "Loading users...";
+
+        return string.IsNullOrWhiteSpace(Model.NewAmName)
+            ? "Select user"
+            : Model.NewAmName;
+    }
+
+    private void ToggleCurrentAmDropdown()
+    {
+        _showCurrentAmDropdown = !_showCurrentAmDropdown;
+        _showNewAmDropdown = false;
+    }
+
+    private void ToggleNewAmDropdown()
+    {
+        _showNewAmDropdown = !_showNewAmDropdown;
+        _showCurrentAmDropdown = false;
+    }
+
+    private void CloseCurrentAmDropdown() => _showCurrentAmDropdown = false;
+
+    private void CloseNewAmDropdown() => _showNewAmDropdown = false;
+
+    private void SelectCurrentAm(User user)
+    {
+        Model.CurrentAmName = user.DisplayName ?? string.Empty;
+        _showCurrentAmDropdown = false;
+        _currentAmSearchTerm = string.Empty;
+        _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.CurrentAmName)));
+    }
+
+    private void SelectNewAm(User user)
+    {
+        Model.NewAmName = user.DisplayName ?? string.Empty;
+        _showNewAmDropdown = false;
+        _newAmSearchTerm = string.Empty;
+        _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.NewAmName)));
     }
 
     private async Task PopulateExecutiveNameAsync()
