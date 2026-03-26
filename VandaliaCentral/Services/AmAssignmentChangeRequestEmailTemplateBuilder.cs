@@ -13,7 +13,8 @@ public static class AmAssignmentChangeRequestEmailTemplateBuilder
         string groupTitle,
         string submittedBy,
         string submissionId,
-        string? approvedBy = null)
+        string? approvedBy = null,
+        string? dashboardUrl = null)
     {
         static string E(string s) => WebUtility.HtmlEncode(s ?? "");
 
@@ -70,6 +71,13 @@ public static class AmAssignmentChangeRequestEmailTemplateBuilder
         }
 
         sb.AppendLine("</tbody></table>");
+
+        if (!string.IsNullOrWhiteSpace(dashboardUrl))
+        {
+            sb.AppendLine("<div style='margin-top:16px;'>");
+            sb.AppendLine($"<a href='{E(dashboardUrl)}' style='color:#0d6efd; text-decoration:underline;'>Go to Account Change Dashboard</a>");
+            sb.AppendLine("</div>");
+        }
 
         sb.AppendLine("<div style='margin-top:16px; color:#666;'>");
         sb.AppendLine("Note: Forms are only approved if submitted directly from Executive/DM/DSM email.");
