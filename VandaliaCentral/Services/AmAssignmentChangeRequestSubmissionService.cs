@@ -9,7 +9,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
     private readonly IAmAccountChangeDashboardService _dashboardService;
 
     private const string SubjectLine = "AM Assignment Change Request";
-    private const string AccountChangeDashboardPath = "/account-change-dashboard";
+    private const string AccountChangeDashboardUrl = "https://vandaliacentral.com/account-change-dashboard";
 
     public AmAssignmentChangeRequestSubmissionService(
         GraphEmailService email,
@@ -53,7 +53,7 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
                 groupTitle: "Accounts WITH Assign Open Contracts checked",
                 submittedBy: fromUserEmail,
                 submissionId: submissionId,
-                dashboardUrl: AccountChangeDashboardPath);
+                dashboardUrl: AccountChangeDashboardUrl);
 
             await _email.SendEmailHtmlAsyncStrict(emailSettings.AmOpenContractsTo, subject, body, emailSettings.AmOpenContractsCc, ct);
         }
