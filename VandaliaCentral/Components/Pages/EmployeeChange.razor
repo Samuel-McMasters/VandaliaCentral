@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
 @using Microsoft.Graph
+@using VandaliaCentral.Authorization
 
 @inject GraphEmailService EmailService
 @inject GraphUserService UserService
@@ -18,7 +19,7 @@
 @inject EmailRoutingSettingsService EmailRoutingSettingsService
 @inject IOptions<BranchLocationsOptions> BranchLocations
 
-@attribute [Authorize]
+@attribute [Authorize(Policy = AuthorizationPolicies.HrFormsAccess)]
 @attribute [AuthorizeForScopes(Scopes = new[] { "User.Read.All", "Mail.Send" })]
 
 <div class="container d-flex flex-column border rounded bg-white shadow-sm col-md-7 py-4">

@@ -1,6 +1,6 @@
 ﻿@page "/am-assignment-change-request"
 
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = VandaliaCentral.Authorization.AuthorizationPolicies.AmAccountChangeAccess)]
 @attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send", "User.Read.All", "GroupMember.Read.All" })]
 
 @using System.Security.Claims

@@ -14,6 +14,7 @@ using Blazorise.Icons.FontAwesome;
 using Blazorise.Charts;
 using System.Net.Http.Headers;
 using VandaliaCentral.Models;
+using VandaliaCentral.Authorization;
 
 var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
 
@@ -149,6 +150,16 @@ builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefa
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = options.DefaultPolicy;
+
+    options.AddPolicy(AuthorizationPolicies.HrFormsAccess, policy =>
+        policy.RequireAssertion(context =>
+            context.User.Identity?.IsAuthenticated == true &&
+            context.User.Claims.Any(c => c.Type == "groups" && AuthorizationPolicies.HrFormsAllowedGroups.Contains(c.Value))));
+
+    options.AddPolicy(AuthorizationPolicies.AmAccountChangeAccess, policy =>
+        policy.RequireAssertion(context =>
+            context.User.Identity?.IsAuthenticated == true &&
+            context.User.Claims.Any(c => c.Type == "groups" && AuthorizationPolicies.AmAccountChangeAllowedGroups.Contains(c.Value))));
 });
 
 // Enables conditional access and consent handling for Graph calls
