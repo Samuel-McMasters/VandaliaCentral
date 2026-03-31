@@ -54,15 +54,18 @@
                 {
                     <li><a class="dropdown-item" href="/am-assignment-change-request" target="" @onclick='(e) => HandleLinkClick("Am Account Change Form")'>AM Account Change Form</a></li>
                 }
-                <li>
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/account-change-dashboard" target="" @onclick='(e) => HandleLinkClick("Account Change Dashboard")'>
-                        <span>Account Change Dashboard</span>
-                        @if (ShowAccountChangeNotification)
-                        {
-                            <span class="badge rounded-pill bg-danger">@PendingAccountChangeCount</span>
-                        }
-                    </a>
-                </li>
+                @if (CanAccessAccountChangeDashboard)
+                {
+                    <li>
+                        <a class="dropdown-item d-flex justify-content-between align-items-center" href="/account-change-dashboard" target="" @onclick='(e) => HandleLinkClick("Account Change Dashboard")'>
+                            <span>Account Change Dashboard</span>
+                            @if (ShowAccountChangeNotification)
+                            {
+                                <span class="badge rounded-pill bg-danger">@PendingAccountChangeCount</span>
+                            }
+                        </a>
+                    </li>
+                }
             </ul>
         </div>
 
