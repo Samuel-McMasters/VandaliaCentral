@@ -22,6 +22,15 @@ public static class AuthorizationPolicies
         "258d799b-8ba1-4507-89a4-7006981a37b9"
     };
 
+    public const string MondayMinuteUploaderGroupId = "b3a0f732-a5f2-4c28-a005-61c901b21096";
+
+    public static readonly HashSet<string> AccountChangeDashboardAllowedGroups = new(StringComparer.OrdinalIgnoreCase)
+    {
+        AdminGroupId,
+        MondayMinuteUploaderGroupId
+    };
+
     public const string HrFormsAccess = nameof(HrFormsAccess);
     public const string AmAccountChangeAccess = nameof(AmAccountChangeAccess);
+    public const string AccountChangeDashboardAccess = nameof(AccountChangeDashboardAccess);
 }
