@@ -1,21 +1,37 @@
+using Azure.Storage.Blobs;
+using System.Text;
+using System.Text.Json;
 using VandaliaCentral.Models;
 
 namespace VandaliaCentral.Services;
 
 public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardService
 {
+    private const string ContainerName = "amaccountchangedashboard";
+    private const string BlobName = "pending-open-contract-account-changes.json";
+
     private static readonly List<AmAccountChangeDashboardItem> Pending = new();
     private static readonly object Sync = new();
+    private static bool IsLoaded;
 
     private readonly GraphEmailService _email;
     private readonly EmailRoutingSettingsService _emailRoutingSettingsService;
+    private readonly BlobContainerClient _containerClient;
 
     public AmAccountChangeDashboardService(
         GraphEmailService email,
-        EmailRoutingSettingsService emailRoutingSettingsService)
+        EmailRoutingSettingsService emailRoutingSettingsService,
+        IConfiguration configuration)
     {
         _email = email;
         _emailRoutingSettingsService = emailRoutingSettingsService;
+
+        var connectionString = configuration["AzureStorage:ConnectionString"]
+            ?? configuration["AzureStorage:connectionString"]
+            ?? throw new InvalidOperationException("AzureStorage:ConnectionString is required.");
+
+        _containerClient = new BlobContainerClient(connectionString, ContainerName);
+        _containerClient.CreateIfNotExists();
     }
 
     public Task QueueOpenContractAccountsAsync(
@@ -30,6 +46,8 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
 
         lock (Sync)
         {
+            EnsureLoaded();
+
             foreach (var line in lines)
             {
                 Pending.Add(new AmAccountChangeDashboardItem
@@ -51,6 +69,8 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
                     ReferralAccount = line.ReferralAccount
                 });
             }
+
+            SaveUnsafe();
         }
 
         return Task.CompletedTask;
@@ -60,6 +80,8 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     {
         lock (Sync)
         {
+            EnsureLoaded();
+
             return Pending
                 .OrderByDescending(x => x.SubmittedAtUtc)
                 .ToList();
@@ -70,6 +92,7 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     {
         lock (Sync)
         {
+            EnsureLoaded();
             return Pending.Count;
         }
     }
@@ -136,6 +159,8 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
     {
         lock (Sync)
         {
+            EnsureLoaded();
+
             var item = Pending.FirstOrDefault(x => x.Id == itemId);
             if (item == null)
                 throw new InvalidOperationException("Dashboard item not found or already processed.");
@@ -149,6 +174,53 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
         lock (Sync)
         {
             Pending.RemoveAll(x => x.Id == itemId);
+            SaveUnsafe();
         }
+    }
+
+    private void EnsureLoaded()
+    {
+        if (IsLoaded)
+            return;
+
+        var blobClient = _containerClient.GetBlobClient(BlobName);
+
+        try
+        {
+            if (!blobClient.Exists())
+            {
+                IsLoaded = true;
+                return;
+            }
+
+            var download = blobClient.DownloadContent();
+            var json = download.Value.Content.ToString();
+            var loaded = string.IsNullOrWhiteSpace(json)
+                ? new List<AmAccountChangeDashboardItem>()
+                : JsonSerializer.Deserialize<List<AmAccountChangeDashboardItem>>(json) ?? new List<AmAccountChangeDashboardItem>();
+
+            Pending.Clear();
+            Pending.AddRange(loaded);
+        }
+        catch
+        {
+            Pending.Clear();
+        }
+        finally
+        {
+            IsLoaded = true;
+        }
+    }
+
+    private void SaveUnsafe()
+    {
+        var payload = JsonSerializer.Serialize(Pending, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(payload));
+        var blobClient = _containerClient.GetBlobClient(BlobName);
+        blobClient.Upload(stream, overwrite: true);
     }
 }
