@@ -1,6 +1,6 @@
 @page "/account-change-dashboard"
 
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = VandaliaCentral.Authorization.AuthorizationPolicies.AccountChangeDashboardAccess)]
 @attribute [Microsoft.Identity.Web.AuthorizeForScopes(Scopes = new[] { "Mail.Send" })]
 
 @using Microsoft.AspNetCore.Components.Authorization

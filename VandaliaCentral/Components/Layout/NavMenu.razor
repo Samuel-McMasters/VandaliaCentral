@@ -248,8 +248,10 @@
             .Where(c => c.Type == "groups")
             .Any(c => AuthorizationPolicies.AmAccountChangeAllowedGroups.Contains(c.Value));
 
-        // Keep notification visibility separate from menu rendering so role-based security can be tightened later.
-        CanAccessAccountChangeDashboard = IsAdmin;
+        // Account Change Dashboard access is limited to admin + designated Entra group.
+        CanAccessAccountChangeDashboard = user.Claims
+            .Where(c => c.Type == "groups")
+            .Any(c => AuthorizationPolicies.AccountChangeDashboardAllowedGroups.Contains(c.Value));
         if (CanAccessAccountChangeDashboard)
         {
             PendingAccountChangeCount = DashboardService.GetPendingCount();
