@@ -160,6 +160,11 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(context =>
             context.User.Identity?.IsAuthenticated == true &&
             context.User.Claims.Any(c => c.Type == "groups" && AuthorizationPolicies.AmAccountChangeAllowedGroups.Contains(c.Value))));
+
+    options.AddPolicy(AuthorizationPolicies.AccountChangeDashboardAccess, policy =>
+        policy.RequireAssertion(context =>
+            context.User.Identity?.IsAuthenticated == true &&
+            context.User.Claims.Any(c => c.Type == "groups" && AuthorizationPolicies.AccountChangeDashboardAllowedGroups.Contains(c.Value))));
 });
 
 // Enables conditional access and consent handling for Graph calls
