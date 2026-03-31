@@ -1,9 +1,11 @@
 @page "/it-dashboard"
 @using Microsoft.AspNetCore.Authorization
+@using VandaliaCentral.Authorization
 @using VandaliaCentral.Models
 @using VandaliaCentral.Services
 @inject ItNewsService ItNewsService
 @inject SowDocumentService SowDocumentService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize]
 
@@ -63,40 +65,43 @@
             </section>
         </div>
 
-        <div class="col-12 col-xl-5">
-            <section class="dashboard-card border rounded-3 shadow-sm p-4 h-100">
-                <h5 class="mb-2">Scope of Work Documents</h5>
-                <p class="text-muted small mb-3">View documents in your browser or download a copy.</p>
+        @if (CanViewSowSection)
+        {
+            <div class="col-12 col-xl-5">
+                <section class="dashboard-card border rounded-3 shadow-sm p-4 h-100">
+                    <h5 class="mb-2">Scope of Work Documents</h5>
+                    <p class="text-muted small mb-3">View documents in your browser or download a copy.</p>
 
-                @if (sowDocuments == null)
-                {
-                    <p class="text-muted mb-0">Loading SOW documents...</p>
-                }
-                else if (!sowDocuments.Any())
-                {
-                    <div class="empty-state">
-                        <p class="text-muted mb-0">No SOW documents are available right now.</p>
-                    </div>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush sow-list">
-                        @foreach (var doc in sowDocuments)
-                        {
-                            <li class="list-group-item px-0 py-3">
-                                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                                    <div class="fw-semibold text-break">@doc.Title</div>
-                                    <div class="d-flex gap-2 flex-shrink-0">
-                                        <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
-                                        <a class="btn btn-sm btn-primary" href="@($"/api/sow-documents/download?fileName={Uri.EscapeDataString(doc.FileName)}")">Download</a>
+                    @if (sowDocuments == null)
+                    {
+                        <p class="text-muted mb-0">Loading SOW documents...</p>
+                    }
+                    else if (!sowDocuments.Any())
+                    {
+                        <div class="empty-state">
+                            <p class="text-muted mb-0">No SOW documents are available right now.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush sow-list">
+                            @foreach (var doc in sowDocuments)
+                            {
+                                <li class="list-group-item px-0 py-3">
+                                    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                        <div class="fw-semibold text-break">@doc.Title</div>
+                                        <div class="d-flex gap-2 flex-shrink-0">
+                                            <a class="btn btn-sm btn-outline-primary" href="@doc.Url" target="_blank" rel="noopener noreferrer">View</a>
+                                            <a class="btn btn-sm btn-primary" href="@($"/api/sow-documents/download?fileName={Uri.EscapeDataString(doc.FileName)}")">Download</a>
+                                        </div>
                                     </div>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </section>
-        </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            </div>
+        }
     </div>
 </div>
 
@@ -130,10 +135,19 @@
 @code {
     private List<ItNewsItem>? itNewsItems;
     private List<SowDocumentInfo>? sowDocuments;
+    private bool CanViewSowSection;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        CanViewSowSection = authState.User.Claims
+            .Where(c => c.Type == "groups")
+            .Any(c => AuthorizationPolicies.AmAccountChangeAllowedGroups.Contains(c.Value));
+
         itNewsItems = await ItNewsService.LoadNewsAsync();
-        sowDocuments = await SowDocumentService.ListDocumentsAsync();
+        if (CanViewSowSection)
+        {
+            sowDocuments = await SowDocumentService.ListDocumentsAsync();
+        }
     }
 }

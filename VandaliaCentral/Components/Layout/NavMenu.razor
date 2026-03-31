@@ -1,6 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
+@using VandaliaCentral.Authorization
 @using VandaliaCentral.Services
 @inject LoggingService Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -49,7 +50,10 @@
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="https://rdo.rouseanalytics.com" target="_blank" @onclick='(e) => HandleLinkClick("Rouse")'>Rouse</a></li>
-                <li><a class="dropdown-item" href="/am-assignment-change-request" target="" @onclick='(e) => HandleLinkClick("Am Account Change Form")'>AM Account Change Form</a></li>
+                @if (CanAccessAmAccountChange)
+                {
+                    <li><a class="dropdown-item" href="/am-assignment-change-request" target="" @onclick='(e) => HandleLinkClick("Am Account Change Form")'>AM Account Change Form</a></li>
+                }
                 <li>
                     <a class="dropdown-item d-flex justify-content-between align-items-center" href="/account-change-dashboard" target="" @onclick='(e) => HandleLinkClick("Account Change Dashboard")'>
                         <span>Account Change Dashboard</span>
@@ -118,8 +122,11 @@
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="https://access.paylocity.com/" target="_blank" @onclick='(e) => HandleLinkClick("Paylocity")'>Paylocity</a></li>
                 <li><a class="dropdown-item" href="https://webtime2.paylocity.com/WebTime/v3/Employee" target="_blank" @onclick='(e) => HandleLinkClick("Request Time Off")'>Request Time Off</a></li>
-                <li><a class="dropdown-item" href="/employeetermination" @onclick='(e) => HandleLinkClick("Employee Termiantion")'>Employee Termination</a></li>
-                <li><a class="dropdown-item" href="/employeechange" @onclick='(e) => HandleLinkClick("Employee Change")'>Employee Change</a></li>
+                @if (CanAccessHrForms)
+                {
+                    <li><a class="dropdown-item" href="/employeetermination" @onclick='(e) => HandleLinkClick("Employee Termiantion")'>Employee Termination</a></li>
+                    <li><a class="dropdown-item" href="/employeechange" @onclick='(e) => HandleLinkClick("Employee Change")'>Employee Change</a></li>
+                }
                 <li><a class="dropdown-item" href="https://talent.paylocity.com/Talent/Jobs/List/" target="_blank" @onclick='(e) => HandleLinkClick("Careers")'>Careers</a></li>
                 
             </ul>
@@ -188,6 +195,8 @@
     
     private bool IsSafetyTrainer = false;
     private bool IsAdmin = false;
+    private bool CanAccessHrForms;
+    private bool CanAccessAmAccountChange;
     private int PendingAccountChangeCount;
     private bool CanAccessAccountChangeDashboard;
     private bool ShowAccountChangeNotification => CanAccessAccountChangeDashboard && PendingAccountChangeCount > 0;
@@ -229,7 +238,15 @@
         // Check if user is in the correct Entra ID group by claim
 
         IsAdmin = user.Claims.Any(c =>
-            c.Type == "groups" && c.Value == "1f7897c7-a5b7-437c-9697-626c1e758f04");
+            c.Type == "groups" && c.Value == AuthorizationPolicies.AdminGroupId);
+
+        CanAccessHrForms = user.Claims
+            .Where(c => c.Type == "groups")
+            .Any(c => AuthorizationPolicies.HrFormsAllowedGroups.Contains(c.Value));
+
+        CanAccessAmAccountChange = user.Claims
+            .Where(c => c.Type == "groups")
+            .Any(c => AuthorizationPolicies.AmAccountChangeAllowedGroups.Contains(c.Value));
 
         // Keep notification visibility separate from menu rendering so role-based security can be tightened later.
         CanAccessAccountChangeDashboard = IsAdmin;
