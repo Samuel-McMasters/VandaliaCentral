@@ -293,6 +293,7 @@
     private string _currentAmSearchTerm = string.Empty;
     private string _newAmSearchTerm = string.Empty;
     private List<User> _eligibleAmUsers = new();
+    private static readonly User HouseAmUser = new() { DisplayName = "House" };
     private static readonly HashSet<string> AllowedAmJobTitles = new(StringComparer.OrdinalIgnoreCase)
     {
         "Account Manager",
@@ -333,14 +334,27 @@
     }
 
     private IEnumerable<User> FilteredCurrentAmUsers =>
-        _eligibleAmUsers.Where(u =>
+        GetAmDropdownUsers().Where(u =>
             string.IsNullOrWhiteSpace(_currentAmSearchTerm) ||
             (u.DisplayName?.Contains(_currentAmSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
 
     private IEnumerable<User> FilteredNewAmUsers =>
-        _eligibleAmUsers.Where(u =>
+        GetAmDropdownUsers().Where(u =>
             string.IsNullOrWhiteSpace(_newAmSearchTerm) ||
             (u.DisplayName?.Contains(_newAmSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private IEnumerable<User> GetAmDropdownUsers()
+    {
+        yield return HouseAmUser;
+
+        foreach (var user in _eligibleAmUsers)
+        {
+            if (string.Equals(user.DisplayName, HouseAmUser.DisplayName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            yield return user;
+        }
+    }
 
     private string GetCurrentAmSelectionText()
     {
