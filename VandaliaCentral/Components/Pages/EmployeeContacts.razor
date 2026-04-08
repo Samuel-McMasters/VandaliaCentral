@@ -94,10 +94,20 @@
                         <thead>
                             <tr class="w-100">
                                 
-                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="5%">District</th>
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="5%">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark fw-semibold"
+                                            @onclick="() => ToggleSort(SortField.District)">
+                                        District @GetSortIndicator(SortField.District)
+                                    </button>
+                                </th>
                                 
                                 <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="15%">Name</th>
-                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="12%">Office Location</th>
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="12%">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark fw-semibold"
+                                            @onclick="() => ToggleSort(SortField.OfficeLocation)">
+                                        Office Location @GetSortIndicator(SortField.OfficeLocation)
+                                    </button>
+                                </th>
                                 <th class="d-none d-md-table-cell" width="15%">Job Title</th>
                                 <th class="d-none d-lg-table-cell" width="20%">Email</th>
                                 <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
@@ -150,6 +160,8 @@
     private readonly HashSet<string> selectedDistricts = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> selectedOfficeLocations = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> selectedJobTitles = new(StringComparer.OrdinalIgnoreCase);
+    private SortField activeSortField = SortField.None;
+    private bool isSortAscending = true;
 
     private IEnumerable<string> DistrictOptions =>
         BuildFilterOptions(
@@ -248,13 +260,13 @@
 
     //Search functionality 
     private IEnumerable<User> FilteredEmployees =>
-        EmployeesFilteredBySelections().Where(u =>
+        ApplySorting(EmployeesFilteredBySelections().Where(u =>
             string.IsNullOrWhiteSpace(searchTerm) ||
             (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
             (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
             (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
             (GetEmployeeNumber(u).Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        );
+        ));
 
     private IEnumerable<User> EmployeesFilteredBySelections(
         bool ignoreDistrictFilter = false,
@@ -284,6 +296,41 @@
     private static string GetDistrict(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute1 ?? string.Empty;
 
     private static string GetEmployeeNumber(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? string.Empty;
+    private static string GetOfficeLocation(User user) => user.OfficeLocation ?? string.Empty;
+
+    private IEnumerable<User> ApplySorting(IEnumerable<User> users)
+    {
+        return activeSortField switch
+        {
+            SortField.District when isSortAscending => users.OrderBy(GetDistrict, StringComparer.OrdinalIgnoreCase),
+            SortField.District => users.OrderByDescending(GetDistrict, StringComparer.OrdinalIgnoreCase),
+            SortField.OfficeLocation when isSortAscending => users.OrderBy(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
+            SortField.OfficeLocation => users.OrderByDescending(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
+            _ => users
+        };
+    }
+
+    private void ToggleSort(SortField sortField)
+    {
+        if (activeSortField == sortField)
+        {
+            isSortAscending = !isSortAscending;
+            return;
+        }
+
+        activeSortField = sortField;
+        isSortAscending = true;
+    }
+
+    private string GetSortIndicator(SortField sortField)
+    {
+        if (activeSortField != sortField)
+        {
+            return "↕";
+        }
+
+        return isSortAscending ? "▲" : "▼";
+    }
 
     private void ToggleFilter(HashSet<string> selectedValues, string value, object? isChecked)
     {
@@ -301,5 +348,12 @@
         selectedDistricts.Clear();
         selectedOfficeLocations.Clear();
         selectedJobTitles.Clear();
+    }
+
+    private enum SortField
+    {
+        None,
+        District,
+        OfficeLocation
     }
 }
