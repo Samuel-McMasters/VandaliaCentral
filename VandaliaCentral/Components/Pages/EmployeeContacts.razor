@@ -111,7 +111,12 @@
                                 <th class="d-none d-md-table-cell" width="15%">Job Title</th>
                                 <th class="d-none d-lg-table-cell" width="20%">Email</th>
                                 <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
-                                <th class="d-none d-xl-table-cell" width="15%">Extension</th>
+                                <th class="d-none d-xl-table-cell" width="15%">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark fw-semibold"
+                                            @onclick="() => ToggleSort(SortField.OfficeNumber)">
+                                        Office Number @GetSortIndicator(SortField.OfficeNumber)
+                                    </button>
+                                </th>
                                 
                             </tr>
                         </thead>
