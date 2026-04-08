@@ -111,12 +111,7 @@
                                 <th class="d-none d-md-table-cell" width="15%">Job Title</th>
                                 <th class="d-none d-lg-table-cell" width="20%">Email</th>
                                 <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
-                                <th class="d-none d-xl-table-cell" width="15%">
-                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark fw-semibold"
-                                            @onclick="() => ToggleSort(SortField.OfficeLocation)">
-                                        Office Number @GetSortIndicator(SortField.OfficeLocation)
-                                    </button>
-                                </th>
+                                <th class="d-none d-xl-table-cell" width="15%">Extension</th>
                                 
                             </tr>
                         </thead>
@@ -189,7 +184,8 @@
     private bool HasActiveFilters =>
         selectedDistricts.Count > 0 ||
         selectedOfficeLocations.Count > 0 ||
-        selectedJobTitles.Count > 0;
+        selectedJobTitles.Count > 0 ||
+        activeSortField != SortField.None;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -302,6 +298,7 @@
 
     private static string GetEmployeeNumber(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? string.Empty;
     private static string GetOfficeLocation(User user) => user.OfficeLocation ?? string.Empty;
+    private static string GetDisplayName(User user) => user.DisplayName ?? string.Empty;
 
     private IEnumerable<User> ApplySorting(IEnumerable<User> users)
     {
@@ -311,7 +308,7 @@
             SortField.District => users.OrderByDescending(GetDistrict, StringComparer.OrdinalIgnoreCase),
             SortField.OfficeLocation when isSortAscending => users.OrderBy(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
             SortField.OfficeLocation => users.OrderByDescending(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
-            _ => users
+            _ => users.OrderBy(GetDisplayName, StringComparer.OrdinalIgnoreCase)
         };
     }
 
@@ -353,6 +350,8 @@
         selectedDistricts.Clear();
         selectedOfficeLocations.Clear();
         selectedJobTitles.Clear();
+        activeSortField = SortField.None;
+        isSortAscending = true;
     }
 
     private enum SortField
