@@ -13,7 +13,7 @@
     <Authorized>
         <div class="container-fluid d-flex flex-column border rounded bg-white shadow-sm col-md-12 py-4">
             <h3>Employee Contacts</h3>
-            <input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, or Job Title..."
+            <input type="text" class="form-control w-50 mb-3" placeholder="Search by Name, Email, Job Title, or Employee Number..."
                    @bind="searchTerm" @bind:event="oninput" />
             <div class="d-flex flex-wrap align-items-start gap-2 mb-3">
                 <div class="dropdown">
@@ -252,7 +252,8 @@
             string.IsNullOrWhiteSpace(searchTerm) ||
             (u.DisplayName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
             (u.Mail?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-            (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            (u.JobTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (GetEmployeeNumber(u).Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
         );
 
     private IEnumerable<User> EmployeesFilteredBySelections(
@@ -281,6 +282,8 @@
     }
 
     private static string GetDistrict(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute1 ?? string.Empty;
+
+    private static string GetEmployeeNumber(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? string.Empty;
 
     private void ToggleFilter(HashSet<string> selectedValues, string value, object? isChecked)
     {
