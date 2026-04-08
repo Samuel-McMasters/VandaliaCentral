@@ -122,7 +122,7 @@
 
                 <div class="col-12 col-lg-4">
                     <label class="form-label">Sales Rep #</label>
-                    <InputText class="form-control" @bind-Value="Model.CurrentAmSalesRepNumber" disabled="@_isSubmitting" />
+                    <InputText class="form-control" @bind-Value="Model.CurrentAmSalesRepNumber" readonly="true" disabled="true" />
                     <ValidationMessage For="@(() => Model.CurrentAmSalesRepNumber)" />
                 </div>
             </div>
@@ -179,7 +179,7 @@
 
                 <div class="col-12 col-lg-4">
                     <label class="form-label">Sales Rep #</label>
-                    <InputText class="form-control" @bind-Value="Model.NewAmSalesRepNumber" disabled="@_isSubmitting" />
+                    <InputText class="form-control" @bind-Value="Model.NewAmSalesRepNumber" readonly="true" disabled="true" />
                     <ValidationMessage For="@(() => Model.NewAmSalesRepNumber)" />
                 </div>
             </div>
@@ -293,6 +293,7 @@
     private string _currentAmSearchTerm = string.Empty;
     private string _newAmSearchTerm = string.Empty;
     private List<User> _eligibleAmUsers = new();
+    private const string HouseAmSalesRepNumber = "9900";
     private static readonly User HouseAmUser = new() { DisplayName = "House" };
     private static readonly HashSet<string> AllowedAmJobTitles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -395,17 +396,29 @@
     private void SelectCurrentAm(User user)
     {
         Model.CurrentAmName = user.DisplayName ?? string.Empty;
+        Model.CurrentAmSalesRepNumber = GetSalesRepNumber(user);
         _showCurrentAmDropdown = false;
         _currentAmSearchTerm = string.Empty;
         _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.CurrentAmName)));
+        _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.CurrentAmSalesRepNumber)));
     }
 
     private void SelectNewAm(User user)
     {
         Model.NewAmName = user.DisplayName ?? string.Empty;
+        Model.NewAmSalesRepNumber = GetSalesRepNumber(user);
         _showNewAmDropdown = false;
         _newAmSearchTerm = string.Empty;
         _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.NewAmName)));
+        _editContext.NotifyFieldChanged(new FieldIdentifier(Model, nameof(Model.NewAmSalesRepNumber)));
+    }
+
+    private static string GetSalesRepNumber(User user)
+    {
+        if (string.Equals(user.DisplayName, HouseAmUser.DisplayName, StringComparison.OrdinalIgnoreCase))
+            return HouseAmSalesRepNumber;
+
+        return user.OnPremisesExtensionAttributes?.ExtensionAttribute2?.Trim() ?? string.Empty;
     }
 
     private async Task PopulateExecutiveNameAsync()
