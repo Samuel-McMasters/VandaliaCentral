@@ -102,7 +102,12 @@
                                 </th>
                                 
                                 <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="15%">Name</th>
-                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="12%">Office Location</th>
+                                <th class="text-truncate" style="overflow: hidden; white-space: nowrap;" width="12%">
+                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-dark fw-semibold"
+                                            @onclick="() => ToggleSort(SortField.OfficeLocation)">
+                                        Office Location @GetSortIndicator(SortField.OfficeLocation)
+                                    </button>
+                                </th>
                                 <th class="d-none d-md-table-cell" width="15%">Job Title</th>
                                 <th class="d-none d-lg-table-cell" width="20%">Email</th>
                                 <th class="d-none d-xl-table-cell" width="15%">Mobile Phone</th>
@@ -296,7 +301,7 @@
     private static string GetDistrict(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute1 ?? string.Empty;
 
     private static string GetEmployeeNumber(User user) => user.OnPremisesExtensionAttributes?.ExtensionAttribute2 ?? string.Empty;
-    private static string GetOfficeNumber(User user) => user.BusinessPhones?.FirstOrDefault() ?? string.Empty;
+    private static string GetOfficeLocation(User user) => user.OfficeLocation ?? string.Empty;
 
     private IEnumerable<User> ApplySorting(IEnumerable<User> users)
     {
@@ -304,8 +309,8 @@
         {
             SortField.District when isSortAscending => users.OrderBy(GetDistrict, StringComparer.OrdinalIgnoreCase),
             SortField.District => users.OrderByDescending(GetDistrict, StringComparer.OrdinalIgnoreCase),
-            SortField.OfficeNumber when isSortAscending => users.OrderBy(GetOfficeNumber, StringComparer.OrdinalIgnoreCase),
-            SortField.OfficeNumber => users.OrderByDescending(GetOfficeNumber, StringComparer.OrdinalIgnoreCase),
+            SortField.OfficeLocation when isSortAscending => users.OrderBy(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
+            SortField.OfficeLocation => users.OrderByDescending(GetOfficeLocation, StringComparer.OrdinalIgnoreCase),
             _ => users
         };
     }
@@ -354,6 +359,6 @@
     {
         None,
         District,
-        OfficeNumber
+        OfficeLocation
     }
 }
