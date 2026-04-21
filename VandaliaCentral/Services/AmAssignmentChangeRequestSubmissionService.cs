@@ -32,9 +32,6 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
         {
             if (string.IsNullOrWhiteSpace(emailSettings.AmOpenContractsTo))
                 throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:OpenContractsTo.");
-
-            if (string.IsNullOrWhiteSpace(emailSettings.AmOpenContractsCc))
-                throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:OpenContractsCc (required when Assign Open Contracts is checked).");
         }
 
         if (standardLines.Count > 0)
@@ -55,7 +52,11 @@ public sealed class AmAssignmentChangeRequestSubmissionService : IAmAssignmentCh
                 submissionId: submissionId,
                 dashboardUrl: AccountChangeDashboardUrl);
 
-            await _email.SendEmailHtmlAsyncStrict(emailSettings.AmOpenContractsTo, subject, body, emailSettings.AmOpenContractsCc, ct);
+            var openContractsCc = string.IsNullOrWhiteSpace(emailSettings.AmOpenContractsCc)
+                ? null
+                : emailSettings.AmOpenContractsCc;
+
+            await _email.SendEmailHtmlAsyncStrict(emailSettings.AmOpenContractsTo, subject, body, openContractsCc, ct);
         }
 
         if (standardLines.Count > 0)
