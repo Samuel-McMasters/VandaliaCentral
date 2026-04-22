@@ -54,7 +54,7 @@
                 <div class="admin-tab-grid" id="adminTabs" role="tablist">
                     <button class='btn text-start admin-tab-button @(IsActiveTab("team"))' @onclick='() => SetActiveTab("team")' type='button'>
                         <span class="fw-semibold d-block">Team</span>
-                        <small class="text-muted">Admin users and work locations</small>
+                        <small class="text-muted">IT users and work locations</small>
                     </button>
                     <button class='btn text-start admin-tab-button @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
                         <span class="fw-semibold d-block">Logs</span>
@@ -111,8 +111,8 @@
         @if (activeTab == "team")
         {
             <div>
-                <h5>Admin Team</h5>
-                <p class="text-muted">Members of the admin Entra group and their current work location.</p>
+                <h5>IT Team</h5>
+                <p class="text-muted">IT team and their current work location.</p>
 
                 @if (isLoadingTeamMembers)
                 {
