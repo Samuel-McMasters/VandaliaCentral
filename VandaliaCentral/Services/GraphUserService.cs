@@ -4,6 +4,7 @@ using Microsoft.Identity.Web;
 using VandaliaCentral.Models;
 
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace VandaliaCentral.Services
 {
@@ -190,7 +191,7 @@ namespace VandaliaCentral.Services
                             .Request()
                             .GetAsync();
 
-                        workLocation = MapWorkLocation(presence?.WorkLocation?.WorkLocationType);
+                        workLocation = MapWorkLocation(GetPresenceWorkLocationType(presence));
                     }
                     catch
                     {
@@ -304,6 +305,31 @@ namespace VandaliaCentral.Services
                 "timeoff" => "Time off",
                 _ => "Unknown"
             };
+        }
+
+        private static string? GetPresenceWorkLocationType(Presence? presence)
+        {
+            if (presence?.AdditionalData is null ||
+                !presence.AdditionalData.TryGetValue("workLocation", out var workLocationObj) ||
+                workLocationObj is null)
+            {
+                return null;
+            }
+
+            if (workLocationObj is JsonElement workLocationElement &&
+                workLocationElement.ValueKind == JsonValueKind.Object &&
+                workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
+            {
+                return workLocationTypeElement.GetString();
+            }
+
+            if (workLocationObj is IDictionary<string, object> workLocationDict &&
+                workLocationDict.TryGetValue("workLocationType", out var workLocationTypeValue))
+            {
+                return workLocationTypeValue?.ToString();
+            }
+
+            return null;
         }
     }
 }
