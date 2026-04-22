@@ -1,8 +1,10 @@
 ﻿using Microsoft.Graph;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
+using VandaliaCentral.Models;
 
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace VandaliaCentral.Services
 {
@@ -159,6 +161,66 @@ namespace VandaliaCentral.Services
             }
         }
 
+        public async Task<IEnumerable<AdminTeamMemberLocation>> GetGroupUsersWithWorkLocationAsync(string groupId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(groupId))
+                {
+                    return Enumerable.Empty<AdminTeamMemberLocation>();
+                }
+
+                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
+                {
+                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All", "GroupMember.Read.All", "Presence.Read.All" });
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }));
+
+                var users = (await GetGroupUsersAsync(groupId)).ToList();
+                if (users.Count == 0)
+                {
+                    return Enumerable.Empty<AdminTeamMemberLocation>();
+                }
+
+                var userTasks = users.Select(async user =>
+                {
+                    var workLocation = "Unknown";
+                    try
+                    {
+                        var presence = await graphClient.Users[user.Id].Presence
+                            .Request()
+                            .GetAsync();
+
+                        workLocation = MapWorkLocation(GetPresenceWorkLocationType(presence));
+                    }
+                    catch
+                    {
+                        workLocation = "Unknown";
+                    }
+
+                    return new AdminTeamMemberLocation
+                    {
+                        UserId = user.Id ?? string.Empty,
+                        DisplayName = user.DisplayName ?? user.UserPrincipalName ?? "Unknown User",
+                        Mail = user.Mail,
+                        UserPrincipalName = user.UserPrincipalName,
+                        WorkLocation = workLocation
+                    };
+                });
+
+                var members = await Task.WhenAll(userTasks);
+                return members
+                    .OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return Enumerable.Empty<AdminTeamMemberLocation>();
+            }
+        }
+
+
         public async Task<User?> GetUserProfileAsync(string userId)
         {
             try
@@ -232,6 +294,42 @@ namespace VandaliaCentral.Services
                 Console.WriteLine($"Graph error: {ex.Message}");
                 return false;
             }
+        }
+
+        private static string MapWorkLocation(string? workLocationType)
+        {
+            return workLocationType?.ToLowerInvariant() switch
+            {
+                "office" => "In office",
+                "remote" => "Remote",
+                "timeoff" => "Time off",
+                _ => "Unknown"
+            };
+        }
+
+        private static string? GetPresenceWorkLocationType(Presence? presence)
+        {
+            if (presence?.AdditionalData is null ||
+                !presence.AdditionalData.TryGetValue("workLocation", out var workLocationObj) ||
+                workLocationObj is null)
+            {
+                return null;
+            }
+
+            if (workLocationObj is JsonElement workLocationElement &&
+                workLocationElement.ValueKind == JsonValueKind.Object &&
+                workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
+            {
+                return workLocationTypeElement.GetString();
+            }
+
+            if (workLocationObj is IDictionary<string, object> workLocationDict &&
+                workLocationDict.TryGetValue("workLocationType", out var workLocationTypeValue))
+            {
+                return workLocationTypeValue?.ToString();
+            }
+
+            return null;
         }
     }
 }
