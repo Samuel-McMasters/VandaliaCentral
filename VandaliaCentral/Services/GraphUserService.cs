@@ -1,8 +1,10 @@
 ﻿using Microsoft.Graph;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
+using VandaliaCentral.Models;
 
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace VandaliaCentral.Services
 {
@@ -10,13 +12,16 @@ namespace VandaliaCentral.Services
     {
         private readonly ITokenAcquisition _tokenAcquisition;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public GraphUserService(
             ITokenAcquisition tokenAcquisition,
-            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
+            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler,
+            IHttpClientFactory httpClientFactory)
         {
             _tokenAcquisition = tokenAcquisition;
             _consentHandler = consentHandler;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<IEnumerable<User>> GetUsersAsync()
@@ -159,6 +164,57 @@ namespace VandaliaCentral.Services
             }
         }
 
+        public async Task<IEnumerable<AdminTeamMemberLocation>> GetGroupUsersWithWorkLocationAsync(string groupId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(groupId))
+                {
+                    return Enumerable.Empty<AdminTeamMemberLocation>();
+                }
+
+                var users = (await GetGroupUsersAsync(groupId)).ToList();
+                if (users.Count == 0)
+                {
+                    return Enumerable.Empty<AdminTeamMemberLocation>();
+                }
+
+                var userTasks = users.Select(async user =>
+                {
+                    var workLocation = "Unknown";
+                    try
+                    {
+                        var workLocationType = await GetUserWorkLocationTypeAsync(user.Id);
+                        workLocation = MapWorkLocation(workLocationType);
+                    }
+                    catch
+                    {
+                        workLocation = "Unknown";
+                    }
+
+                    return new AdminTeamMemberLocation
+                    {
+                        UserId = user.Id ?? string.Empty,
+                        DisplayName = user.DisplayName ?? user.UserPrincipalName ?? "Unknown User",
+                        Mail = user.Mail,
+                        UserPrincipalName = user.UserPrincipalName,
+                        WorkLocation = workLocation
+                    };
+                });
+
+                var members = await Task.WhenAll(userTasks);
+                return members
+                    .OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _consentHandler.HandleException(ex);
+                return Enumerable.Empty<AdminTeamMemberLocation>();
+            }
+        }
+
+
         public async Task<User?> GetUserProfileAsync(string userId)
         {
             try
@@ -232,6 +288,56 @@ namespace VandaliaCentral.Services
                 Console.WriteLine($"Graph error: {ex.Message}");
                 return false;
             }
+        }
+
+        private static string MapWorkLocation(string? workLocationType)
+        {
+            return workLocationType?.ToLowerInvariant() switch
+            {
+                "office" => "In office",
+                "remote" => "Remote",
+                "timeoff" => "Time off",
+                _ => "Unknown"
+            };
+        }
+
+        private async Task<string?> GetUserWorkLocationTypeAsync(string? userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return null;
+            }
+
+            var accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Presence.Read.All" });
+            var client = _httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://graph.microsoft.com/beta/users/{userId}/presence?$select=workLocation");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var payload = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                return null;
+            }
+
+            using var json = JsonDocument.Parse(payload);
+            if (!json.RootElement.TryGetProperty("workLocation", out var workLocationElement))
+            {
+                return null;
+            }
+
+            if (workLocationElement.ValueKind == JsonValueKind.Object &&
+                workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
+            {
+                return workLocationTypeElement.GetString();
+            }
+
+            return null;
         }
     }
 }
