@@ -179,18 +179,16 @@ namespace VandaliaCentral.Services
                     return Enumerable.Empty<AdminTeamMemberLocation>();
                 }
 
-                var userTasks = users.Select(async user =>
+                var workLocationByUserId = await GetWorkLocationTypesByUserIdsAsync(users
+                    .Select(u => u.Id)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Cast<string>()
+                    .ToList());
+
+                var userTasks = users.Select(user =>
                 {
-                    var workLocation = "Unknown";
-                    try
-                    {
-                        var workLocationType = await GetUserWorkLocationTypeAsync(user.Id);
-                        workLocation = MapWorkLocation(workLocationType);
-                    }
-                    catch
-                    {
-                        workLocation = "Unknown";
-                    }
+                    workLocationByUserId.TryGetValue(user.Id ?? string.Empty, out var workLocationType);
+                    var workLocation = MapWorkLocation(workLocationType);
 
                     return new AdminTeamMemberLocation
                     {
@@ -202,7 +200,7 @@ namespace VandaliaCentral.Services
                     };
                 });
 
-                var members = await Task.WhenAll(userTasks);
+                var members = userTasks.ToList();
                 return members
                     .OrderBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .ToList();
@@ -301,43 +299,83 @@ namespace VandaliaCentral.Services
             };
         }
 
-        private async Task<string?> GetUserWorkLocationTypeAsync(string? userId)
+        private async Task<Dictionary<string, string?>> GetWorkLocationTypesByUserIdsAsync(List<string> userIds)
         {
-            if (string.IsNullOrWhiteSpace(userId))
+            var results = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            if (userIds.Count == 0)
             {
-                return null;
+                return results;
             }
 
             var accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Presence.Read.All" });
             var client = _httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://graph.microsoft.com/beta/users/{userId}/presence?$select=workLocation");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            const int batchSize = 100;
 
-            using var response = await client.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
+            for (var i = 0; i < userIds.Count; i += batchSize)
             {
-                return null;
+                var idBatch = userIds.Skip(i).Take(batchSize).ToList();
+                var requestBody = JsonSerializer.Serialize(new { ids = idBatch });
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, "https://graph.microsoft.com/beta/communications/getPresencesByUserId");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                request.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
+
+                using var response = await client.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    continue;
+                }
+
+                var payload = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(payload))
+                {
+                    continue;
+                }
+
+                using var json = JsonDocument.Parse(payload);
+                if (!json.RootElement.TryGetProperty("value", out var valueElement) ||
+                    valueElement.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var presenceItem in valueElement.EnumerateArray())
+                {
+                    if (!presenceItem.TryGetProperty("id", out var idElement))
+                    {
+                        continue;
+                    }
+
+                    var id = idElement.GetString();
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        continue;
+                    }
+
+                    string? workLocationType = null;
+
+                    if (presenceItem.TryGetProperty("workLocation", out var workLocationElement) &&
+                        workLocationElement.ValueKind == JsonValueKind.Object &&
+                        workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
+                    {
+                        workLocationType = workLocationTypeElement.GetString();
+                    }
+                    else if (presenceItem.TryGetProperty("workLocation", out workLocationElement) &&
+                             workLocationElement.ValueKind == JsonValueKind.Object &&
+                             workLocationElement.TryGetProperty("type", out var typeElement))
+                    {
+                        workLocationType = typeElement.GetString();
+                    }
+                    else if (presenceItem.TryGetProperty("workLocationType", out var topLevelWorkLocationType))
+                    {
+                        workLocationType = topLevelWorkLocationType.GetString();
+                    }
+
+                    results[id] = workLocationType;
+                }
             }
 
-            var payload = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(payload))
-            {
-                return null;
-            }
-
-            using var json = JsonDocument.Parse(payload);
-            if (!json.RootElement.TryGetProperty("workLocation", out var workLocationElement))
-            {
-                return null;
-            }
-
-            if (workLocationElement.ValueKind == JsonValueKind.Object &&
-                workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
-            {
-                return workLocationTypeElement.GetString();
-            }
-
-            return null;
+            return results;
         }
     }
 }
