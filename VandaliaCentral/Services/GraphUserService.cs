@@ -12,13 +12,16 @@ namespace VandaliaCentral.Services
     {
         private readonly ITokenAcquisition _tokenAcquisition;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public GraphUserService(
             ITokenAcquisition tokenAcquisition,
-            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
+            MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler,
+            IHttpClientFactory httpClientFactory)
         {
             _tokenAcquisition = tokenAcquisition;
             _consentHandler = consentHandler;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<IEnumerable<User>> GetUsersAsync()
@@ -170,12 +173,6 @@ namespace VandaliaCentral.Services
                     return Enumerable.Empty<AdminTeamMemberLocation>();
                 }
 
-                var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async request =>
-                {
-                    var token = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "User.Read.All", "GroupMember.Read.All", "Presence.Read.All" });
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }));
-
                 var users = (await GetGroupUsersAsync(groupId)).ToList();
                 if (users.Count == 0)
                 {
@@ -187,11 +184,8 @@ namespace VandaliaCentral.Services
                     var workLocation = "Unknown";
                     try
                     {
-                        var presence = await graphClient.Users[user.Id].Presence
-                            .Request()
-                            .GetAsync();
-
-                        workLocation = MapWorkLocation(GetPresenceWorkLocationType(presence));
+                        var workLocationType = await GetUserWorkLocationTypeAsync(user.Id);
+                        workLocation = MapWorkLocation(workLocationType);
                     }
                     catch
                     {
@@ -307,26 +301,40 @@ namespace VandaliaCentral.Services
             };
         }
 
-        private static string? GetPresenceWorkLocationType(Presence? presence)
+        private async Task<string?> GetUserWorkLocationTypeAsync(string? userId)
         {
-            if (presence?.AdditionalData is null ||
-                !presence.AdditionalData.TryGetValue("workLocation", out var workLocationObj) ||
-                workLocationObj is null)
+            if (string.IsNullOrWhiteSpace(userId))
             {
                 return null;
             }
 
-            if (workLocationObj is JsonElement workLocationElement &&
-                workLocationElement.ValueKind == JsonValueKind.Object &&
+            var accessToken = await _tokenAcquisition.GetAccessTokenForUserAsync(new[] { "Presence.Read.All" });
+            var client = _httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://graph.microsoft.com/beta/users/{userId}/presence?$select=workLocation");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var payload = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                return null;
+            }
+
+            using var json = JsonDocument.Parse(payload);
+            if (!json.RootElement.TryGetProperty("workLocation", out var workLocationElement))
+            {
+                return null;
+            }
+
+            if (workLocationElement.ValueKind == JsonValueKind.Object &&
                 workLocationElement.TryGetProperty("workLocationType", out var workLocationTypeElement))
             {
                 return workLocationTypeElement.GetString();
-            }
-
-            if (workLocationObj is IDictionary<string, object> workLocationDict &&
-                workLocationDict.TryGetValue("workLocationType", out var workLocationTypeValue))
-            {
-                return workLocationTypeValue?.ToString();
             }
 
             return null;
