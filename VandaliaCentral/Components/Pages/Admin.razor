@@ -52,6 +52,10 @@
                 <h6 class="text-uppercase text-muted small mb-3">Admin sections</h6>
 
                 <div class="admin-tab-grid" id="adminTabs" role="tablist">
+                    <button class='btn text-start admin-tab-button @(IsActiveTab("team"))' @onclick='() => SetActiveTab("team")' type='button'>
+                        <span class="fw-semibold d-block">Team</span>
+                        <small class="text-muted">Admin users and work locations</small>
+                    </button>
                     <button class='btn text-start admin-tab-button @(IsActiveTab("logs"))' @onclick='() => SetActiveTab("logs")' type='button'>
                         <span class="fw-semibold d-block">Logs</span>
                         <small class="text-muted">Review system logs quickly</small>
@@ -103,6 +107,46 @@
 
 
 
+
+        @if (activeTab == "team")
+        {
+            <div>
+                <h5>Admin Team</h5>
+                <p class="text-muted">Members of the admin Entra group and their current work location.</p>
+
+                @if (isLoadingTeamMembers)
+                {
+                    <p>Loading team members...</p>
+                }
+                else if (!string.IsNullOrWhiteSpace(teamMembersError))
+                {
+                    <div class="alert alert-warning mb-0">@teamMembersError</div>
+                }
+                else if (adminTeamMembers == null || adminTeamMembers.Count == 0)
+                {
+                    <p class="text-muted">No users were found in the admin group.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var member in adminTeamMembers)
+                        {
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded p-3 h-100 bg-light-subtle">
+                                    <div class="fw-semibold text-truncate" title="@member.DisplayName">@member.DisplayName</div>
+                                    <div class="text-muted small text-truncate" title="@(member.Mail ?? member.UserPrincipalName)">@(member.Mail ?? member.UserPrincipalName ?? "No email")</div>
+                                    <div class="mt-3">
+                                        <span class="@GetWorkLocationBadgeClass(member.WorkLocation)">
+                                            @member.WorkLocation
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
 
         @if (activeTab == "logs")
         {
@@ -709,7 +753,7 @@
     private string? logContent;
     private bool isAuthorized = false;
     private bool isMobile = false;
-    private string activeTab = "logs";
+    private string activeTab = "team";
     private string adminGroupId = "1f7897c7-a5b7-437c-9697-626c1e758f04";
     private List<ItNewsItem>? itNewsItems;
     private string newItNewsTitle = string.Empty;
@@ -759,6 +803,9 @@
     private bool isSavingEmailRouting = false;
     private bool emailRoutingSaveFailed = false;
     private string? emailRoutingStatusMessage;
+    private List<AdminTeamMemberLocation>? adminTeamMembers;
+    private bool isLoadingTeamMembers;
+    private string? teamMembersError;
 
     private void SetActiveTab(string tab)
     {
@@ -773,8 +820,16 @@
 
     private string IsActiveTab(string tab) => activeTab == tab ? "active" : "";
 
+    private static string GetWorkLocationBadgeClass(string? workLocation) => workLocation?.ToLowerInvariant() switch
+    {
+        "in office" => "badge rounded-pill bg-success-subtle text-success-emphasis",
+        "remote" => "badge rounded-pill bg-primary-subtle text-primary-emphasis",
+        _ => "badge rounded-pill bg-warning-subtle text-warning-emphasis"
+    };
+
     private string GetTabHeading(string tab) => tab switch
     {
+        "team" => string.Empty,
         "logs" => "System Logs",
 
         "calendar" => string.Empty,
@@ -812,6 +867,7 @@
 
             if (isAuthorized)
             {
+                isLoadingTeamMembers = true;
                 logFiles = await Logger.GetLogFileNamesAsync();
                 itNewsItems = await ItNewsService.LoadNewsAsync();
                 flappyLeaderboards = await FlappyLeaderboardService.GetLeaderboardsAsync(5);
@@ -819,6 +875,9 @@
                 itProjectItems = await ItProjectTrackerService.LoadItemsAsync(signedInUserLogin);
                 knowledgeBaseFolders = await KnowledgeBaseService.LoadFoldersAsync();
                 emailRoutingSettings = await EmailRoutingSettingsService.GetSettingsAsync();
+                adminTeamMembers = (await GraphUserService.GetGroupUsersWithWorkLocationAsync(adminGroupId)).ToList();
+                teamMembersError = null;
+                isLoadingTeamMembers = false;
             }
         }
         catch (MsalUiRequiredException ex)
@@ -828,6 +887,8 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Unexpected error during token acquisition or group check: {ex.Message}");
+            teamMembersError = "Unable to load team members right now.";
+            isLoadingTeamMembers = false;
         }
     }
 
