@@ -22,7 +22,7 @@
             <!-- Monday Minute -->
             <div class="p-4 border rounded bg-white shadow-sm w-100 d-flex flex-column position-relative flex-grow-1 monday-minute-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">@mmPdfName</h5>
+                    <h5 class="mb-0">@(string.IsNullOrWhiteSpace(mmPdfName) ? "Monday Minute" : mmPdfName)</h5>
                     <div class="d-flex gap-2">
                         @if (showPreviousMondayMinutes)
                         {
@@ -36,17 +36,19 @@
                                 View Previous Monday Minutes
                             </button>
                         }
-                        <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
-                            View Fullscreen
-                        </a>
+                        @if (!string.IsNullOrWhiteSpace(mmPdf))
+                        {
+                            <a href=@mmPdf target="_blank" class="btn btn-sm btn-outline-secondary">
+                                View Fullscreen
+                            </a>
+                        }
                     </div>
                 </div>
 
                 <div class="flex-grow-1 w-100 rounded overflow-hidden position-relative monday-minute-content" style="background-color: #e9ecef;">   
                     @if (mmPdf == null)
                     {
-
-                        <p>Loading latest Monday Minute PDF...</p>
+                        <p>There is no Monday Minute currently scheduled for display.</p>
 
                     }
                     else if (!showPreviousMondayMinutes)
@@ -201,7 +203,9 @@
         mmPdfName = await PdfService.GetMmPdfNameAsync("mondayminute");
 
         var mondayMinutes = await PdfService.GetPdfsAsync("mondayminute");
+        var nowUtc = DateTimeOffset.UtcNow;
         previousMondayMinutes = mondayMinutes
+            .Where(pdf => (pdf.DisplayFromUtc ?? pdf.LastModified ?? DateTimeOffset.MinValue) <= nowUtc)
             .Where(pdf => !string.Equals(pdf.Name, mmPdfName, StringComparison.OrdinalIgnoreCase))
             .ToList();
 

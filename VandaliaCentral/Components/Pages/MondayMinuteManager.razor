@@ -15,10 +15,11 @@
     
 
 <div class="pt-4 pb-2 d-flex flex-wrap gap-3">
-    <label class="btn btn-primary mmbtn custom-upload-button text-nowrap" style="max-width: 200px;">
-        @(isMobile ? "Upload" : "Upload Monday Minute")
-        <InputFile OnChange="HandleFileUpload" accept=".pdf" class="d-none" />
-    </label>
+    <button class="btn btn-primary mmbtn custom-upload-button text-nowrap"
+            style="max-width: 220px;"
+            @onclick="OpenUploadModal">
+        @(isMobile ? "Upload PDF" : "Upload Monday Minute")
+    </button>
 
     @if (!string.IsNullOrEmpty(uploadStatus))
     {
@@ -27,6 +28,58 @@
         </div>
     }
 </div>
+
+@if (showUploadModal)
+{
+    <div class="mm-modal-backdrop"></div>
+    <div class="mm-modal">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Upload Monday Minute</h5>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="CloseUploadModal">Close</button>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Upload PDF File</label>
+            <InputFile OnChange="HandleModalFileSelected" accept=".pdf" class="form-control" />
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(selectedFileName))
+        {
+            <p class="mb-2"><strong>Selected:</strong> @selectedFileName</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(modalError))
+        {
+            <div class="alert alert-danger py-2">@modalError</div>
+        }
+
+        @if (pendingUploadFile is not null && !isScheduleStep)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" @onclick="DisplaySelectedImmediately" disabled="@isUploading">
+                    Display Immediately
+                </button>
+                <button class="btn btn-outline-primary" @onclick="GoToScheduleStep" disabled="@isUploading">
+                    Schedule Upload
+                </button>
+            </div>
+        }
+        else if (pendingUploadFile is not null && isScheduleStep)
+        {
+            <div class="d-flex flex-column gap-2">
+                <label for="displayAtLocal" class="form-label mb-1">Display on homepage (Dayton, OH time)</label>
+                <InputDate id="displayAtLocal"
+                           class="form-control"
+                           Type="InputDateType.DateTimeLocal"
+                           @bind-Value="scheduledDisplayDateTimeDayton" />
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary" @onclick="BackToActionStep" disabled="@isUploading">Back</button>
+                    <button class="btn btn-primary" @onclick="FinishScheduledUpload" disabled="@isUploading">Finish</button>
+                </div>
+            </div>
+        }
+    </div>
+}
 
 @if (fileItems == null)
 {
@@ -43,6 +96,7 @@ else
             <thead>
                 <tr>
                     <th style="min-width: 200px;">File Name</th>
+                    <th class="d-none d-md-table-cell" style="min-width: 170px;">Display On Homepage (ET)</th>
                     <th class="d-none d-md-table-cell" style="min-width: 150px;">Date Uploaded</th>
                     <th class="text-start" style="width: 1%;">Actions</th>
                 </tr>
@@ -50,13 +104,21 @@ else
             <tbody>
                 @foreach (var file in fileItems)
                 {
+                    var isDisplayedNow = file.Blob.Name == latestFileName;
                     <tr>
                         <td class="text-break">
                             @file.Blob.Name
-                            @if (file.Blob.Name == latestFileName)
+                            @if (isDisplayedNow)
                             {
                                 <span class="badge bg-success ms-2">Displayed</span>
                             }
+                            else if (file.DisplayFromUtc.HasValue && file.DisplayFromUtc > DateTimeOffset.UtcNow)
+                            {
+                                <span class="badge bg-warning text-dark ms-2">Scheduled</span>
+                            }
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            @(FormatDisplayTime(file.DisplayFromUtc))
                         </td>
                         <td class="d-none d-md-table-cell">
                             @(file.Blob.Properties.LastModified?.UtcDateTime.ToString("g") ?? "Unknown")
@@ -78,11 +140,43 @@ else
     </div>
 }
 
+<style>
+    .mm-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+    }
+
+    .mm-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(560px, 92vw);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.3);
+        padding: 1rem;
+        z-index: 1050;
+    }
+</style>
+
 
 @code {
     private bool isMobile = false;
     private string? uploadStatus;
     private string? latestFileName;
+    private DateTime scheduledDisplayDateTimeDayton = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, DaytonTimeZone).DateTime.AddHours(1);
+    private static readonly TimeZoneInfo DaytonTimeZone = GetDaytonTimeZone();
+    private bool showUploadModal;
+    private bool isScheduleStep;
+    private bool isUploading;
+    private IBrowserFile? pendingUploadFile;
+    private string? selectedFileName;
+    private string? modalError;
 
 
     //Checks if viewport is mobile
@@ -96,33 +190,117 @@ else
         }
     }
 
-    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    private void OpenUploadModal()
+    {
+        showUploadModal = true;
+        modalError = null;
+        isScheduleStep = false;
+        isUploading = false;
+        pendingUploadFile = null;
+        selectedFileName = null;
+        scheduledDisplayDateTimeDayton = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, DaytonTimeZone).DateTime.AddHours(1);
+    }
+
+    private void CloseUploadModal()
+    {
+        showUploadModal = false;
+        isScheduleStep = false;
+        isUploading = false;
+        pendingUploadFile = null;
+        selectedFileName = null;
+        modalError = null;
+    }
+
+    private void HandleModalFileSelected(InputFileChangeEventArgs e)
     {
         var file = e.File;
-
-        if (file is null || !file.Name.EndsWith(".pdf"))
+        if (file is null || !file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
         {
-            uploadStatus = "Please select a valid PDF file.";
+            modalError = "Please select a valid PDF file.";
+            pendingUploadFile = null;
+            selectedFileName = null;
             return;
         }
+
+        pendingUploadFile = file;
+        selectedFileName = file.Name;
+        modalError = null;
+        isScheduleStep = false;
+    }
+
+    private void GoToScheduleStep()
+    {
+        isScheduleStep = true;
+        modalError = null;
+    }
+
+    private void BackToActionStep()
+    {
+        isScheduleStep = false;
+        modalError = null;
+    }
+
+    private async Task DisplaySelectedImmediately()
+    {
+        await UploadPendingFileAsync(MondayMinuteDisplayMode.DisplayNow);
+    }
+
+    private async Task FinishScheduledUpload()
+    {
+        await UploadPendingFileAsync(MondayMinuteDisplayMode.ScheduleForLater);
+    }
+
+    private async Task UploadPendingFileAsync(MondayMinuteDisplayMode mode)
+    {
+        if (pendingUploadFile is null)
+        {
+            modalError = "Please upload a PDF file first.";
+            return;
+        }
+
+        isUploading = true;
 
         try
         {
             uploadStatus = "Uploading...";
-            await PdfService.UploadPdfAsync("mondayminute", file);
+            DateTimeOffset? displayFromUtc = null;
+            if (mode == MondayMinuteDisplayMode.ScheduleForLater)
+            {
+                var scheduledLocal = DateTime.SpecifyKind(scheduledDisplayDateTimeDayton, DateTimeKind.Unspecified);
+                var scheduledUtc = TimeZoneInfo.ConvertTimeToUtc(scheduledLocal, DaytonTimeZone);
+                if (scheduledUtc <= DateTime.UtcNow)
+                {
+                    modalError = "Scheduled time must be in the future.";
+                    return;
+                }
+
+                displayFromUtc = new DateTimeOffset(scheduledUtc);
+            }
+
+            var uploadOptions = new MondayMinuteUploadOptions
+            {
+                DisplayMode = mode,
+                DisplayFromUtc = displayFromUtc
+            };
+            await PdfService.UploadPdfAsync("mondayminute", pendingUploadFile, uploadOptions);
 
             // Get current user identity
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var userName = authState.User?.Identity?.Name ?? "anonymous";
 
             // Log the activity
-            var activity = $"Uploaded File: '{file.Name}'";
+            var activity = mode == MondayMinuteDisplayMode.ScheduleForLater && displayFromUtc.HasValue
+                ? $"Uploaded File: '{pendingUploadFile.Name}' (scheduled for {displayFromUtc.Value:O})"
+                : $"Uploaded File: '{pendingUploadFile.Name}' (display immediately)";
             await Logger.LogActivityAsync(userName, activity);
 
             // refresh the table data (works in /admin AND /mondayminuteeditor)
             await LoadFilesAsync();
 
-            uploadStatus = "Upload successful!";
+            uploadStatus = mode == MondayMinuteDisplayMode.ScheduleForLater && displayFromUtc.HasValue
+                ? $"Upload successful! Scheduled for {FormatDisplayTime(displayFromUtc)}."
+                : "Upload successful! Displaying now.";
+            CloseUploadModal();
             StateHasChanged();
 
             await Task.Delay(2000);
@@ -132,6 +310,11 @@ else
         catch (Exception ex)
         {
             uploadStatus = $"Upload failed: {ex.Message}";
+            modalError = uploadStatus;
+        }
+        finally
+        {
+            isUploading = false;
         }
     }
 
@@ -141,6 +324,7 @@ else
     {
         public BlobItem Blob { get; set; } = default!;
         public string Url { get; set; } = string.Empty;
+        public DateTimeOffset? DisplayFromUtc { get; set; }
     }
 
     private List<FileItem>? fileItems;
@@ -156,7 +340,7 @@ else
 
         var blobs = new List<BlobItem>();
 
-        await foreach (var blobItem in containerClient.GetBlobsAsync())
+        await foreach (var blobItem in containerClient.GetBlobsAsync(BlobTraits.Metadata))
         {
             if (blobItem.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {
@@ -169,12 +353,18 @@ else
             .Select(blob => new FileItem
                 {
                     Blob = blob,
-                    Url = containerClient.GetBlobClient(blob.Name).Uri.ToString()
+                    Url = containerClient.GetBlobClient(blob.Name).Uri.ToString(),
+                    DisplayFromUtc = TryGetDisplayFromUtc(blob)
                 })
             .ToList();
 
-        // ✅ Track the latest file name (first in the list)
-        latestFileName = fileItems.FirstOrDefault()?.Blob.Name;
+        var nowUtc = DateTimeOffset.UtcNow;
+        latestFileName = fileItems
+            .Where(f => (f.DisplayFromUtc ?? f.Blob.Properties.LastModified ?? DateTimeOffset.MinValue) <= nowUtc)
+            .OrderByDescending(f => f.DisplayFromUtc ?? f.Blob.Properties.LastModified ?? DateTimeOffset.MinValue)
+            .ThenByDescending(f => f.Blob.Properties.LastModified ?? DateTimeOffset.MinValue)
+            .Select(f => f.Blob.Name)
+            .FirstOrDefault();
     }
 
     private async Task DeleteFile(string blobName)
@@ -189,5 +379,45 @@ else
         await Logger.LogActivityAsync(userName, activity);
         await LoadFilesAsync();
         StateHasChanged();
+    }
+
+    private static DateTimeOffset? TryGetDisplayFromUtc(BlobItem blobItem)
+    {
+        if (blobItem.Metadata is null)
+        {
+            return null;
+        }
+
+        if (!blobItem.Metadata.TryGetValue("displayfromutc", out var rawDisplayFromUtc))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(rawDisplayFromUtc, out var parsedDate)
+            ? parsedDate
+            : null;
+    }
+
+    private static TimeZoneInfo GetDaytonTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+        }
+    }
+
+    private static string FormatDisplayTime(DateTimeOffset? utcDateTime)
+    {
+        if (!utcDateTime.HasValue)
+        {
+            return "Immediate";
+        }
+
+        var localTime = TimeZoneInfo.ConvertTime(utcDateTime.Value, DaytonTimeZone);
+        return $"{localTime:MMM d, yyyy h:mm tt} ET";
     }
 }

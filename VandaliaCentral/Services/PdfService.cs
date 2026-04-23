@@ -5,11 +5,24 @@ using Microsoft.AspNetCore.Components.Forms;
 
 namespace VandaliaCentral.Services
 {
+    public enum MondayMinuteDisplayMode
+    {
+        DisplayNow = 0,
+        ScheduleForLater = 1
+    }
+
+    public class MondayMinuteUploadOptions
+    {
+        public MondayMinuteDisplayMode DisplayMode { get; set; } = MondayMinuteDisplayMode.DisplayNow;
+        public DateTimeOffset? DisplayFromUtc { get; set; }
+    }
+
     public class PdfInfo
     {
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public DateTimeOffset? LastModified { get; set; }
+        public DateTimeOffset? DisplayFromUtc { get; set; }
     }
 
 
@@ -31,6 +44,31 @@ namespace VandaliaCentral.Services
 
         public async Task<string?> GetLatestPdfUrlAsync(string containerName)
         {
+            if (string.Equals(containerName, "mondayminute", StringComparison.OrdinalIgnoreCase))
+            {
+                var currentMondayMinute = await GetCurrentMondayMinuteBlobAsync(containerName);
+                if (currentMondayMinute is null)
+                {
+                    return null;
+                }
+
+                var mondayMinuteContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                var blobClient = mondayMinuteContainerClient.GetBlobClient(currentMondayMinute.Name);
+                var uriBuilder = new UriBuilder(blobClient.Uri);
+                var cacheBustToken = currentMondayMinute.Properties.LastModified?.ToUnixTimeMilliseconds().ToString() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+                if (string.IsNullOrWhiteSpace(uriBuilder.Query))
+                {
+                    uriBuilder.Query = $"v={cacheBustToken}";
+                }
+                else
+                {
+                    uriBuilder.Query = $"{uriBuilder.Query.TrimStart('?')}&v={cacheBustToken}";
+                }
+
+                return uriBuilder.Uri.ToString();
+            }
+
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
             BlobItem? latestBlob = null;
@@ -72,6 +110,14 @@ namespace VandaliaCentral.Services
 
         public async Task<string?> GetMmPdfNameAsync(string containerName)
         {
+            if (string.Equals(containerName, "mondayminute", StringComparison.OrdinalIgnoreCase))
+            {
+                var currentMondayMinute = await GetCurrentMondayMinuteBlobAsync(containerName);
+                return currentMondayMinute is null
+                    ? null
+                    : Path.GetFileNameWithoutExtension(currentMondayMinute.Name);
+            }
+
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var pdfName = "";
 
@@ -105,6 +151,11 @@ namespace VandaliaCentral.Services
 
         public async Task UploadPdfAsync(string containerName, IBrowserFile file)
         {
+            await UploadPdfAsync(containerName, file, null);
+        }
+
+        public async Task UploadPdfAsync(string containerName, IBrowserFile file, MondayMinuteUploadOptions? options)
+        {
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
 
             // Optional: Generate a unique file name with timestamp
@@ -114,7 +165,24 @@ namespace VandaliaCentral.Services
 
             // Upload file stream with content type
             var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
-            await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = "application/pdf" });
+            var uploadOptions = new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders { ContentType = "application/pdf" }
+            };
+
+            if (string.Equals(containerName, "mondayminute", StringComparison.OrdinalIgnoreCase))
+            {
+                var displayFromUtc = options?.DisplayMode == MondayMinuteDisplayMode.ScheduleForLater && options.DisplayFromUtc.HasValue
+                    ? options.DisplayFromUtc.Value
+                    : DateTimeOffset.UtcNow;
+
+                uploadOptions.Metadata = new Dictionary<string, string>
+                {
+                    ["displayfromutc"] = displayFromUtc.ToString("o")
+                };
+            }
+
+            await blobClient.UploadAsync(stream, uploadOptions);
         }
 
         public async Task<List<PdfInfo>> GetPdfsAsync(string containerName)
@@ -144,7 +212,8 @@ namespace VandaliaCentral.Services
                 {
                     Name = Path.GetFileNameWithoutExtension(blobItem.Name),
                     Url = uriBuilder.Uri.ToString(),
-                    LastModified = blobItem.Properties.LastModified
+                    LastModified = blobItem.Properties.LastModified,
+                    DisplayFromUtc = TryGetDisplayFromUtc(blobItem)
                 });
             }
 
@@ -170,6 +239,58 @@ namespace VandaliaCentral.Services
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             await containerClient.DeleteBlobIfExistsAsync(blobName);
+        }
+
+        private async Task<BlobItem?> GetCurrentMondayMinuteBlobAsync(string containerName)
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var nowUtc = DateTimeOffset.UtcNow;
+            BlobItem? latestEligibleBlob = null;
+            DateTimeOffset latestDisplayFromUtc = DateTimeOffset.MinValue;
+
+            await foreach (var blobItem in containerClient.GetBlobsAsync(BlobTraits.Metadata))
+            {
+                if (!blobItem.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var displayFromUtc = TryGetDisplayFromUtc(blobItem) ?? blobItem.Properties.LastModified ?? DateTimeOffset.MinValue;
+                if (displayFromUtc > nowUtc)
+                {
+                    continue;
+                }
+
+                if (displayFromUtc > latestDisplayFromUtc)
+                {
+                    latestDisplayFromUtc = displayFromUtc;
+                    latestEligibleBlob = blobItem;
+                }
+                else if (displayFromUtc == latestDisplayFromUtc
+                    && (blobItem.Properties.LastModified ?? DateTimeOffset.MinValue) > (latestEligibleBlob?.Properties.LastModified ?? DateTimeOffset.MinValue))
+                {
+                    latestEligibleBlob = blobItem;
+                }
+            }
+
+            return latestEligibleBlob;
+        }
+
+        private static DateTimeOffset? TryGetDisplayFromUtc(BlobItem blobItem)
+        {
+            if (blobItem.Metadata is null)
+            {
+                return null;
+            }
+
+            if (!blobItem.Metadata.TryGetValue("displayfromutc", out var rawDisplayFromUtc))
+            {
+                return null;
+            }
+
+            return DateTimeOffset.TryParse(rawDisplayFromUtc, out var parsedDate)
+                ? parsedDate
+                : null;
         }
     }
 }
