@@ -61,7 +61,7 @@
                         @foreach (var result in GlobalSearchResults)
                         {
                             <div class="col-12 col-md-6 col-xl-4">
-                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenArticle(result)">
+                                <button type="button" class="article-tile text-start w-100 h-100" @onclick="() => OpenSearchResultAsync(result)">
                                     <div class="fw-semibold">@result.Article.Title</div>
                                     <div class="text-muted small mt-1">@result.Folder.Name</div>
                                     <div class="text-muted small mt-2">Click to open</div>
@@ -90,7 +90,7 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach (var article in RecentlyAddedArticles)
                                 {
-                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenSearchResultAsync(article)">
                                         <div class="fw-semibold">@article.Article.Title</div>
                                         <div class="text-muted small mt-1">@article.Folder.Name</div>
                                         <div class="text-muted small mt-1">Added @article.Article.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")</div>
@@ -111,7 +111,7 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach (var article in MostViewedArticles)
                                 {
-                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenSearchResultAsync(article)">
                                         <div class="fw-semibold">@article.Article.Title</div>
                                         <div class="text-muted small mt-1">@article.Folder.Name</div>
                                         <div class="text-muted small mt-1">@article.Article.ViewCount view(s)</div>
@@ -265,9 +265,11 @@
         await KnowledgeBaseService.SaveFoldersAsync(Folders);
     }
 
-    private Task OpenArticle(KnowledgeBaseSearchResultItem result)
+    private Task OpenSearchResultAsync(KnowledgeBaseSearchResultItem result)
     {
         SelectedFolder = result.Folder;
+        ArticleSearchTerm = string.Empty;
+
         return OpenArticle(result.Article);
     }
 
