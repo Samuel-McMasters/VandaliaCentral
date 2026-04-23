@@ -52,8 +52,8 @@ namespace VandaliaCentral.Services
                     return null;
                 }
 
-                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-                var blobClient = containerClient.GetBlobClient(currentMondayMinute.Name);
+                var mondayMinuteContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                var blobClient = mondayMinuteContainerClient.GetBlobClient(currentMondayMinute.Name);
                 var uriBuilder = new UriBuilder(blobClient.Uri);
                 var cacheBustToken = currentMondayMinute.Properties.LastModified?.ToUnixTimeMilliseconds().ToString() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
 
