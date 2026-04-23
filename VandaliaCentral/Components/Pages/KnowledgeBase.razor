@@ -90,7 +90,7 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach (var article in RecentlyAddedArticles)
                                 {
-                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenSearchResultAsync(article)">
                                         <div class="fw-semibold">@article.Article.Title</div>
                                         <div class="text-muted small mt-1">@article.Folder.Name</div>
                                         <div class="text-muted small mt-1">Added @article.Article.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")</div>
@@ -111,7 +111,7 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach (var article in MostViewedArticles)
                                 {
-                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenArticle(article)">
+                                    <button type="button" class="article-highlight-tile text-start" @onclick="() => OpenSearchResultAsync(article)">
                                         <div class="fw-semibold">@article.Article.Title</div>
                                         <div class="text-muted small mt-1">@article.Folder.Name</div>
                                         <div class="text-muted small mt-1">@article.Article.ViewCount view(s)</div>
