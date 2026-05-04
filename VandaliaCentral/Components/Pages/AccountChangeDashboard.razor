@@ -45,7 +45,7 @@ else
                     <th>Executive/DM/DSM</th>
                     <th>Current AM</th>
                     <th>New AM</th>
-                    <th style="width: 190px;">Actions</th>
+                    <th style="width: 320px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,6 +64,11 @@ else
                                     disabled="@_isProcessing"
                                     @onclick="() => ApproveAsync(item.Id)">
                                 Approve
+                            </button>
+                            <button class="btn btn-outline-success btn-sm"
+                                    disabled="@_isProcessing"
+                                    @onclick="() => ApproveWithoutContractsAsync(item.Id)">
+                                Approve Without Contracts
                             </button>
                             <button class="btn btn-danger btn-sm"
                                     disabled="@_isProcessing"
@@ -99,15 +104,20 @@ else
 
     private async Task ApproveAsync(string id)
     {
-        await ProcessAsync(id, isApprove: true);
+        await ProcessAsync(id, DashboardAction.Approve);
+    }
+
+    private async Task ApproveWithoutContractsAsync(string id)
+    {
+        await ProcessAsync(id, DashboardAction.ApproveWithoutContracts);
     }
 
     private async Task DenyAsync(string id)
     {
-        await ProcessAsync(id, isApprove: false);
+        await ProcessAsync(id, DashboardAction.Deny);
     }
 
-    private async Task ProcessAsync(string id, bool isApprove)
+    private async Task ProcessAsync(string id, DashboardAction action)
     {
         _successMessage = null;
         _errorMessage = null;
@@ -118,11 +128,17 @@ else
 
         try
         {
-            if (isApprove)
+            if (action == DashboardAction.Approve)
             {
                 await DashboardService.ApproveAsync(id, userName);
                 _successMessage = "Account approved and forwarded.";
                 await Logger.LogActivityAsync(userName, "Account Change Dashboard - approved account.");
+            }
+            else if (action == DashboardAction.ApproveWithoutContracts)
+            {
+                await DashboardService.ApproveWithoutContractsAsync(id, userName);
+                _successMessage = "Account approved without contracts and forwarded.";
+                await Logger.LogActivityAsync(userName, "Account Change Dashboard - approved account without contracts.");
             }
             else
             {
@@ -141,6 +157,13 @@ else
         {
             _isProcessing = false;
         }
+    }
+
+    private enum DashboardAction
+    {
+        Approve,
+        ApproveWithoutContracts,
+        Deny
     }
 
     private void Refresh()

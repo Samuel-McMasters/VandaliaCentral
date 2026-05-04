@@ -8,5 +8,6 @@ public interface IAmAccountChangeDashboardService
     IReadOnlyList<AmAccountChangeDashboardItem> GetPending();
     int GetPendingCount();
     Task ApproveAsync(string itemId, string approvedBy, CancellationToken ct = default);
+    Task ApproveWithoutContractsAsync(string itemId, string approvedBy, CancellationToken ct = default);
     Task DenyAsync(string itemId, string deniedBy, CancellationToken ct = default);
 }
