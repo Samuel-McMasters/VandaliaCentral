@@ -52,7 +52,7 @@ else
                 @foreach (var item in _items)
                 {
                     <tr>
-                        <td>@item.SubmittedAtUtc.LocalDateTime.ToString("g")</td>
+                        <td>@FormatSubmittedAtEastern(item.SubmittedAtUtc)</td>
                         <td>@item.SubmittedByName</td>
                         <td>@item.AccountNumber</td>
                         <td>@item.CompanyName</td>
@@ -83,6 +83,14 @@ else
     private bool _isProcessing;
     private string? _successMessage;
     private string? _errorMessage;
+
+    private static readonly TimeZoneInfo EasternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
+    private static string FormatSubmittedAtEastern(DateTimeOffset submittedAtUtc)
+    {
+        var easternTime = TimeZoneInfo.ConvertTime(submittedAtUtc, EasternTimeZone);
+        return easternTime.ToString("g");
+    }
 
     protected override void OnInitialized()
     {
