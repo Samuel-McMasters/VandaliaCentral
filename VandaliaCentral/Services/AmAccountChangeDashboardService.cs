@@ -127,6 +127,37 @@ public sealed class AmAccountChangeDashboardService : IAmAccountChangeDashboardS
         Remove(itemId);
     }
 
+
+    public async Task ApproveWithoutContractsAsync(string itemId, string approvedBy, CancellationToken ct = default)
+    {
+        var item = GetRequiredItem(itemId);
+        var emailSettings = await _emailRoutingSettingsService.GetSettingsAsync(ct);
+
+        if (string.IsNullOrWhiteSpace(emailSettings.AmStandardTo))
+            throw new InvalidOperationException("TODO: Configure AmAssignmentChangeRequestEmail:StandardTo.");
+
+        var model = ToRequestModel(item);
+        var body = AmAssignmentChangeRequestEmailTemplateBuilder.BuildSubmissionHtmlBody(
+            model,
+            new List<AmAssignmentCustomerLine>
+            {
+                new()
+                {
+                    AccountNumber = item.AccountNumber,
+                    CompanyName = item.CompanyName,
+                    AssignOpenContracts = false,
+                    ReferralAccount = item.ReferralAccount
+                }
+            },
+            groupTitle: "Approved Open Contract Assignment",
+            submittedBy: item.SubmittedByEmail,
+            submissionId: item.SubmissionId,
+            approvedBy: approvedBy);
+
+        await _email.SendEmailHtmlAsyncStrict(emailSettings.AmStandardTo, "AM Assignment Change Request", body, ccEmail: null, ct);
+        Remove(itemId);
+    }
+
     public async Task DenyAsync(string itemId, string deniedBy, CancellationToken ct = default)
     {
         var item = GetRequiredItem(itemId);
